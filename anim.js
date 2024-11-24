@@ -4,7 +4,7 @@ var lyrics = document.querySelector("#lyrics");
 
 // Offset inicial en segundos
 var offset = 50; // Cambia este número para ajustar el tiempo inicial
-
+await sleep(<8500>);
 // Array de objetos que contiene cada línea y su tiempo de aparición en segundos
 var lyricsData = [
   { text: "I'm lying on the moon", time: 9 },

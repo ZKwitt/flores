@@ -3,7 +3,7 @@ var audio = document.querySelector("audio");
 var lyrics = document.querySelector("#lyrics");
 
 // Offset inicial en segundos
-var offset = 10; // Cambia este número para ajustar el tiempo inicial
+var offset = 50; // Cambia este número para ajustar el tiempo inicial
 
 // Array de objetos que contiene cada línea y su tiempo de aparición en segundos
 var lyricsData = [

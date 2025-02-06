@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laberinto</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        #game-container {
+            display: grid;
+            grid-template-columns: repeat(10, 40px);
+            grid-template-rows: repeat(10, 40px);
+            gap: 2px;
+            margin: 20px auto;
+            width: fit-content;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border: 1px solid black;
+        }
+        .wall { background-color: black; }
+        .player { background-color: blue; }
+        .goal { background-color: green; }
+    </style>
+</head>
+<body>
+    <h1>¡Llega a la meta!</h1>
+    <div id="game-container"></div>
+    <script>
+        const maze = [
+            "##########",
+            "#P       #",
+            "# ####### #",
+            "#       # #",
+            "### ### # #",
+            "#   # #   #",
+            "# ### ### #",
+            "# #   #   #",
+            "# ##### ###",
+            "#       G#",
+            "##########"
+        ];
+        
+        const container = document.getElementById("game-container");
+        let playerX = 1, playerY = 1;
+
+        function drawMaze() {
+            container.innerHTML = "";
+            maze.forEach((row, y) => {
+                row.split("").forEach((cell, x) => {
+                    const div = document.createElement("div");
+                    div.classList.add("cell");
+                    if (cell === "#") div.classList.add("wall");
+                    if (x === playerX && y === playerY) div.classList.add("player");
+                    if (cell === "G") div.classList.add("goal");
+                    container.appendChild(div);
+                });
+            });
+        }
+
+        function move(dx, dy) {
+            const newX = playerX + dx;
+            const newY = playerY + dy;
+            if (maze[newY][newX] !== "#") {
+                playerX = newX;
+                playerY = newY;
+                drawMaze();
+                if (maze[playerY][playerX] === "G") window.location.href = "https://www.google.com";
+            }
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp" || e.key === "w") move(0, -1);
+            if (e.key === "ArrowDown" || e.key === "s") move(0, 1);
+            if (e.key === "ArrowLeft" || e.key === "a") move(-1, 0);
+            if (e.key === "ArrowRight" || e.key === "d") move(1, 0);
+        });
+
+        let touchStartX = 0, touchStartY = 0;
+        document.addEventListener("touchstart", (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+        document.addEventListener("touchend", (e) => {
+            let dx = e.changedTouches[0].clientX - touchStartX;
+            let dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : -1, 0);
+            else move(0, dy > 0 ? 1 : -1);
+        });
+
+        drawMaze();
+    </script>
+</body>
+</html>

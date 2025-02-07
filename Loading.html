@@ -20,11 +20,8 @@
       overflow: hidden;
       position: relative;
       transform-origin: center;
-      transition: transform 0.5s linear;
+      transition: transform 0.3s ease-in-out;
       box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
     }
     .progress {
       width: 0%;
@@ -41,68 +38,58 @@
   </div>
 
   <script>
-    const progress    = document.getElementById("progressBar");
-    const container   = document.getElementById("barContainer");
-    let percentage    = 0;
-    let isTilted      = false;  // indica si la barra está inclinada
-    let isCorrecting  = false;  // flag para evitar cambios mientras se corrige la inclinación
-    let clickCount    = 0;      // cuenta los clics en cada “tick”
-    let wasFull       = false;  // se usa para detectar cuándo la barra pasa de 100% a bajar
+    const progress = document.getElementById("progressBar");
+    const container = document.getElementById("barContainer");
+    let percentage = 0;
+    let isCorrecting = false;
+    let clickCount = 0;
+    let phase = 'filling'; // 'filling' o 'emptying'
 
     function animateProgress() {
-      if (!isCorrecting) {
-        if (clickCount > 0) {
-          // Si se hicieron clics, se suma 10% por cada uno (sin exceder el 100%)
-          percentage += 10 * clickCount;
-          if (percentage >= 100) {
-            percentage = 100;
-          }
-        } else {
-          // Sin clic, se vacía la barra (si no está en 0)
-          if (percentage > 0) {
-            percentage -= 10;
-          }
+      if (phase === 'filling') {
+        percentage += 10;
+        if (percentage >= 70) {
+          percentage = 70;
+          phase = 'emptying';
         }
-        // Se reinicia la cuenta de clics para el siguiente intervalo
+      } else if (phase === 'emptying') {
+        percentage -= 10;
+        percentage += 10 * clickCount;
+        percentage = Math.max(0, Math.min(percentage, 100));
         clickCount = 0;
       }
 
-      // Si la barra estaba llena y ahora baja, se activa la inclinación
-      if (wasFull && percentage < 100 && !isTilted) {
-        container.style.transform = "rotate(-15deg)";
-        isTilted = true;
-      }
-
-      // Se actualiza el ancho de la barra
       progress.style.width = percentage + "%";
 
-      // Actualizamos la variable wasFull: será true cuando la barra esté al 100%
-      wasFull = (percentage === 100);
-
-      // Si la barra está llena y no está inclinada, se redirige a Google
-      if (percentage === 100 && !isTilted) {
+      // Redirección al completar
+      if (percentage === 100) {
         setTimeout(() => {
           window.location.href = "https://www.google.com";
         }, 500);
-        return; // se para la animación
+        return;
       }
 
-      setTimeout(animateProgress, 500);
+      // Manejo de la inclinación
+      if (phase === 'emptying' && !isCorrecting) {
+        container.style.transform = "rotate(-15deg)";
+      } else {
+        container.style.transform = "rotate(0deg)";
+      }
+
+      setTimeout(animateProgress, 200);
     }
 
-    // Al hacer clic en la barra...
     container.addEventListener("click", () => {
-      if (isTilted) {
-        // Si está inclinada, el clic corrige la inclinación (vuelve a 0º)
-        isCorrecting = true;
-        container.style.transform = "rotate(0deg)";
-        isTilted = false;
-        setTimeout(() => {
-          isCorrecting = false;
-        }, 500);
+      if (phase === 'emptying') {
+        clickCount++;
+        if (!isCorrecting) {
+          isCorrecting = true;
+          container.style.transform = "rotate(0deg)";
+          setTimeout(() => {
+            isCorrecting = false;
+          }, 500);
+        }
       }
-      // Cada clic (ya sea para corregir o para llenar) se cuenta para aumentar el porcentaje
-      clickCount++;
     });
 
     animateProgress();

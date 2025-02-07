@@ -48,9 +48,10 @@
         let angle = 0;
         let isCorrecting = false;
         let isTilted = false;
+        let clickCount = 0;
 
         function animateProgress() {
-            if (!isCorrecting && !isTilted) {
+            if (!isCorrecting && !isTilted && clickCount > 0) {
                 percentage += 10 * direction;
             }
 
@@ -61,6 +62,8 @@
                 angle = -15; // Inclinación simulando gravedad
                 container.style.transform = `rotate(${angle}deg)`;
                 isTilted = true;
+            } else if (percentage < 100 && direction === 1 && isTilted) {
+                percentage = Math.max(percentage - 10, 0); // Evita que suba si no se hace clic
             }
 
             progress.style.width = percentage + "%";
@@ -80,9 +83,13 @@
                     isTilted = false;
                 }, 500);
             }
+            if (!isTilted) {
+                clickCount++;
+            }
         });
 
         animateProgress();
     </script>
 </body>
 </html>
+

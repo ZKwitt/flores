@@ -9,7 +9,7 @@
         #game-container {
             display: grid;
             grid-template-columns: repeat(10, 40px);
-            grid-template-rows: repeat(10, 40px);
+            grid-template-rows: repeat(11, 40px);
             gap: 2px;
             margin: 20px auto;
             width: fit-content;
@@ -29,7 +29,7 @@
     <h1>¡Llega a la meta!</h1>
     <div id="game-container"></div>
     <script>
-        const maze = [
+        let maze = [
             "##########",
             "#P       #",
             "# ####### #",
@@ -41,7 +41,7 @@
             "# ##### ###",
             "#       G#",
             "##########"
-        ];
+        ].map(row => row.split("")); // Convertir cada fila en un array
         
         const container = document.getElementById("game-container");
         let playerX = 1, playerY = 1;
@@ -49,7 +49,7 @@
         function drawMaze() {
             container.innerHTML = "";
             maze.forEach((row, y) => {
-                row.split("").forEach((cell, x) => {
+                row.forEach((cell, x) => {
                     const div = document.createElement("div");
                     div.classList.add("cell");
                     if (cell === "#") div.classList.add("wall");
@@ -94,3 +94,4 @@
     </script>
 </body>
 </html>
+

@@ -19,7 +19,7 @@
             border-radius: 15px;
             overflow: hidden;
             position: relative;
-            transform-origin: left center;
+            transform-origin: center;
             transition: transform 0.5s linear;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
             display: flex;
@@ -47,9 +47,10 @@
         let direction = 1; // 1 para llenar, -1 para vaciar
         let angle = 0;
         let isCorrecting = false;
+        let isTilted = false;
 
         function animateProgress() {
-            if (!isCorrecting) {
+            if (!isCorrecting && !isTilted) {
                 percentage += 10 * direction;
             }
 
@@ -59,6 +60,7 @@
                 direction = 1;
                 angle = -15; // Inclinación simulando gravedad
                 container.style.transform = `rotate(${angle}deg)`;
+                isTilted = true;
             }
 
             progress.style.width = percentage + "%";
@@ -69,13 +71,18 @@
         }
 
         container.addEventListener("click", () => {
-            if (angle !== 0) {
+            if (isTilted) {
                 isCorrecting = true;
                 angle = 0;
                 container.style.transform = `rotate(${angle}deg)`;
-                setTimeout(() => { isCorrecting = false; }, 500);
+                setTimeout(() => {
+                    isCorrecting = false;
+                    isTilted = false;
+                }, 500);
             }
         });
 
         animateProgress();
-
+    </script>
+</body>
+</html>

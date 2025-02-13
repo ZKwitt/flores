@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Laberinto 2</title>
+  <title>Laberinto 2 - Versión Difícil</title>
   <style>
     body { 
       text-align: center; 
@@ -30,38 +30,41 @@
   <h1>¡Llega a la meta!</h1>
   <div id="game-container"></div>
   <script>
-    // Definimos el laberinto con filas de igual longitud (10 columnas x 11 filas)
-    // Cada string debe tener exactamente 10 caracteres.
+    // Laberinto de 15 columnas x 15 filas (más grande y complejo)
     let maze = [
-      "##########",
-      "#P       #",
-      "# ###### #",
-      "#       ##",
-      "### ### ##",
-      "#   # # ##",
-      "# ### ####",
-      "# #   # ##",
-      "# ##### ##",
-      "#       G#",
-      "##########"
+      "###############",
+      "#P    #       #",
+      "# ### #####   #",
+      "#   #     #   #",
+      "### # ### # # #",
+      "#   # #   #   #",
+      "# ### # ### ###",
+      "#   #   #     #",
+      "##### ### #####",
+      "#     #   #   #",
+      "# ### ##### # #",
+      "#   #     #   #",
+      "### ##### # # #",
+      "#       #   G #",
+      "###############"
     ].map(row => row.split(""));
 
     const container = document.getElementById("game-container");
     const rows = maze.length;
     const cols = maze[0].length;
     
-    // Ajustamos dinámicamente la cuadrícula según el tamaño del laberinto.
+    // Ajustamos la cuadrícula según el tamaño del laberinto.
     container.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
     container.style.gridTemplateRows = `repeat(${rows}, 40px)`;
 
-    // Buscamos la posición inicial del jugador (la "P") y la guardamos.
+    // Buscamos la posición inicial del jugador ("P") y la guardamos.
     let playerX = 0, playerY = 0;
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         if (maze[y][x] === "P") {
           playerX = x;
           playerY = y;
-          // Reemplazamos la "P" por un espacio para que no se dibuje como muro o meta.
+          // Reemplazamos la "P" por un espacio para no dibujarla como muro.
           maze[y][x] = " ";
           break;
         }
@@ -77,14 +80,14 @@
           div.classList.add("cell");
           if (cell === "#") div.classList.add("wall");
           if (cell === "G") div.classList.add("goal");
-          // Dibuja al jugador en la posición actual
+          // Dibuja al jugador en su posición actual
           if (x === playerX && y === playerY) div.classList.add("player");
           container.appendChild(div);
         });
       });
     }
 
-    // Función para mover al jugador (siempre que no haya pared y sin salir del laberinto)
+    // Función para mover al jugador (sin atravesar muros ni salirse del laberinto)
     function move(dx, dy) {
       const newX = playerX + dx;
       const newY = playerY + dy;
@@ -93,7 +96,7 @@
         playerX = newX;
         playerY = newY;
         drawMaze();
-        // Si llega a la meta, redirige (aquí a Google)
+        // Si llega a la meta ("G"), redirige (en este caso, a Google)
         if (maze[playerY][playerX] === "G") {
           window.location.href = "https://www.google.com";
         }
@@ -108,7 +111,7 @@
       if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") move(1, 0);
     });
 
-    // Soporte para pantalla táctil
+    // Soporte para pantallas táctiles
     let touchStartX = 0, touchStartY = 0;
     document.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;
@@ -125,3 +128,4 @@
   </script>
 </body>
 </html>
+

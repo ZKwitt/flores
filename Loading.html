@@ -1,18 +1,26 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Barra de Carga Interactiva</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barra de Carga con Gravedad</title>
   <style>
     body {
       display: flex;
+      flex-direction: column; /* Para ubicar el mensaje encima de la barra */
       justify-content: center;
       align-items: center;
       height: 100vh;
       background-color: #222;
       margin: 0;
+    }
+    /* Estilo para el mensaje que se muestra arriba de la barra */
+    #mensaje {
+      margin-bottom: 10px;
+      color: #fff;
       font-family: Arial, sans-serif;
+      font-size: 16px;
+      text-align: center;
     }
     .container {
       width: 300px;
@@ -29,32 +37,14 @@
       width: 0%;
       height: 100%;
       background: linear-gradient(to right, #4caf50, #2e7d32);
-      transition: width 0.3s linear;
+      transition: width 0.5s linear;
       border-radius: 15px;
-    }
-    .messages {
-      position: absolute;
-      top: calc(50% - 80px);
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      color: white;
-      font-size: 1.2em;
-    }
-    .message {
-      opacity: 0;
-      transition: opacity 0.3s ease-in-out;
-      position: absolute;
-      width: 100%;
     }
   </style>
 </head>
 <body>
-  <div class="messages">
-    <div class="message" id="message1">Cargando sistema...</div>
-    <div class="message" id="message2">Preparando recursos...</div>
-    <div class="message" id="message3">¡Listo para interactuar!</div>
-  </div>
+  <!-- Mensaje que aparece encima de la barra -->
+  <div id="mensaje">Cargando...</div>
   <div class="container" id="barContainer">
     <div class="progress" id="progressBar"></div>
   </div>
@@ -62,52 +52,53 @@
   <script>
     const progress = document.getElementById("progressBar");
     const container = document.getElementById("barContainer");
-    const messages = {
-      1: document.getElementById("message1"),
-      2: document.getElementById("message2"),
-      3: document.getElementById("message3")
-    };
-    
+    const mensajeDiv = document.getElementById("mensaje");
+
     let percentage = 0;
     let isCorrecting = false;
     let clickCount = 0;
-    let phase = 'filling';
-    let messageIndex = 1;
-
-    function showMessage(index) {
-      Object.values(messages).forEach(msg => msg.style.opacity = 0);
-      messages[index].style.opacity = 1;
-    }
+    let phase = 'filling'; // Fases: "filling" (llenando hasta 70%) o "emptying" (vacío, usuario debe hacer clic)
 
     function animateProgress() {
       if (phase === 'filling') {
         percentage += 10;
-        
-        // Mostrar mensajes durante la carga inicial
-        if (percentage === 25) showMessage(1);
-        if (percentage === 50) showMessage(2);
-        if (percentage === 75) {
-          showMessage(3);
+        // Se muestran 3 mensajes según el avance hasta el 70%
+        if (percentage < 25) {
+          mensajeDiv.innerText = "Cargando recursos...";
+        } else if (percentage < 50) {
+          mensajeDiv.innerText = "Preparando entorno...";
+        } else {
+          mensajeDiv.innerText = "Iniciando carga...";
+        }
+
+        if (percentage >= 70) {
+          percentage = 70;
           phase = 'emptying';
         }
       } else if (phase === 'emptying') {
-        percentage = Math.max(0, percentage - 10 + (10 * clickCount));
+        // La barra pierde 10% cada tick y se suma 10% por cada clic acumulado
+        percentage -= 10;
+        percentage += 10 * clickCount;
+        percentage = Math.max(0, Math.min(percentage, 100));
         clickCount = 0;
+
+        // Si no se está corrigiendo (es decir, tras un clic), se inclina la barra
+        if (!isCorrecting) {
+          container.style.transform = "rotate(-15deg)";
+          mensajeDiv.innerText = "¡Haz clic para enderezar!";
+        } else {
+          container.style.transform = "rotate(0deg)";
+        }
       }
 
       progress.style.width = percentage + "%";
 
-      // Redirección al completar
+      // Al llegar al 100% se redirige a Google
       if (percentage === 100) {
-        setTimeout(() => window.location.href = "https://www.google.com", 500);
+        setTimeout(() => {
+          window.location.href = "https://www.google.com";
+        }, 500);
         return;
-      }
-
-      // Manejo de la inclinación
-      if (phase === 'emptying' && !isCorrecting) {
-        container.style.transform = "rotate(-15deg)";
-      } else {
-        container.style.transform = "rotate(0deg)";
       }
 
       setTimeout(animateProgress, 200);
@@ -116,12 +107,16 @@
     container.addEventListener("click", () => {
       if (phase === 'emptying') {
         clickCount++;
-        showMessage(3);
+        // Al hacer clic se muestra un mensaje y se endereza la barra
+        mensajeDiv.innerText = "¡Bien!";
         if (!isCorrecting) {
           isCorrecting = true;
           container.style.transform = "rotate(0deg)";
           setTimeout(() => {
             isCorrecting = false;
+            if (phase === 'emptying') {
+              mensajeDiv.innerText = "¡Haz clic para enderezar!";
+            }
           }, 500);
         }
       }

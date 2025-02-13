@@ -15,9 +15,8 @@
       margin: 0;
       user-select: none; /* Evita selección en toda la página */
     }
-    /* Estilo para el mensaje */
     #mensaje {
-      margin-bottom: 20px; /* Un poco más separado de la barra */
+      margin-bottom: 20px;
       color: #fff;
       font-family: Arial, sans-serif;
       font-size: 16px;
@@ -46,7 +45,6 @@
   </style>
 </head>
 <body>
-  <!-- Mensaje que aparece encima de la barra -->
   <div id="mensaje">Cargando...</div>
   <div class="container" id="barContainer">
     <div class="progress" id="progressBar"></div>
@@ -58,15 +56,16 @@
     const mensajeDiv = document.getElementById("mensaje");
 
     let percentage = 0;
-    let phase = 'filling'; // 'filling' hasta el 70% inicial, luego 'emptying'
-    let lastClickTime = 0; // Guarda el instante del último clic
-    let timer = setInterval(autoUpdate, 500);
+    let phase = 'filling'; // 'filling' hasta el 70%, luego 'emptying'
+    let lastClickTime = 0; // Registra el tiempo del último clic
 
     function autoUpdate() {
+      let delay; // Variable para ajustar el retardo según la fase
+
       if (phase === 'filling') {
-        // Incremento automático del 10% cada tick
+        // Incremento automático del 10% cada tick en fase filling
         percentage += 10;
-        // Mensajes según el avance hasta el 70%
+        // Actualizamos el mensaje según el avance
         if (percentage < 25) {
           mensajeDiv.innerText = "Cargando recursos...";
         } else if (percentage < 50) {
@@ -74,45 +73,50 @@
         } else {
           mensajeDiv.innerText = "Iniciando carga...";
         }
+        // Si alcanzamos o superamos el 70%, fijamos el 70% y cambiamos de fase
         if (percentage >= 70) {
           percentage = 70;
           phase = 'emptying';
           container.style.transform = "rotate(-15deg)";
           mensajeDiv.innerText = "¡Haz clic para enderezar!";
         }
+        delay = 1000; // En filling, espera 1000ms para que se lean los mensajes
       } else if (phase === 'emptying') {
-        // En emptying, se resta 10% solo si no se hizo clic en los últimos 500ms
+        // En emptying, bajamos 10% cada tick si no se ha hecho clic recientemente
         let now = Date.now();
         if (now - lastClickTime >= 500) {
           percentage -= 10;
           if (percentage < 0) percentage = 0;
         }
-        // Se muestra la inclinación y el mensaje de indicación
         container.style.transform = "rotate(-15deg)";
         mensajeDiv.innerText = "¡Haz clic para enderezar!";
+        delay = 500; // En emptying, el retardo es de 500ms
       }
 
       progress.style.width = percentage + "%";
 
-      // Al llegar al 100%, se detiene y se redirige a Google
+      // Redirigir a Google al llegar al 100%
       if (percentage >= 100) {
-        clearInterval(timer);
         setTimeout(() => {
           window.location.href = "https://www.google.com";
         }, 500);
+        return;
       }
+
+      // Se programa la siguiente actualización según el retardo definido
+      setTimeout(autoUpdate, delay);
     }
 
-    // Cada clic suma 10% de inmediato, endereza la barra y actualiza el mensaje
+    // Cada clic en la barra suma 10% de inmediato en la fase emptying
     container.addEventListener("click", () => {
       if (phase === 'emptying') {
-        lastClickTime = Date.now(); // Actualiza el tiempo del clic
+        lastClickTime = Date.now(); // Actualiza el tiempo del último clic
         percentage += 10;
         if (percentage > 100) percentage = 100;
         progress.style.width = percentage + "%";
         container.style.transform = "rotate(0deg)";
         mensajeDiv.innerText = "¡Bien!";
-        // Después de 300ms se vuelve a la inclinación si aún no se completó
+        // Después de 300ms se vuelve a inclinar si no se completa la barra
         setTimeout(() => {
           if (phase === 'emptying' && percentage < 100) {
             container.style.transform = "rotate(-15deg)";
@@ -121,6 +125,10 @@
         }, 300);
       }
     });
+
+    // Inicia la actualización de la barra
+    autoUpdate();
   </script>
 </body>
 </html>
+

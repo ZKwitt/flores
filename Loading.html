@@ -14,7 +14,7 @@
       background-color: #222;
       margin: 0;
     }
-    /* Estilo para el mensaje que se muestra arriba de la barra */
+    /* Estilo para el mensaje que se muestra encima de la barra */
     #mensaje {
       margin-bottom: 10px;
       color: #fff;
@@ -55,14 +55,14 @@
     const mensajeDiv = document.getElementById("mensaje");
 
     let percentage = 0;
-    let isCorrecting = false;
-    let clickCount = 0;
-    let phase = 'filling'; // Fases: "filling" (llenando hasta 70%) o "emptying" (vacío, usuario debe hacer clic)
+    let phase = 'filling'; // "filling" hasta el 70% inicial, luego "emptying" (fase de clics)
+    let timer;
 
     function animateProgress() {
       if (phase === 'filling') {
+        // Se incrementa automáticamente un 10% cada tick
         percentage += 10;
-        // Se muestran 3 mensajes según el avance hasta el 70%
+        // Se muestran mensajes según el avance hasta el 70%
         if (percentage < 25) {
           mensajeDiv.innerText = "Cargando recursos...";
         } else if (percentage < 50) {
@@ -74,51 +74,47 @@
         if (percentage >= 70) {
           percentage = 70;
           phase = 'emptying';
+          mensajeDiv.innerText = "¡Haz clic para enderezar!";
+          container.style.transform = "rotate(-15deg)";
         }
       } else if (phase === 'emptying') {
-        // La barra pierde 10% cada tick y se suma 10% por cada clic acumulado
-        percentage -= 5;
-        percentage += 10 * clickCount;
-        percentage = Math.max(0, Math.min(percentage, 100));
-        clickCount = 0;
-
-        // Si no se está corrigiendo (es decir, tras un clic), se inclina la barra
-        if (!isCorrecting) {
-          container.style.transform = "rotate(-15deg)";
-          mensajeDiv.innerText = "¡Haz clic para enderezar!";
-        } else {
-          container.style.transform = "rotate(0deg)";
-        }
+        // Cada tick de 500ms baja un 10% si no se hace clic
+        percentage -= 10;
+        percentage = Math.max(0, percentage);
+        mensajeDiv.innerText = "¡Haz clic para enderezar!";
+        container.style.transform = "rotate(-15deg)";
       }
 
       progress.style.width = percentage + "%";
 
-      // Al llegar al 100% se redirige a Google
-      if (percentage === 100) {
+      // Cuando se llegue al 100% se redirige a Google
+      if (percentage >= 100) {
+        clearTimeout(timer);
         setTimeout(() => {
           window.location.href = "https://www.google.com";
         }, 500);
         return;
       }
 
-      setTimeout(animateProgress, 200);
+      timer = setTimeout(animateProgress, 500);
     }
 
+    // Cada clic suma un 10% de inmediato y endereza la barra temporalmente
     container.addEventListener("click", () => {
       if (phase === 'emptying') {
-        clickCount++;
-        // Al hacer clic se muestra un mensaje y se endereza la barra
+        percentage += 10;
+        if (percentage > 100) percentage = 100;
+        progress.style.width = percentage + "%";
+        // Se endereza la barra y se muestra el mensaje "¡Bien!"
+        container.style.transform = "rotate(0deg)";
         mensajeDiv.innerText = "¡Bien!";
-        if (!isCorrecting) {
-          isCorrecting = true;
-          container.style.transform = "rotate(0deg)";
-          setTimeout(() => {
-            isCorrecting = false;
-            if (phase === 'emptying') {
-              mensajeDiv.innerText = "¡Haz clic para enderezar!";
-            }
-          }, 500);
-        }
+        // Luego de 300ms se vuelve a inclinar si aún no se completó
+        setTimeout(() => {
+          if (phase === 'emptying' && percentage < 100) {
+            container.style.transform = "rotate(-15deg)";
+            mensajeDiv.innerText = "¡Haz clic para enderezar!";
+          }
+        }, 300);
       }
     });
 
@@ -126,3 +122,4 @@
   </script>
 </body>
 </html>
+

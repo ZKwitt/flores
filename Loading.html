@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Barra de Carga con Gravedad</title>
+  <title>Barra de Carga Interactiva</title>
   <style>
     body {
       display: flex;
@@ -11,6 +11,8 @@
       align-items: center;
       height: 100vh;
       background-color: #222;
+      margin: 0;
+      font-family: Arial, sans-serif;
     }
     .container {
       width: 300px;
@@ -27,12 +29,32 @@
       width: 0%;
       height: 100%;
       background: linear-gradient(to right, #4caf50, #2e7d32);
-      transition: width 0.5s linear;
+      transition: width 0.3s linear;
       border-radius: 15px;
+    }
+    .messages {
+      position: absolute;
+      top: calc(50% - 80px);
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      color: white;
+      font-size: 1.2em;
+    }
+    .message {
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      position: absolute;
+      width: 100%;
     }
   </style>
 </head>
 <body>
+  <div class="messages">
+    <div class="message" id="message1">Cargando sistema...</div>
+    <div class="message" id="message2">Preparando recursos...</div>
+    <div class="message" id="message3">¡Listo para interactuar!</div>
+  </div>
   <div class="container" id="barContainer">
     <div class="progress" id="progressBar"></div>
   </div>
@@ -40,22 +62,36 @@
   <script>
     const progress = document.getElementById("progressBar");
     const container = document.getElementById("barContainer");
+    const messages = {
+      1: document.getElementById("message1"),
+      2: document.getElementById("message2"),
+      3: document.getElementById("message3")
+    };
+    
     let percentage = 0;
     let isCorrecting = false;
     let clickCount = 0;
-    let phase = 'filling'; // 'filling' o 'emptying'
+    let phase = 'filling';
+    let messageIndex = 1;
+
+    function showMessage(index) {
+      Object.values(messages).forEach(msg => msg.style.opacity = 0);
+      messages[index].style.opacity = 1;
+    }
 
     function animateProgress() {
       if (phase === 'filling') {
         percentage += 10;
-        if (percentage >= 70) {
-          percentage = 70;
+        
+        // Mostrar mensajes durante la carga inicial
+        if (percentage === 25) showMessage(1);
+        if (percentage === 50) showMessage(2);
+        if (percentage === 75) {
+          showMessage(3);
           phase = 'emptying';
         }
       } else if (phase === 'emptying') {
-        percentage -= 10;
-        percentage += 10 * clickCount;
-        percentage = Math.max(0, Math.min(percentage, 100));
+        percentage = Math.max(0, percentage - 10 + (10 * clickCount));
         clickCount = 0;
       }
 
@@ -63,9 +99,7 @@
 
       // Redirección al completar
       if (percentage === 100) {
-        setTimeout(() => {
-          window.location.href = "https://www.google.com";
-        }, 500);
+        setTimeout(() => window.location.href = "https://www.google.com", 500);
         return;
       }
 
@@ -82,6 +116,7 @@
     container.addEventListener("click", () => {
       if (phase === 'emptying') {
         clickCount++;
+        showMessage(3);
         if (!isCorrecting) {
           isCorrecting = true;
           container.style.transform = "rotate(0deg)";
@@ -96,6 +131,3 @@
   </script>
 </body>
 </html>
-
-
-

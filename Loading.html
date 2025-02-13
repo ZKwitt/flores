@@ -7,20 +7,22 @@
   <style>
     body {
       display: flex;
-      flex-direction: column; /* Para ubicar el mensaje encima de la barra */
+      flex-direction: column; /* Ubica el mensaje encima de la barra */
       justify-content: center;
       align-items: center;
       height: 100vh;
       background-color: #222;
       margin: 0;
+      user-select: none; /* Evita selección en toda la página */
     }
-    /* Estilo para el mensaje que se muestra encima de la barra */
+    /* Estilo para el mensaje */
     #mensaje {
-      margin-bottom: 10px;
+      margin-bottom: 20px; /* Un poco más separado de la barra */
       color: #fff;
       font-family: Arial, sans-serif;
       font-size: 16px;
       text-align: center;
+      user-select: none; /* Evita selección del texto */
     }
     .container {
       width: 300px;
@@ -32,6 +34,7 @@
       transform-origin: center;
       transition: transform 0.3s ease-in-out;
       box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+      user-select: none;
     }
     .progress {
       width: 0%;
@@ -55,14 +58,15 @@
     const mensajeDiv = document.getElementById("mensaje");
 
     let percentage = 0;
-    let phase = 'filling'; // "filling" hasta el 70% inicial, luego "emptying" (fase de clics)
-    let timer;
+    let phase = 'filling'; // 'filling' hasta el 70% inicial, luego 'emptying'
+    let lastClickTime = 0; // Guarda el instante del último clic
+    let timer = setInterval(autoUpdate, 500);
 
-    function animateProgress() {
+    function autoUpdate() {
       if (phase === 'filling') {
-        // Se incrementa automáticamente un 10% cada tick
+        // Incremento automático del 10% cada tick
         percentage += 10;
-        // Se muestran mensajes según el avance hasta el 70%
+        // Mensajes según el avance hasta el 70%
         if (percentage < 25) {
           mensajeDiv.innerText = "Cargando recursos...";
         } else if (percentage < 50) {
@@ -70,45 +74,45 @@
         } else {
           mensajeDiv.innerText = "Iniciando carga...";
         }
-
         if (percentage >= 70) {
           percentage = 70;
           phase = 'emptying';
-          mensajeDiv.innerText = "¡Haz clic para enderezar!";
           container.style.transform = "rotate(-15deg)";
+          mensajeDiv.innerText = "¡Haz clic para enderezar!";
         }
       } else if (phase === 'emptying') {
-        // Cada tick de 500ms baja un 10% si no se hace clic
-        percentage -= 10;
-        percentage = Math.max(0, percentage);
-        mensajeDiv.innerText = "¡Haz clic para enderezar!";
+        // En emptying, se resta 10% solo si no se hizo clic en los últimos 500ms
+        let now = Date.now();
+        if (now - lastClickTime >= 500) {
+          percentage -= 10;
+          if (percentage < 0) percentage = 0;
+        }
+        // Se muestra la inclinación y el mensaje de indicación
         container.style.transform = "rotate(-15deg)";
+        mensajeDiv.innerText = "¡Haz clic para enderezar!";
       }
 
       progress.style.width = percentage + "%";
 
-      // Cuando se llegue al 100% se redirige a Google
+      // Al llegar al 100%, se detiene y se redirige a Google
       if (percentage >= 100) {
-        clearTimeout(timer);
+        clearInterval(timer);
         setTimeout(() => {
           window.location.href = "https://www.google.com";
         }, 500);
-        return;
       }
-
-      timer = setTimeout(animateProgress, 500);
     }
 
-    // Cada clic suma un 10% de inmediato y endereza la barra temporalmente
+    // Cada clic suma 10% de inmediato, endereza la barra y actualiza el mensaje
     container.addEventListener("click", () => {
       if (phase === 'emptying') {
+        lastClickTime = Date.now(); // Actualiza el tiempo del clic
         percentage += 10;
         if (percentage > 100) percentage = 100;
         progress.style.width = percentage + "%";
-        // Se endereza la barra y se muestra el mensaje "¡Bien!"
         container.style.transform = "rotate(0deg)";
         mensajeDiv.innerText = "¡Bien!";
-        // Luego de 300ms se vuelve a inclinar si aún no se completó
+        // Después de 300ms se vuelve a la inclinación si aún no se completó
         setTimeout(() => {
           if (phase === 'emptying' && percentage < 100) {
             container.style.transform = "rotate(-15deg)";
@@ -117,9 +121,6 @@
         }, 300);
       }
     });
-
-    animateProgress();
   </script>
 </body>
 </html>
-

@@ -27,7 +27,7 @@
       color: pink;
       transition: opacity 0.5s ease;
     }
-    /* Contenedor que agrupa el laberinto y los cubitos de mensaje */
+    /* Contenedor que agrupa el laberinto */
     #laberinto-wrapper {
       position: relative;
       display: inline-block;
@@ -35,50 +35,38 @@
       opacity: 0;
       transition: opacity 0.5s ease;
     }
-    /* Contenedor del laberinto */
+    /* Contenedor del laberinto con esquinas redondeadas (las cuales recortan cualquier cuadricula en el exterior) */
     #game-container {
       display: grid;
-      gap: 2px;
+      gap: 0;
       width: fit-content;
-      border-radius: 15px; /* Esquinas redondeadas */
+      border-radius: 15px;
       overflow: hidden;
     }
+    /* Cada celda mide 40px x 40px; las celdas blancas no tienen borde */
     .cell {
       width: 40px;
       height: 40px;
       background-color: white;
-      border: 1px solid black;
     }
+    /* Las paredes se representan con fondo rosa y una cuadricula simulada mediante background-image */
     .wall { 
-      background-color: pink; /* Cubos negros cambiados a rosa */
+      background-color: pink;
+      background-image: 
+        linear-gradient(to right, rgba(0,0,0,0.5) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,0,0,0.5) 1px, transparent 1px);
+      background-size: 40px 40px;
     }
-    .player { background-color: blue; }
-    .goal { background-color: green; }
-    
-    /* Cubitos de mensaje alrededor del laberinto */
-    .message-cube {
-      width: 60px;
-      height: 60px;
-      background-color: #eee;
-      border: 2px solid #333;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 0.8em;
-      position: absolute;
-      border-radius: 5px;
+    /* Se usan imágenes para el jugador y la meta; reemplaza las URLs según necesites */
+    .player {
+      background-image: url('player.png');
+      background-size: cover;
+      background-position: center;
     }
-    #cube-top {
-      top: -70px;
-      left: calc(50% - 30px);
-    }
-    #cube-left {
-      left: -70px;
-      top: calc(50% - 30px);
-    }
-    #cube-right {
-      right: -70px;
-      top: calc(50% - 30px);
+    .goal {
+      background-image: url('goal.png');
+      background-size: cover;
+      background-position: center;
     }
   </style>
 </head>
@@ -90,13 +78,9 @@
   
   <h1>¡Llega a la meta!</h1>
   
-  <!-- Contenedor del laberinto y cubitos de mensaje -->
+  <!-- Contenedor del laberinto -->
   <div id="laberinto-wrapper">
     <div id="game-container"></div>
-    <!-- Cubitos de mensaje -->
-    <div class="message-cube" id="cube-top">mensaje</div>
-    <div class="message-cube" id="cube-left">mensaje</div>
-    <div class="message-cube" id="cube-right">mensaje</div>
   </div>
   
   <script>
@@ -115,14 +99,12 @@
       if (splashIndex < messages.length) {
         splashMessageDiv.innerText = messages[splashIndex];
         splashMessageDiv.style.opacity = 1;
-        // Cada mensaje se muestra 2 segundos
         setTimeout(() => {
           splashMessageDiv.style.opacity = 0;
           splashIndex++;
           setTimeout(showNextSplashMessage, 500);
         }, 2000);
       } else {
-        // Desvanecemos la pantalla de introducción y mostramos el laberinto
         const splashScreen = document.getElementById("splash-screen");
         splashScreen.style.opacity = 0;
         setTimeout(() => {
@@ -195,7 +177,7 @@
         playerX = newX;
         playerY = newY;
         drawMaze();
-        // Si llega a la meta, aplicamos fade out y redirigimos
+        // Al llegar a la meta se aplica fade out y se redirige
         if (maze[playerY][playerX] === "G") {
           const labyrinthWrapper = document.getElementById("laberinto-wrapper");
           labyrinthWrapper.style.opacity = 0;
@@ -214,7 +196,7 @@
       if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") move(1, 0);
     });
 
-    // Soporte para pantalla táctil
+    // Soporte para dispositivos táctiles
     let touchStartX = 0, touchStartY = 0;
     document.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;
@@ -229,6 +211,3 @@
   </script>
 </body>
 </html>
-
-
-

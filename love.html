@@ -2,43 +2,32 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Reproductor Personalizado</title>
+  <title>Reproductores Personalizados</title>
   <style>
-    /* Centramos todo en la pantalla */
+    /* Estilos generales */
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background-color: #f0f0f0;
+      background: #f0f0f0;
       font-family: Arial, sans-serif;
-    }
-
-    /* Contenedor principal del "reproductor" */
-    .player-container {
-      background-color: #052962; /* color de fondo estilo Spotify */
-      width: 400px;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       display: flex;
       flex-direction: column;
       align-items: center;
+    }
+    .player-container {
+      width: 400px;
+      background-color: #052962; /* color predeterminado, se sobreescribe en línea */
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      margin: 20px;
       padding: 15px;
       position: relative;
+      overflow: hidden;
     }
-
     .top-section {
       display: flex;
-      flex-direction: row;
       align-items: center;
-      width: 100%;
     }
-
-    /* Imagen de portada (carátula) */
     .cover {
       width: 80px;
       height: 80px;
@@ -46,8 +35,6 @@
       margin-right: 15px;
       object-fit: cover;
     }
-
-    /* Información de la canción */
     .info {
       flex: 1;
       color: #fff;
@@ -55,167 +42,209 @@
     .info h3 {
       margin: 0;
       font-size: 18px;
-      line-height: 1.2;
     }
     .info p {
       margin: 4px 0 0 0;
       font-size: 14px;
       opacity: 0.8;
     }
-
-    /* Botón de play/pausa */
     .play-btn {
-      background-color: #fff;
-      color: #052962;
+      background: #fff;
+      color: inherit;
       border: none;
       border-radius: 50%;
       width: 40px;
       height: 40px;
       font-weight: bold;
       cursor: pointer;
-      transition: background-color 0.2s ease;
+      transition: background 0.2s ease;
+      z-index: 2;
     }
     .play-btn:hover {
-      background-color: #ccc;
+      background: #ccc;
     }
-
-    /* Barra de progreso */
     .progress-container {
       width: 100%;
       height: 8px;
-      background-color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.3);
       border-radius: 4px;
       margin-top: 15px;
-      position: relative;
+      overflow: hidden;
     }
     .progress-bar {
-      height: 100%;
-      background-color: #fff;
       width: 0%;
-      border-radius: 4px;
+      height: 100%;
+      background: #fff;
+      transition: width 0.25s linear;
     }
     .time-info {
-      margin-top: 5px;
       font-size: 12px;
       color: #fff;
       text-align: center;
-      width: 100%;
+      margin-top: 5px;
     }
-
-    /* Contenedor de la nota */
+    /* Nota emergente (popup) */
     .note {
-      margin-top: 20px;
-      width: 400px;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      padding: 10px;
-    }
-    .note p {
-      margin: 0;
-      font-size: 14px;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.9);
       color: #333;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+    }
+    .note.visible {
+      opacity: 1;
+    }
+    /* Reproductores de YouTube ocultos (fuera de vista) */
+    .youtube-player {
+      position: absolute;
+      left: -9999px;
     }
   </style>
 </head>
 <body>
 
-  <div class="player-container">
+  <!-- Player 1 -->
+  <div class="player-container" data-player-index="0" style="background-color: #052962;">
     <div class="top-section">
-      <!-- Imagen de portada -->
       <img class="cover" src="https://via.placeholder.com/80" alt="Carátula">
-      
-      <!-- Información de la canción -->
       <div class="info">
-        <h3>Nombre de la Canción</h3>
-        <p>Nombre del Artista</p>
+        <h3>Canción 1</h3>
+        <p>Artista 1</p>
       </div>
-      
-      <!-- Botón de play/pausa -->
-      <button class="play-btn" id="playBtn">▶</button>
+      <button class="play-btn">▶</button>
     </div>
-
-    <!-- Barra de progreso -->
     <div class="progress-container">
       <div class="progress-bar"></div>
     </div>
     <div class="time-info">0:00 / 0:00</div>
+    <div class="note">Nota: Mensaje adicional 1</div>
   </div>
 
-  <!-- Nota adicional -->
-  <div class="note">
-    <p>Este es un mensaje adicional o nota que quieras dejar.</p>
+  <!-- Player 2 -->
+  <div class="player-container" data-player-index="1" style="background-color: #8A2BE2;">
+    <div class="top-section">
+      <img class="cover" src="https://via.placeholder.com/80/8A2BE2/ffffff" alt="Carátula">
+      <div class="info">
+        <h3>Canción 2</h3>
+        <p>Artista 2</p>
+      </div>
+      <button class="play-btn">▶</button>
+    </div>
+    <div class="progress-container">
+      <div class="progress-bar"></div>
+    </div>
+    <div class="time-info">0:00 / 0:00</div>
+    <div class="note">Nota: Mensaje adicional 2</div>
   </div>
 
-  <!-- Reproductor de YouTube oculto (fuera de la vista) -->
-  <div style="position: absolute; left: -9999px;">
-    <div id="player"></div>
+  <!-- Player 3 -->
+  <div class="player-container" data-player-index="2" style="background-color: #FF4500;">
+    <div class="top-section">
+      <img class="cover" src="https://via.placeholder.com/80/FF4500/ffffff" alt="Carátula">
+      <div class="info">
+        <h3>Canción 3</h3>
+        <p>Artista 3</p>
+      </div>
+      <button class="play-btn">▶</button>
+    </div>
+    <div class="progress-container">
+      <div class="progress-bar"></div>
+    </div>
+    <div class="time-info">0:00 / 0:00</div>
+    <div class="note">Nota: Mensaje adicional 3</div>
   </div>
+
+  <!-- Reproductores de YouTube ocultos -->
+  <div id="player0" class="youtube-player"></div>
+  <div id="player1" class="youtube-player"></div>
+  <div id="player2" class="youtube-player"></div>
 
   <!-- Cargar la API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
-    let player;
-    let updateInterval;
+    const players = [];    // Almacenará cada instancia de YT.Player
+    const intervals = [];  // Almacenará los intervalos para actualizar la barra de progreso
+    // Para ejemplo, se usará el mismo video en todos; puedes cambiar los IDs en este array.
+    const videoIds = ['xAz_DzPUjrM', 'xAz_DzPUjrM', 'xAz_DzPUjrM'];
 
-    // Esta función la llama automáticamente la API de YouTube cuando está lista
     function onYouTubeIframeAPIReady() {
-      player = new YT.Player('player', {
-        videoId: 'xAz_DzPUjrM', // Solo el ID
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-        },
-        events: {
-          'onReady': onPlayerReady,
-          'onStateChange': onPlayerStateChange
-        }
+      document.querySelectorAll('.player-container').forEach((container, index) => {
+        const playerDivId = 'player' + index;
+        players[index] = new YT.Player(playerDivId, {
+          videoId: videoIds[index],
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+          },
+          events: {
+            'onReady': (event) => onPlayerReady(event, index),
+            'onStateChange': (event) => onPlayerStateChange(event, index)
+          }
+        });
       });
     }
 
-    function onPlayerReady(event) {
-      const playBtn = document.getElementById('playBtn');
+    function onPlayerReady(event, index) {
+      const container = document.querySelectorAll('.player-container')[index];
+      const playBtn = container.querySelector('.play-btn');
       let isPlaying = false;
 
       playBtn.addEventListener('click', () => {
         if (!isPlaying) {
-          player.playVideo();
+          players[index].playVideo();
           playBtn.textContent = '⏸';
           isPlaying = true;
-          startProgressUpdater();
+          // Mostrar la nota con fade in
+          container.querySelector('.note').classList.add('visible');
+          startProgressUpdater(index);
         } else {
-          player.pauseVideo();
+          players[index].pauseVideo();
           playBtn.textContent = '▶';
           isPlaying = false;
-          stopProgressUpdater();
+          stopProgressUpdater(index);
+        }
+      });
+
+      // Cuando el usuario pase el cursor sobre el reproductor, si el video no se está reproduciendo, se oculta la nota (fade out)
+      container.addEventListener('mouseover', () => {
+        if (players[index].getPlayerState() !== YT.PlayerState.PLAYING) {
+          container.querySelector('.note').classList.remove('visible');
         }
       });
     }
 
-    function onPlayerStateChange(event) {
-      // Cuando termina el video, reiniciamos el botón y detenemos la actualización
+    function onPlayerStateChange(event, index) {
+      // Cuando termina el video, actualizamos el botón y detenemos la actualización
       if (event.data === YT.PlayerState.ENDED) {
-        document.getElementById('playBtn').textContent = '▶';
-        stopProgressUpdater();
-        updateProgress(); // Para asegurar que la barra llegue al 100%
+        const container = document.querySelectorAll('.player-container')[index];
+        container.querySelector('.play-btn').textContent = '▶';
+        stopProgressUpdater(index);
       }
     }
 
-    function startProgressUpdater() {
-      updateInterval = setInterval(updateProgress, 500);
+    function startProgressUpdater(index) {
+      intervals[index] = setInterval(() => updateProgress(index), 500);
     }
 
-    function stopProgressUpdater() {
-      clearInterval(updateInterval);
+    function stopProgressUpdater(index) {
+      clearInterval(intervals[index]);
+      updateProgress(index);
     }
 
-    function updateProgress() {
-      if (player && player.getDuration) {
-        const currentTime = player.getCurrentTime();
-        const duration = player.getDuration();
+    function updateProgress(index) {
+      if (players[index] && players[index].getDuration) {
+        const currentTime = players[index].getCurrentTime();
+        const duration = players[index].getDuration();
         const percentage = (currentTime / duration) * 100;
-        document.querySelector('.progress-bar').style.width = percentage + '%';
-        document.querySelector('.time-info').textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
+        const container = document.querySelectorAll('.player-container')[index];
+        container.querySelector('.progress-bar').style.width = percentage + '%';
+        container.querySelector('.time-info').textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
       }
     }
 
@@ -228,4 +257,5 @@
   </script>
 </body>
 </html>
+
 

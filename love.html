@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reproductor Personalizado</title>
+  <style>
+    /* Centramos todo en la pantalla */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Contenedor principal del "reproductor" */
+    .player-container {
+      background-color: #052962; /* color de fondo aproximado al embed de Spotify */
+      width: 300px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      padding: 10px;
+    }
+
+    /* Imagen de portada (carátula) */
+    .cover {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      margin-right: 10px;
+      object-fit: cover;
+    }
+
+    /* Información de la canción */
+    .info {
+      flex: 1;
+      color: #fff;
+    }
+    .info h3 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+    .info p {
+      margin: 2px 0 0 0;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    /* Botón de play/pausa */
+    .play-btn {
+      background-color: #fff;
+      color: #052962;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .play-btn:hover {
+      background-color: #ccc;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="player-container">
+    <!-- Imagen de portada -->
+    <img class="cover" src="https://via.placeholder.com/60" alt="Carátula">
+    
+    <!-- Información de la canción -->
+    <div class="info">
+      <h3>Nombre de la Canción</h3>
+      <p>Nombre del Artista</p>
+    </div>
+    
+    <!-- Botón de play/pausa -->
+    <button class="play-btn" id="playBtn">▶</button>
+  </div>
+
+  <!-- Iframe “invisible” para el video de YouTube -->
+  <!-- El ID 'player' lo usaremos con la API de YouTube -->
+  <div style="display:none;">
+    <div id="player"></div>
+  </div>
+
+  <!-- Cargar la API de YouTube -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    let player;
+    // Esta función la llama automáticamente la API de YouTube cuando está lista
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        videoId: 'VIDEO_ID', // Reemplaza con el ID del video que quieras reproducir
+        playerVars: {
+          'autoplay': 0,
+          'controls': 0, // 0 oculta los controles por defecto de YouTube
+        },
+        events: {
+          'onReady': onPlayerReady
+        }
+      });
+    }
+
+    // Cuando el reproductor está listo
+    function onPlayerReady(event) {
+      const playBtn = document.getElementById('playBtn');
+      let isPlaying = false;
+
+      playBtn.addEventListener('click', () => {
+        if (!isPlaying) {
+          player.playVideo();
+          playBtn.textContent = '⏸'; // Cambiamos el símbolo a "pausa"
+          isPlaying = true;
+        } else {
+          player.pauseVideo();
+          playBtn.textContent = '▶'; // Regresamos el símbolo a "play"
+          isPlaying = false;
+        }
+      });
+    }
+  </script>
+</body>
+</html>

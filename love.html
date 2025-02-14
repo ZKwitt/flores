@@ -153,7 +153,7 @@
       left: -9999px;
     }
 
-    /* Botón inferior para abrir el telón (ahora más arriba) */
+    /* Botón inferior para abrir el telón */
     .curtain-btn {
       margin: 10px auto;
       padding: 12px;
@@ -200,10 +200,16 @@
       margin-bottom: 20px;
       color: #052962;
     }
-    .curtain-image {
-      max-width: 80%;
+    /* Aquí usamos un contenedor para el gif que cambia */
+    .curtain-gif-container {
+      width: 80%;
+      max-width: 300px;
+      margin: 0 auto 20px auto;
+    }
+    .curtain-gif {
+      width: 100%;
       height: auto;
-      margin-bottom: 20px;
+      border-radius: 8px;
     }
     .curtain-subtext {
       font-size: 1.2rem;
@@ -288,15 +294,17 @@
     </div>
   </div>
 
-  <!-- Botón inferior para abrir el telón (ahora sin margen extra para quepa en pantalla) -->
+  <!-- Botón inferior para abrir el telón -->
   <button id="curtainBtn" class="curtain-btn">Abrir Telón</button>
 
   <!-- Overlay (telón) que se mostrará al presionar el botón inferior -->
   <div id="curtainOverlay" class="curtain-overlay">
     <div class="curtain-content">
       <h1 class="curtain-header">Encabezado Grande</h1>
-      <img src="img/imagen_central.png" alt="Imagen Central" class="curtain-image">
-      <p class="curtain-subtext">Contenido de la pantalla</p>
+      <div class="curtain-gif-container">
+        <img src="img/gif1.gif" alt="Gif" class="curtain-gif">
+      </div>
+      <p class="curtain-subtext">Texto inicial</p>
       <button id="curtainCloseBtn" class="curtain-close-btn">Cerrar Telón</button>
     </div>
   </div>
@@ -313,6 +321,15 @@
     const intervals = [];  // Intervalos de actualización
     // Usamos distintos videos para este ejemplo; cámbialos según necesites.
     const videoIds = ['xCx1eSdkyr0', 'ucRVDoFkcxc', 'zv8fu8NhCTQ'];
+
+    // Secuencia de gifs y textos (puedes cambiar duraciones y textos fácilmente)
+    const gifSequence = [
+      { src: "img/gif1.gif", duration: 3000, text: "Texto para gif 1" },
+      { src: "img/gif2.gif", duration: 4000, text: "Texto para gif 2" },
+      { src: "img/gif3.gif", duration: 5000, text: "Texto para gif 3" },
+      { src: "img/gif4.gif", duration: 6000, text: "Texto para gif 4" }
+    ];
+    const finalTexts = ["Texto final 1", "Texto final 2", "Texto final 3"];
 
     // Quita la clase active de todos los contenedores
     function removeActiveClassFromAll() {
@@ -411,12 +428,44 @@
     // Funcionalidad del botón inferior (telón)
     document.getElementById('curtainBtn').addEventListener('click', function() {
       document.getElementById('curtainOverlay').classList.add('visible');
+      startOverlayAnimation();
     });
 
     // Funcionalidad para cerrar el telón
     document.getElementById('curtainCloseBtn').addEventListener('click', function() {
       document.getElementById('curtainOverlay').classList.remove('visible');
     });
+
+    // Secuencia del overlay: cambia gif y texto según lo configurado
+    function startOverlayAnimation() {
+      let index = 0;
+      const gifImg = document.querySelector('.curtain-gif');
+      const subtext = document.querySelector('.curtain-subtext');
+      
+      function playNextGif() {
+        if(index < gifSequence.length) {
+          const item = gifSequence[index];
+          gifImg.src = item.src;
+          subtext.textContent = item.text;
+          setTimeout(() => {
+            index++;
+            playNextGif();
+          }, item.duration);
+        } else {
+          // Inicia la secuencia final: 3 cambios de texto, cada 4 segundos.
+          let finalIndex = 0;
+          function playFinalText() {
+            if(finalIndex < finalTexts.length) {
+              subtext.textContent = finalTexts[finalIndex];
+              finalIndex++;
+              setTimeout(playFinalText, 4000);
+            }
+          }
+          playFinalText();
+        }
+      }
+      playNextGif();
+    }
   </script>
 </body>
 </html>

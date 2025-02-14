@@ -9,24 +9,9 @@
       text-align: center; 
       font-family: Arial, sans-serif;
       margin: 0;
+      padding: 0;
     }
-    #game-container {
-      display: grid;
-      gap: 2px;
-      margin: 20px auto;
-      width: fit-content;
-    }
-    .cell {
-      width: 40px;
-      height: 40px;
-      background-color: white;
-      border: 1px solid black;
-    }
-    .wall { background-color: black; }
-    .player { background-color: blue; }
-    .goal { background-color: green; }
-    
-    /* Estilos para la pantalla de introducción (splash screen) */
+    /* Pantalla de introducción (splash screen) */
     #splash-screen {
       position: fixed;
       top: 0;
@@ -42,6 +27,59 @@
       color: pink;
       transition: opacity 0.5s ease;
     }
+    /* Contenedor que agrupa el laberinto y los cubitos de mensaje */
+    #laberinto-wrapper {
+      position: relative;
+      display: inline-block;
+      margin: 20px auto;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    /* Contenedor del laberinto */
+    #game-container {
+      display: grid;
+      gap: 2px;
+      width: fit-content;
+      border-radius: 15px; /* Esquinas redondeadas */
+      overflow: hidden;
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      background-color: white;
+      border: 1px solid black;
+    }
+    .wall { 
+      background-color: pink; /* Cubos negros cambiados a rosa */
+    }
+    .player { background-color: blue; }
+    .goal { background-color: green; }
+    
+    /* Cubitos de mensaje alrededor del laberinto */
+    .message-cube {
+      width: 60px;
+      height: 60px;
+      background-color: #eee;
+      border: 2px solid #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 0.8em;
+      position: absolute;
+      border-radius: 5px;
+    }
+    #cube-top {
+      top: -70px;
+      left: calc(50% - 30px);
+    }
+    #cube-left {
+      left: -70px;
+      top: calc(50% - 30px);
+    }
+    #cube-right {
+      right: -70px;
+      top: calc(50% - 30px);
+    }
   </style>
 </head>
 <body>
@@ -51,9 +89,18 @@
   </div>
   
   <h1>¡Llega a la meta!</h1>
-  <div id="game-container"></div>
+  
+  <!-- Contenedor del laberinto y cubitos de mensaje -->
+  <div id="laberinto-wrapper">
+    <div id="game-container"></div>
+    <!-- Cubitos de mensaje -->
+    <div class="message-cube" id="cube-top">mensaje</div>
+    <div class="message-cube" id="cube-left">mensaje</div>
+    <div class="message-cube" id="cube-right">mensaje</div>
+  </div>
+  
   <script>
-    // Mensajes a mostrar en el splash screen
+    // Mensajes del splash screen
     const messages = [
       "Hola",
       "Queria hacerte algo lindo por san valentin",
@@ -62,36 +109,33 @@
       "sigue el juego ;)"
     ];
 
-    // Función para mostrar los mensajes uno tras otro
     let splashIndex = 0;
     const splashMessageDiv = document.getElementById("splash-message");
     function showNextSplashMessage() {
       if (splashIndex < messages.length) {
         splashMessageDiv.innerText = messages[splashIndex];
         splashMessageDiv.style.opacity = 1;
-        // Mostrar cada mensaje durante 2 segundos
+        // Cada mensaje se muestra 2 segundos
         setTimeout(() => {
           splashMessageDiv.style.opacity = 0;
           splashIndex++;
-          // Esperar a que la transición termine (0.5s) antes de mostrar el siguiente mensaje
           setTimeout(showNextSplashMessage, 500);
         }, 2000);
       } else {
-        // Después de los mensajes, ocultamos el splash screen
+        // Desvanecemos la pantalla de introducción y mostramos el laberinto
         const splashScreen = document.getElementById("splash-screen");
         splashScreen.style.opacity = 0;
         setTimeout(() => {
           splashScreen.style.display = "none";
-          // Iniciamos el laberinto
+          const labyrinthWrapper = document.getElementById("laberinto-wrapper");
+          labyrinthWrapper.style.opacity = 1;
           drawMaze();
         }, 500);
       }
     }
-    // Inicia la secuencia del splash screen
     showNextSplashMessage();
 
-    // Definimos el laberinto (10 columnas x 11 filas)
-    // Cada string tiene exactamente 10 caracteres.
+    // Definición del laberinto (11 filas x 10 columnas)
     let maze = [
       "##########",
       "#P       #",
@@ -110,18 +154,17 @@
     const rows = maze.length;
     const cols = maze[0].length;
     
-    // Ajustamos la cuadrícula según el tamaño del laberinto.
+    // Configuramos la cuadrícula según el tamaño del laberinto
     container.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
     container.style.gridTemplateRows = `repeat(${rows}, 40px)`;
 
-    // Buscamos la posición inicial del jugador (la "P") y la guardamos.
+    // Buscamos la posición inicial del jugador (la "P")
     let playerX = 0, playerY = 0;
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         if (maze[y][x] === "P") {
           playerX = x;
           playerY = y;
-          // Reemplazamos la "P" por un espacio para que no se dibuje
           maze[y][x] = " ";
           break;
         }
@@ -137,14 +180,13 @@
           div.classList.add("cell");
           if (cell === "#") div.classList.add("wall");
           if (cell === "G") div.classList.add("goal");
-          // Dibuja al jugador en la posición actual
           if (x === playerX && y === playerY) div.classList.add("player");
           container.appendChild(div);
         });
       });
     }
 
-    // Función para mover al jugador (sin chocar con paredes ni salirse del laberinto)
+    // Función para mover al jugador
     function move(dx, dy) {
       const newX = playerX + dx;
       const newY = playerY + dy;
@@ -153,9 +195,13 @@
         playerX = newX;
         playerY = newY;
         drawMaze();
-        // Si llega a la meta, redirige a la URL indicada
+        // Si llega a la meta, aplicamos fade out y redirigimos
         if (maze[playerY][playerX] === "G") {
-          window.location.href = "https://zkwitt.github.io/flores/laberinto2.html";
+          const labyrinthWrapper = document.getElementById("laberinto-wrapper");
+          labyrinthWrapper.style.opacity = 0;
+          setTimeout(() => {
+            window.location.href = "https://zkwitt.github.io/flores/laberinto2.html";
+          }, 500);
         }
       }
     }
@@ -168,7 +214,7 @@
       if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") move(1, 0);
     });
 
-    // Soporte para dispositivos táctiles
+    // Soporte para pantalla táctil
     let touchStartX = 0, touchStartY = 0;
     document.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;
@@ -180,10 +226,9 @@
       if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : -1, 0);
       else move(0, dy > 0 ? 1 : -1);
     });
-
-    // Nota: No llamamos a drawMaze() inmediatamente, ya que se ejecuta tras el splash.
   </script>
 </body>
 </html>
+
 
 

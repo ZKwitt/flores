@@ -5,30 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Barra de Carga con Gravedad</title>
   <style>
+    /* Evita scroll y asegura que html y body ocupen el 100% */
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
     body {
       display: flex;
-      flex-direction: column; /* Coloca el mensaje encima de la barra */
-      justify-content: flex-start; /* Ubica los elementos en la parte superior */
+      flex-direction: column;
+      justify-content: center;
       align-items: center;
-      height: 100vh;
-      background-color: #fff; /* Fondo blanco */
-      margin: 0;
-      padding-top: 50px; /* Espacio superior para que no esté tan pegado al tope */
-      user-select: none; /* Evita selección en toda la página */
+      background-color: #222;
+      user-select: none; /* Evita selección de texto */
     }
     #mensaje {
       margin-bottom: 20px;
-      color: #C2185B; /* Tono rosa oscuro */
+      color: #fff;
       font-family: Arial, sans-serif;
       font-size: 16px;
       text-align: center;
-      user-select: none; /* Evita selección del texto */
+      user-select: none;
     }
     .container {
       width: 300px;
       height: 30px;
-      background-color: #ffe0f0; /* Fondo rosa claro */
-      border: 2px solid #F48FB1; /* Contorno rosa un poco más oscuro */
+      background-color: #ddd;
       border-radius: 15px;
       overflow: hidden;
       position: relative;
@@ -40,7 +42,7 @@
     .progress {
       width: 0%;
       height: 100%;
-      background: linear-gradient(to right, #ff80ab, #f48fb1); /* Gradiente rosa */
+      background: linear-gradient(to right, #4caf50, #2e7d32);
       transition: width 0.5s linear;
       border-radius: 15px;
     }

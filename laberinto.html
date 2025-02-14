@@ -7,7 +7,8 @@
   <style>
     body { 
       text-align: center; 
-      font-family: Arial, sans-serif; 
+      font-family: Arial, sans-serif;
+      margin: 0;
     }
     #game-container {
       display: grid;
@@ -24,14 +25,73 @@
     .wall { background-color: black; }
     .player { background-color: blue; }
     .goal { background-color: green; }
+    
+    /* Estilos para la pantalla de introducción (splash screen) */
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      font-size: 2em;
+      color: pink;
+      transition: opacity 0.5s ease;
+    }
   </style>
 </head>
 <body>
+  <!-- Pantalla de introducción -->
+  <div id="splash-screen">
+    <div id="splash-message"></div>
+  </div>
+  
   <h1>¡Llega a la meta!</h1>
   <div id="game-container"></div>
   <script>
-    // Definimos el laberinto con filas de igual longitud (10 columnas x 11 filas)
-    // Cada string debe tener exactamente 10 caracteres.
+    // Mensajes a mostrar en el splash screen
+    const messages = [
+      "Hola",
+      "Queria hacerte algo lindo por san valentin",
+      "pero una cosa llevo a la otra",
+      "Entonces si quieres ver lo que tengo para ti",
+      "sigue el juego ;)"
+    ];
+
+    // Función para mostrar los mensajes uno tras otro
+    let splashIndex = 0;
+    const splashMessageDiv = document.getElementById("splash-message");
+    function showNextSplashMessage() {
+      if (splashIndex < messages.length) {
+        splashMessageDiv.innerText = messages[splashIndex];
+        splashMessageDiv.style.opacity = 1;
+        // Mostrar cada mensaje durante 2 segundos
+        setTimeout(() => {
+          splashMessageDiv.style.opacity = 0;
+          splashIndex++;
+          // Esperar a que la transición termine (0.5s) antes de mostrar el siguiente mensaje
+          setTimeout(showNextSplashMessage, 500);
+        }, 2000);
+      } else {
+        // Después de los mensajes, ocultamos el splash screen
+        const splashScreen = document.getElementById("splash-screen");
+        splashScreen.style.opacity = 0;
+        setTimeout(() => {
+          splashScreen.style.display = "none";
+          // Iniciamos el laberinto
+          drawMaze();
+        }, 500);
+      }
+    }
+    // Inicia la secuencia del splash screen
+    showNextSplashMessage();
+
+    // Definimos el laberinto (10 columnas x 11 filas)
+    // Cada string tiene exactamente 10 caracteres.
     let maze = [
       "##########",
       "#P       #",
@@ -50,7 +110,7 @@
     const rows = maze.length;
     const cols = maze[0].length;
     
-    // Ajustamos dinámicamente la cuadrícula según el tamaño del laberinto.
+    // Ajustamos la cuadrícula según el tamaño del laberinto.
     container.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
     container.style.gridTemplateRows = `repeat(${rows}, 40px)`;
 
@@ -61,7 +121,7 @@
         if (maze[y][x] === "P") {
           playerX = x;
           playerY = y;
-          // Reemplazamos la "P" por un espacio para que no se dibuje como muro o meta.
+          // Reemplazamos la "P" por un espacio para que no se dibuje
           maze[y][x] = " ";
           break;
         }
@@ -84,7 +144,7 @@
       });
     }
 
-    // Función para mover al jugador (siempre que no haya pared y sin salir del laberinto)
+    // Función para mover al jugador (sin chocar con paredes ni salirse del laberinto)
     function move(dx, dy) {
       const newX = playerX + dx;
       const newY = playerY + dy;
@@ -93,7 +153,7 @@
         playerX = newX;
         playerY = newY;
         drawMaze();
-        // Si llega a la meta, redirige (aquí a Google)
+        // Si llega a la meta, redirige a la URL indicada
         if (maze[playerY][playerX] === "G") {
           window.location.href = "https://zkwitt.github.io/flores/laberinto2.html";
         }
@@ -108,7 +168,7 @@
       if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") move(1, 0);
     });
 
-    // Soporte para pantalla táctil
+    // Soporte para dispositivos táctiles
     let touchStartX = 0, touchStartY = 0;
     document.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;
@@ -121,7 +181,7 @@
       else move(0, dy > 0 ? 1 : -1);
     });
 
-    drawMaze();
+    // Nota: No llamamos a drawMaze() inmediatamente, ya que se ejecuta tras el splash.
   </script>
 </body>
 </html>

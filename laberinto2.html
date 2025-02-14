@@ -8,29 +8,41 @@
     body { 
       text-align: center; 
       font-family: Arial, sans-serif; 
+      margin: 0;
+      padding: 0;
     }
+    /* Contenedor para centrar y asegurar que quepa en pantalla */
     #game-container {
       display: grid;
       gap: 2px;
       margin: 20px auto;
       width: fit-content;
+      max-width: 100%;
     }
     .cell {
       width: 40px;
       height: 40px;
       background-color: white;
       border: 1px solid black;
+      box-sizing: border-box;
     }
-    .wall { background-color: black; }
-    .player { background-color: blue; }
-    .goal { background-color: green; }
+    .wall { 
+      background-color: black; 
+    }
+    .player { 
+      background-color: blue; 
+    }
+    .goal { 
+      background-color: green; 
+      /* Se aplicará la rotación vía JavaScript */
+    }
   </style>
 </head>
 <body>
   <h1>¡Llega a la meta!</h1>
   <div id="game-container"></div>
   <script>
-    // Laberinto de 15 columnas x 15 filas (más grande y complejo)
+    // Laberinto de 15 columnas x 15 filas (estructura sin cambios)
     let maze = [
       "###############",
       "#P    #       #",
@@ -53,23 +65,26 @@
     const rows = maze.length;
     const cols = maze[0].length;
     
-    // Ajustamos la cuadrícula según el tamaño del laberinto.
+    // Configuramos la cuadrícula según el tamaño del laberinto.
     container.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
     container.style.gridTemplateRows = `repeat(${rows}, 40px)`;
 
-    // Buscamos la posición inicial del jugador ("P") y la guardamos.
+    // Buscamos la posición inicial del jugador ("P")
     let playerX = 0, playerY = 0;
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         if (maze[y][x] === "P") {
           playerX = x;
           playerY = y;
-          // Reemplazamos la "P" por un espacio para no dibujarla como muro.
+          // Reemplazamos la "P" por un espacio para no dibujarla como muro
           maze[y][x] = " ";
           break;
         }
       }
     }
+
+    // Variable para la rotación acumulada de la meta
+    let goalRotation = 0;
 
     // Función para dibujar el laberinto
     function drawMaze() {
@@ -78,13 +93,25 @@
         row.forEach((cell, x) => {
           const div = document.createElement("div");
           div.classList.add("cell");
-          if (cell === "#") div.classList.add("wall");
-          if (cell === "G") div.classList.add("goal");
-          // Dibuja al jugador en su posición actual
-          if (x === playerX && y === playerY) div.classList.add("player");
+          if (cell === "#") {
+            div.classList.add("wall");
+          }
+          if (cell === "G") {
+            div.classList.add("goal");
+            div.id = "goal-cell";  // Asignamos un id para actualizar la rotación
+          }
+          // Dibujamos al jugador en su posición actual
+          if (x === playerX && y === playerY) {
+            div.classList.add("player");
+          }
           container.appendChild(div);
         });
       });
+      // Al finalizar, actualizamos la rotación actual de la meta
+      const goalElem = document.getElementById("goal-cell");
+      if (goalElem) {
+        goalElem.style.transform = "rotate(" + goalRotation + "deg)";
+      }
     }
 
     // Función para mover al jugador (sin atravesar muros ni salirse del laberinto)
@@ -96,7 +123,7 @@
         playerX = newX;
         playerY = newY;
         drawMaze();
-        // Si llega a la meta ("G"), redirige (en este caso, a Google)
+        // Si el jugador llega a la meta ("G"), redirige
         if (maze[playerY][playerX] === "G") {
           window.location.href = "https://zkwitt.github.io/flores/laberinto3.html";
         }
@@ -118,14 +145,24 @@
       touchStartY = e.touches[0].clientY;
     });
     document.addEventListener("touchend", (e) => {
-      let dx = e.changedTouches[0].clientX - touchStartX;
-      let dy = e.changedTouches[0].clientY - touchStartY;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
       if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : -1, 0);
       else move(0, dy > 0 ? 1 : -1);
     });
 
     drawMaze();
+
+    // Intervalo para rotar la meta: cada segundo, se incrementa 15° a la derecha
+    setInterval(() => {
+      goalRotation = (goalRotation + 15) % 360;
+      const goalElem = document.getElementById("goal-cell");
+      if (goalElem) {
+        goalElem.style.transform = "rotate(" + goalRotation + "deg)";
+      }
+    }, 1000);
   </script>
 </body>
 </html>
+
 

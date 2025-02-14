@@ -37,11 +37,13 @@
       padding: 20px;
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 20px;
-      background-color: rgba(255, 182, 193, 0.2); /* fondo rosa muy sutil */
+      background-color: #ffe6f2; /* tono rosa claro diferente */
       max-width: 450px;
       width: 100%;
       margin-top: 20px;
+      margin-bottom: 100px; /* para permitir scroll y ver el botón inferior */
     }
 
     .player-container {
@@ -203,6 +205,22 @@
       font-size: 1.5rem;
       color: #333;
     }
+    /* Botón para cerrar el telón */
+    .curtain-close-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      background-color: #fff;
+      color: #052962;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .curtain-close-btn:hover {
+      background-color: #ccc;
+    }
   </style>
 </head>
 <body>
@@ -266,11 +284,6 @@
     </div>
   </div>
 
-  <!-- Reproductores de YouTube ocultos -->
-  <div id="player0" class="youtube-player"></div>
-  <div id="player1" class="youtube-player"></div>
-  <div id="player2" class="youtube-player"></div>
-
   <!-- Botón inferior para abrir el telón -->
   <button id="curtainBtn" class="curtain-btn">Abrir Telón</button>
 
@@ -280,8 +293,14 @@
       <h1 class="curtain-header">Encabezado Grande</h1>
       <img src="img/imagen_central.png" alt="Imagen Central" class="curtain-image">
       <p class="curtain-subtext">Contenido de la pantalla</p>
+      <button id="curtainCloseBtn" class="curtain-close-btn">Cerrar Telón</button>
     </div>
   </div>
+
+  <!-- Reproductores de YouTube ocultos -->
+  <div id="player0" class="youtube-player"></div>
+  <div id="player1" class="youtube-player"></div>
+  <div id="player2" class="youtube-player"></div>
 
   <!-- Cargar la API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
@@ -389,6 +408,12 @@
     document.getElementById('curtainBtn').addEventListener('click', function() {
       document.getElementById('curtainOverlay').classList.add('visible');
     });
+
+    // Funcionalidad para cerrar el telón
+    document.getElementById('curtainCloseBtn').addEventListener('click', function() {
+      document.getElementById('curtainOverlay').classList.remove('visible');
+    });
   </script>
 </body>
 </html>
+

@@ -8,7 +8,7 @@
     body {
       margin: 0;
       padding: 0;
-      background: url("background.png") no-repeat center center fixed;
+      background: url("img/background.png") no-repeat center center fixed;
       background-size: cover;
       font-family: Arial, sans-serif;
       display: flex;
@@ -16,36 +16,8 @@
       align-items: center;
       min-height: 100vh;
     }
-    /* Encabezado superior */
-    .main-header {
-      text-align: center;
-      margin: 20px 0;
-      color: #fff;
-      text-shadow: 1px 1px 2px #000;
-    }
-    .main-header h1 {
-      font-size: 2.5rem;
-      margin: 0;
-      font-family: 'Georgia', serif;
-    }
-    .curtain-btn {
-      margin-top: 10px;
-      padding: 15px;
-      width: 90%;
-      max-width: 400px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      background-color: #fff;
-      color: #052962;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    .curtain-btn:hover {
-      background-color: #ccc;
-    }
-    /* Contenedor que agrupa los reproductores */
+    
+    /* Contenedor que agrupa todos los reproductores */
     .players-wrapper {
       border: 2px solid #FFB6C1; /* rosa muy claro */
       border-radius: 12px;
@@ -53,11 +25,12 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      background-color: rgba(255, 182, 193, 0.2);
+      background-color: rgba(255, 182, 193, 0.2); /* fondo rosa muy sutil */
       max-width: 450px;
       width: 100%;
-      margin-bottom: 20px;
+      margin-top: 20px;
     }
+
     .player-container {
       background-color: inherit;
       width: 400px;
@@ -68,15 +41,17 @@
       overflow: hidden;
       transition: transform 0.3s ease;
     }
-    /* Resalte activo: se agranda */
+    /* Resalte: cuando esté activo se agranda */
     .player-container.active {
       transform: scale(1.1);
       z-index: 5;
     }
+    
     .top-section {
       display: flex;
       align-items: center;
     }
+    
     .cover {
       width: 80px;
       height: 80px;
@@ -84,6 +59,7 @@
       margin-right: 15px;
       object-fit: cover;
     }
+    
     .info {
       flex: 1;
       color: #fff;
@@ -97,6 +73,7 @@
       font-size: 14px;
       opacity: 0.8;
     }
+    
     .play-btn {
       background: #fff;
       color: inherit;
@@ -112,6 +89,7 @@
     .play-btn:hover {
       background: #ccc;
     }
+    
     .progress-container {
       width: 100%;
       height: 8px;
@@ -132,6 +110,7 @@
       text-align: center;
       margin-top: 5px;
     }
+    
     /* Nota emergente (popup) */
     .note {
       position: absolute;
@@ -149,66 +128,24 @@
     .note.visible {
       opacity: 1;
     }
-    /* Reproductores de YouTube ocultos (fuera de la vista) */
+    
+    /* Reproductores de YouTube ocultos (fuera de vista) */
     .youtube-player {
       position: absolute;
       left: -9999px;
-    }
-    /* Overlay (telón) */
-    .curtain-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #fff;
-      z-index: 100;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      transform: translateY(100%);
-      transition: transform 0.7s ease-in-out;
-    }
-    .curtain-overlay.visible {
-      transform: translateY(0);
-    }
-    .curtain-content {
-      text-align: center;
-    }
-    .curtain-header {
-      font-size: 3rem;
-      margin-bottom: 20px;
-      color: #052962;
-    }
-    .curtain-image {
-      max-width: 80%;
-      height: auto;
-      margin-bottom: 20px;
-    }
-    .curtain-subtext {
-      font-size: 1.5rem;
-      color: #333;
     }
   </style>
 </head>
 <body>
 
-  <!-- Encabezado superior -->
-  <header class="main-header">
-    <h1>Canciones que me recuerdan a ti</h1>
-    <button id="curtainBtn" class="curtain-btn">Abrir Telón</button>
-  </header>
-
-  <!-- Contenedor de reproductores -->
   <div class="players-wrapper">
     <!-- Player 1 -->
     <div class="player-container" data-player-index="0">
       <div class="top-section">
         <img class="cover" src="https://via.placeholder.com/80" alt="Carátula">
         <div class="info">
-          <h3>Canción 1</h3>
-          <p>Artista 1</p>
+          <h3>The moon song</h3>
+          <p>Beabadoobe</p>
         </div>
         <button class="play-btn">▶</button>
       </div>
@@ -224,8 +161,8 @@
       <div class="top-section">
         <img class="cover" src="https://via.placeholder.com/80/8A2BE2/ffffff" alt="Carátula">
         <div class="info">
-          <h3>Canción 2</h3>
-          <p>Artista 2</p>
+          <h3>Nothing <3</h3>
+          <p>Bruno Major</p>
         </div>
         <button class="play-btn">▶</button>
       </div>
@@ -241,8 +178,8 @@
       <div class="top-section">
         <img class="cover" src="https://via.placeholder.com/80/FF4500/ffffff" alt="Carátula">
         <div class="info">
-          <h3>Canción 3</h3>
-          <p>Artista 3</p>
+          <h3>Lucky love</h3>
+          <p>michael seyer</p>
         </div>
         <button class="play-btn">▶</button>
       </div>
@@ -259,24 +196,15 @@
   <div id="player1" class="youtube-player"></div>
   <div id="player2" class="youtube-player"></div>
 
-  <!-- Overlay (telón) que se muestra al presionar el botón -->
-  <div id="curtainOverlay" class="curtain-overlay">
-    <div class="curtain-content">
-      <h1 class="curtain-header">Encabezado Grande</h1>
-      <img src="imagen_central.png" alt="Imagen Central" class="curtain-image">
-      <p class="curtain-subtext">Contenido de la pantalla</p>
-    </div>
-  </div>
-
   <!-- Cargar la API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     const players = [];    // Instancias de YT.Player
     const intervals = [];  // Intervalos de actualización
-    // Usamos el mismo video para todos en este ejemplo; cámbialos según necesites.
-    const videoIds = ['xAz_DzPUjrM', 'xAz_DzPUjrM', 'xAz_DzPUjrM'];
+    // Para este ejemplo, se usa el mismo video en todos (cámbialo según necesites)
+    const videoIds = ['xCx1eSdkyr0', 'ucRVDoFkcxc', 'zv8fu8NhCTQ'];
 
-    // Quita la clase active de todos los contenedores
+    // Función auxiliar para quitar clase active de todos los contenedores
     function removeActiveClassFromAll() {
       document.querySelectorAll('.player-container').forEach(container => container.classList.remove('active'));
     }
@@ -305,12 +233,13 @@
 
       playBtn.addEventListener('click', () => {
         if (!isPlaying) {
+          // Reproducir el video
           players[index].playVideo();
           playBtn.textContent = '⏸';
           isPlaying = true;
-          // Mostrar la nota (fade in)
+          // Mostrar nota (fade in)
           container.querySelector('.note').classList.add('visible');
-          // Remover el resaltado de los demás y marcar este como activo
+          // Quitar el resaltado de otros y marcar este como activo
           removeActiveClassFromAll();
           container.classList.add('active');
           startProgressUpdater(index);
@@ -325,7 +254,7 @@
         }
       });
 
-      // Al pasar el cursor sobre el contenedor, si el video no se reproduce, ocultamos la nota
+      // Cuando el cursor pase sobre el contenedor y el video no se esté reproduciendo, ocultamos la nota
       container.addEventListener('mouseover', () => {
         if (players[index].getPlayerState() !== YT.PlayerState.PLAYING) {
           container.querySelector('.note').classList.remove('visible');
@@ -340,7 +269,7 @@
         container.querySelector('.play-btn').textContent = '▶';
         container.classList.remove('active');
         stopProgressUpdater(index);
-        updateProgress(index);
+        updateProgress(index); // Asegura que la barra llegue al 100%
       }
     }
 
@@ -370,11 +299,6 @@
       const secs = seconds % 60;
       return minutes + ':' + (secs < 10 ? '0' : '') + secs;
     }
-
-    // Funcionalidad del botón del telón
-    document.getElementById('curtainBtn').addEventListener('click', function() {
-      document.getElementById('curtainOverlay').classList.add('visible');
-    });
   </script>
 </body>
 </html>

@@ -25,11 +25,17 @@
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       display: flex;
-      flex-direction: row;
+      flex-direction: column;
       align-items: center;
       padding: 15px;
       position: relative;
-      z-index: 2;
+    }
+
+    .top-section {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      width: 100%;
     }
 
     /* Imagen de portada (carátula) */
@@ -68,10 +74,32 @@
       font-weight: bold;
       cursor: pointer;
       transition: background-color 0.2s ease;
-      z-index: 3;
     }
     .play-btn:hover {
       background-color: #ccc;
+    }
+
+    /* Barra de progreso */
+    .progress-container {
+      width: 100%;
+      height: 8px;
+      background-color: rgba(255,255,255,0.3);
+      border-radius: 4px;
+      margin-top: 15px;
+      position: relative;
+    }
+    .progress-bar {
+      height: 100%;
+      background-color: #fff;
+      width: 0%;
+      border-radius: 4px;
+    }
+    .time-info {
+      margin-top: 5px;
+      font-size: 12px;
+      color: #fff;
+      text-align: center;
+      width: 100%;
     }
 
     /* Contenedor de la nota */
@@ -88,43 +116,30 @@
       font-size: 14px;
       color: #333;
     }
-
-    /* Contenedor del video (16:9) */
-    #video-container {
-      width: 400px;
-      height: 225px; /* 16:9 */
-      position: absolute;
-      top: calc(50% - 112.5px);
-      left: calc(50% - 200px);
-      z-index: 1;
-      transition: opacity 0.5s ease;
-      opacity: 0;
-    }
-    /* Se mostrará al reproducir el video */
-    #video-container.visible {
-      opacity: 1;
-    }
   </style>
 </head>
 <body>
 
-  <!-- Contenedor del video -->
-  <div id="video-container">
-    <div id="player"></div>
-  </div>
-
   <div class="player-container">
-    <!-- Imagen de portada -->
-    <img class="cover" src="https://via.placeholder.com/80" alt="Carátula">
-    
-    <!-- Información de la canción -->
-    <div class="info">
-      <h3>Nombre de la Canción</h3>
-      <p>Nombre del Artista</p>
+    <div class="top-section">
+      <!-- Imagen de portada -->
+      <img class="cover" src="https://via.placeholder.com/80" alt="Carátula">
+      
+      <!-- Información de la canción -->
+      <div class="info">
+        <h3>Nombre de la Canción</h3>
+        <p>Nombre del Artista</p>
+      </div>
+      
+      <!-- Botón de play/pausa -->
+      <button class="play-btn" id="playBtn">▶</button>
     </div>
-    
-    <!-- Botón de play/pausa -->
-    <button class="play-btn" id="playBtn">▶</button>
+
+    <!-- Barra de progreso -->
+    <div class="progress-container">
+      <div class="progress-bar"></div>
+    </div>
+    <div class="time-info">0:00 / 0:00</div>
   </div>
 
   <!-- Nota adicional -->
@@ -132,43 +147,83 @@
     <p>Este es un mensaje adicional o nota que quieras dejar.</p>
   </div>
 
+  <!-- Reproductor de YouTube oculto (fuera de la vista) -->
+  <div style="position: absolute; left: -9999px;">
+    <div id="player"></div>
+  </div>
+
   <!-- Cargar la API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     let player;
+    let updateInterval;
+
     // Esta función la llama automáticamente la API de YouTube cuando está lista
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
-        videoId: 'xAz_DzPUjrM', // Solo el ID, no toda la URL
+        videoId: 'xAz_DzPUjrM', // Solo el ID
         playerVars: {
           autoplay: 0,
-          controls: 0, // Oculta los controles nativos
+          controls: 0,
         },
         events: {
-          'onReady': onPlayerReady
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
         }
       });
     }
 
-    // Cuando el reproductor está listo
     function onPlayerReady(event) {
       const playBtn = document.getElementById('playBtn');
-      const videoContainer = document.getElementById('video-container');
       let isPlaying = false;
 
       playBtn.addEventListener('click', () => {
         if (!isPlaying) {
-          // Se muestra el contenedor del video
-          videoContainer.classList.add('visible');
           player.playVideo();
           playBtn.textContent = '⏸';
           isPlaying = true;
+          startProgressUpdater();
         } else {
           player.pauseVideo();
           playBtn.textContent = '▶';
           isPlaying = false;
+          stopProgressUpdater();
         }
       });
+    }
+
+    function onPlayerStateChange(event) {
+      // Cuando termina el video, reiniciamos el botón y detenemos la actualización
+      if (event.data === YT.PlayerState.ENDED) {
+        document.getElementById('playBtn').textContent = '▶';
+        stopProgressUpdater();
+        updateProgress(); // Para asegurar que la barra llegue al 100%
+      }
+    }
+
+    function startProgressUpdater() {
+      updateInterval = setInterval(updateProgress, 500);
+    }
+
+    function stopProgressUpdater() {
+      clearInterval(updateInterval);
+    }
+
+    function updateProgress() {
+      if (player && player.getDuration) {
+        const currentTime = player.getCurrentTime();
+        const duration = player.getDuration();
+        const percentage = (currentTime / duration) * 100;
+        document.querySelector('.progress-bar').style.width = percentage + '%';
+        document.querySelector('.time-info').textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
+      }
+    }
+
+    function formatTime(seconds) {
+      seconds = Math.floor(seconds);
+      const minutes = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return minutes + ':' + (secs < 10 ? '0' : '') + secs;
     }
   </script>
 </body>

@@ -5,32 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Barra de Carga con Gravedad</title>
   <style>
-    /* Evita scroll y asegura que html y body ocupen el 100% */
-    html, body {
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-    }
     body {
       display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background-color: #222;
-      user-select: none; /* Evita selección de texto */
+      flex-direction: column; /* Coloca el mensaje encima de la barra */
+      justify-content: center; /* Centra verticalmente */
+      align-items: center;     /* Centra horizontalmente */
+      height: 100vh;
+      background-color: #fff;  /* Fondo blanco */
+      margin: 0;
+      overflow: hidden;        /* Evita scroll */
+      user-select: none;       /* Evita selección en toda la página */
     }
     #mensaje {
       margin-bottom: 20px;
-      color: #fff;
+      color: #C2185B;         /* Tono rosa oscuro */
       font-family: Arial, sans-serif;
       font-size: 16px;
       text-align: center;
-      user-select: none;
+      user-select: none;       /* Evita selección del texto */
     }
     .container {
       width: 300px;
       height: 30px;
-      background-color: #ddd;
+      background-color: #ffe0f0;      /* Fondo rosa claro */
+      border: 2px solid #F48FB1;      /* Contorno rosa un poco más oscuro */
       border-radius: 15px;
       overflow: hidden;
       position: relative;
@@ -42,7 +40,7 @@
     .progress {
       width: 0%;
       height: 100%;
-      background: linear-gradient(to right, #4caf50, #2e7d32);
+      background: linear-gradient(to right, #ff80ab, #f48fb1); /* Gradiente rosa */
       transition: width 0.5s linear;
       border-radius: 15px;
     }
@@ -60,16 +58,15 @@
     const mensajeDiv = document.getElementById("mensaje");
 
     let percentage = 0;
-    let phase = 'filling'; // 'filling' hasta el 70%, luego 'emptying'
-    let lastClickTime = 0; // Registra el tiempo del último clic
+    let phase = 'filling'; // Fase "filling" hasta el 70%, luego "emptying"
+    let lastClickTime = 0; // Tiempo del último clic
 
     function autoUpdate() {
-      let delay; // Variable para ajustar el retardo según la fase
+      let delay; // Retardo según la fase
 
       if (phase === 'filling') {
-        // Incremento automático del 10% cada tick en fase filling
+        // Incremento automático del 10% cada tick
         percentage += 10;
-        // Actualizamos el mensaje según el avance
         if (percentage < 25) {
           mensajeDiv.innerText = "Cargando recursos...";
         } else if (percentage < 50) {
@@ -77,16 +74,15 @@
         } else {
           mensajeDiv.innerText = "Iniciando carga...";
         }
-        // Si alcanzamos o superamos el 70%, fijamos el 70% y cambiamos de fase
         if (percentage >= 70) {
           percentage = 70;
           phase = 'emptying';
           container.style.transform = "rotate(-15deg)";
           mensajeDiv.innerText = "¡Haz clic para enderezar!";
         }
-        delay = 1000; // En filling, espera 1000ms para que se lean los mensajes
+        delay = 1000; // 1000ms en filling
       } else if (phase === 'emptying') {
-        // En emptying, bajamos 10% cada tick si no se ha hecho clic recientemente
+        // En emptying, decrementa 10% cada tick si no se ha clickeado recientemente
         let now = Date.now();
         if (now - lastClickTime >= 500) {
           percentage -= 10;
@@ -94,12 +90,12 @@
         }
         container.style.transform = "rotate(-15deg)";
         mensajeDiv.innerText = "¡Haz clic para enderezar!";
-        delay = 500; // En emptying, el retardo es de 500ms
+        delay = 500; // 500ms en emptying
       }
 
       progress.style.width = percentage + "%";
 
-      // Redirigir a Google al llegar al 100%
+      // Al llegar al 100%, redirige a Google
       if (percentage >= 100) {
         setTimeout(() => {
           window.location.href = "https://www.google.com";
@@ -107,20 +103,18 @@
         return;
       }
 
-      // Se programa la siguiente actualización según el retardo definido
       setTimeout(autoUpdate, delay);
     }
 
-    // Cada clic en la barra suma 10% de inmediato en la fase emptying
+    // Cada clic en la barra suma 10% inmediato en fase emptying
     container.addEventListener("click", () => {
       if (phase === 'emptying') {
-        lastClickTime = Date.now(); // Actualiza el tiempo del último clic
+        lastClickTime = Date.now();
         percentage += 10;
         if (percentage > 100) percentage = 100;
         progress.style.width = percentage + "%";
         container.style.transform = "rotate(0deg)";
         mensajeDiv.innerText = "¡Bien!";
-        // Después de 300ms se vuelve a inclinar si no se completa la barra
         setTimeout(() => {
           if (phase === 'emptying' && percentage < 100) {
             container.style.transform = "rotate(-15deg)";
@@ -130,7 +124,6 @@
       }
     });
 
-    // Inicia la actualización de la barra
     autoUpdate();
   </script>
 </body>

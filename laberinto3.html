@@ -5,33 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Laberinto 2 - Gran Desafío</title>
   <style>
-    body { 
-      text-align: center; 
-      font-family: Arial, sans-serif; 
-    }
+    body { text-align: center; font-family: Arial, sans-serif; background-color: #222; color: white; }
     #game-container {
       display: grid;
       gap: 2px;
       margin: 20px auto;
       width: fit-content;
+      background: #444;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
     }
     .cell {
       width: 25px;
       height: 25px;
-      background-color: white;
-      border: 1px solid black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 5px;
+      font-weight: bold;
     }
-    .wall { background-color: black; }
-    .player { background-color: blue; }
-    .goal { background-color: green; }
+    .wall { background-color: #000; box-shadow: inset 0 0 5px #888; }
+    .player { background-color: dodgerblue; box-shadow: 0 0 10px dodgerblue; }
+    .goal { background-color: limegreen; box-shadow: 0 0 10px limegreen; }
   </style>
 </head>
 <body>
   <h1>¡Llega a la meta!</h1>
   <div id="game-container"></div>
   <script>
-    // Laberinto de 20 columnas x 20 filas (más grande y desafiante)
-    // Cada fila debe tener exactamente 20 caracteres
     let maze = [
       "####################",
       "#P     #     #     #",
@@ -56,28 +58,21 @@
     ].map(row => row.split(""));
 
     const container = document.getElementById("game-container");
-    const rows = maze.length;
-    const cols = maze[0].length;
-    
-    // Ajustamos dinámicamente la cuadrícula (celdas de 25px)
+    const rows = maze.length, cols = maze[0].length;
     container.style.gridTemplateColumns = `repeat(${cols}, 25px)`;
     container.style.gridTemplateRows = `repeat(${rows}, 25px)`;
 
-    // Buscamos la posición inicial del jugador ("P") y la guardamos
     let playerX = 0, playerY = 0;
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         if (maze[y][x] === "P") {
-          playerX = x;
-          playerY = y;
-          // Reemplazamos "P" por un espacio para no dibujarlo como muro o meta
+          playerX = x; playerY = y;
           maze[y][x] = " ";
           break;
         }
       }
     }
 
-    // Función para dibujar el laberinto
     function drawMaze() {
       container.innerHTML = "";
       maze.forEach((row, y) => {
@@ -86,30 +81,24 @@
           div.classList.add("cell");
           if (cell === "#") div.classList.add("wall");
           if (cell === "G") div.classList.add("goal");
-          // Dibuja al jugador en su posición actual
           if (x === playerX && y === playerY) div.classList.add("player");
           container.appendChild(div);
         });
       });
     }
 
-    // Función para mover al jugador (evitando muros y límites)
     function move(dx, dy) {
-      const newX = playerX + dx;
-      const newY = playerY + dy;
+      const newX = playerX + dx, newY = playerY + dy;
       if (newX < 0 || newX >= cols || newY < 0 || newY >= rows) return;
       if (maze[newY][newX] !== "#") {
-        playerX = newX;
-        playerY = newY;
+        playerX = newX; playerY = newY;
         drawMaze();
-        // Si el jugador alcanza la meta ("G"), redirige (en este caso, a Google)
         if (maze[playerY][playerX] === "G") {
           window.location.href = "https://zkwitt.github.io/flores/Loading.html";
         }
       }
     }
 
-    // Soporte para teclado (flechas y WASD)
     document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") move(0, -1);
       if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") move(0, 1);
@@ -117,7 +106,6 @@
       if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") move(1, 0);
     });
 
-    // Soporte para pantallas táctiles
     let touchStartX = 0, touchStartY = 0;
     document.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;
@@ -134,3 +122,4 @@
   </script>
 </body>
 </html>
+

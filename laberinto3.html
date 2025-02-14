@@ -11,7 +11,13 @@
       /* Color para la cuadricula: 10% más saturado y un poco más oscuro */
       --wall-border: #ff69b4;
     }
+    /* Se centra todo el contenido vertical y horizontalmente */
     body { 
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
       text-align: center; 
       font-family: Arial, sans-serif;
       margin: 0;
@@ -39,15 +45,14 @@
     }
     /* Contenedor que agrupa el laberinto */
     #laberinto-wrapper {
-      position: relative;
       margin: 20px auto;
-      /* Escalado para que el laberinto completo se ajuste en pantalla (sin scroll vertical) */
+      /* Escalado para que el laberinto se ajuste a la pantalla sin scroll vertical */
       transform: scale(0.9);
       transform-origin: top center;
       opacity: 0;
       transition: opacity 0.5s ease;
     }
-    /* Contenedor del laberinto con esquinas redondeadas y sin bordes exteriores (para recortar la cuadricula) */
+    /* Contenedor del laberinto con esquinas redondeadas (recorta cualquier borde exterior) */
     #game-container {
       display: grid;
       gap: 0;
@@ -99,7 +104,7 @@
   </div>
   
   <script>
-    // Mensajes iniciales (se reducen a 2)
+    // Mensajes iniciales (reducción a 2 mensajes)
     const messages = [
       "Hola",
       "sigue el juego ;)"
@@ -192,7 +197,6 @@
         playerY = newY;
         drawMaze();
         if (maze[playerY][playerX] === "G") {
-          // Al llegar a la meta se aplica fade out y se redirige
           const labyrinthWrapper = document.getElementById("laberinto-wrapper");
           labyrinthWrapper.style.opacity = 0;
           setTimeout(() => {
@@ -225,5 +229,3 @@
   </script>
 </body>
 </html>
-
-

@@ -5,11 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Laberinto 2</title>
   <style>
+    :root {
+      /* Color base para las paredes (rosa) */
+      --wall-color: #ffc0cb;
+      /* Color para la cuadricula: 10% más saturado y un poco más oscuro */
+      --wall-border: #ff69b4;
+    }
     body { 
       text-align: center; 
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
+      /* Fondo con GIF (reemplaza 'background.gif' por tu imagen) */
+      background: url('background.gif') no-repeat center center fixed;
+      background-size: cover;
     }
     /* Pantalla de introducción (splash screen) */
     #splash-screen {
@@ -35,7 +44,7 @@
       opacity: 0;
       transition: opacity 0.5s ease;
     }
-    /* Contenedor del laberinto con esquinas redondeadas (las cuales recortan cualquier cuadricula en el exterior) */
+    /* Contenedor del laberinto con esquinas redondeadas (las cuales recortan cualquier borde exterior) */
     #game-container {
       display: grid;
       gap: 0;
@@ -43,21 +52,23 @@
       border-radius: 15px;
       overflow: hidden;
     }
-    /* Cada celda mide 40px x 40px; las celdas blancas no tienen borde */
+    /* Cada celda mide 40px x 40px y usa border-box para incluir bordes en sus dimensiones */
     .cell {
       width: 40px;
       height: 40px;
+      box-sizing: border-box;
+    }
+    /* Las celdas que no son paredes (espacios) */
+    .cell:not(.wall) {
       background-color: white;
+      border: none;
     }
-    /* Las paredes se representan con fondo rosa y una cuadricula simulada mediante background-image */
+    /* Las paredes: bloques rosa con borde (cuadrícula) */
     .wall { 
-      background-color: pink;
-      background-image: 
-        linear-gradient(to right, rgba(0,0,0,0.5) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(0,0,0,0.5) 1px, transparent 1px);
-      background-size: 40px 40px;
+      background-color: var(--wall-color);
+      border: 1px solid var(--wall-border);
     }
-    /* Se usan imágenes para el jugador y la meta; reemplaza las URLs según necesites */
+    /* Imágenes para el jugador y la meta (reemplaza las URLs por las tuyas) */
     .player {
       background-image: url('player.png');
       background-size: cover;

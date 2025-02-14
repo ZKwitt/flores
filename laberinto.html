@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Laberinto 2</title>
+  <title>Laberinto</title>
   <style>
     :root {
       /* Color base para las paredes (rosa) */
@@ -35,6 +35,11 @@
       font-size: 2em;
       color: pink;
       transition: opacity 0.5s ease;
+    }
+    /* Estilo romántico para los mensajes iniciales */
+    #splash-message {
+      font-family: 'Brush Script MT', cursive;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
     }
     /* Contenedor que agrupa el laberinto */
     #laberinto-wrapper {
@@ -68,16 +73,26 @@
       background-color: var(--wall-color);
       border: 1px solid var(--wall-border);
     }
-    /* Imágenes para el jugador y la meta (reemplaza las URLs por las tuyas) */
+    /* Imagen del jugador */
     .player {
       background-image: url('player.png');
       background-size: cover;
       background-position: center;
     }
+    /* Meta (logo) con GIF y efecto "beat" */
     .goal {
-      background-image: url('img/goal.png');
+      background-image: url('gif6.gif');
       background-size: cover;
       background-position: center;
+      animation: beat 1s infinite;
+    }
+    @keyframes beat {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
     }
   </style>
 </head>
@@ -95,13 +110,13 @@
   </div>
   
   <script>
-    // Mensajes del splash screen
+    // Mensajes del splash screen con temática romántica
     const messages = [
-      "Hola",
-      "Queria hacerte algo lindo por san valentin",
-      "pero una cosa llevo a la otra",
-      "Entonces si quieres ver lo que tengo para ti",
-      "sigue el juego ;)"
+      "Hola, mi amor",
+      "He tejido un sendero de suspiros y estrellas",
+      "Cada latido te acerca a mi corazón",
+      "Sigue el laberinto y descubre mi secreto",
+      "Con todo mi amor, para ti"
     ];
 
     let splashIndex = 0;
@@ -222,4 +237,5 @@
   </script>
 </body>
 </html>
+
 

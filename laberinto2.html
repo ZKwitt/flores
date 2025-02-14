@@ -11,7 +11,13 @@
       /* Color para la cuadricula: 10% más saturado y un poco más oscuro */
       --wall-border: #ff69b4;
     }
+    /* Usamos flex para centrar vertical y horizontalmente todo el contenido */
     body { 
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
       text-align: center; 
       font-family: Arial, sans-serif;
       margin: 0;
@@ -38,15 +44,13 @@
     }
     /* Contenedor que agrupa el laberinto */
     #laberinto-wrapper {
-      position: relative;
-      display: inline-block;
       margin: 20px auto;
-      opacity: 0;
-      transition: opacity 0.5s ease;
-      max-width: 100%; /* Para que no se desborde en pantallas pequeñas */
-      /* Escalamos el laberinto para que en conjunto sea más pequeño */
+      max-width: 100%; /* Evita desbordar en pantallas pequeñas */
+      /* Escalamos el laberinto para que se ajuste y no genere scroll vertical */
       transform: scale(0.8);
       transform-origin: top center;
+      opacity: 0;
+      transition: opacity 0.5s ease;
     }
     /* Contenedor del laberinto con esquinas redondeadas (recorta cualquier borde exterior) */
     #game-container {
@@ -56,13 +60,13 @@
       border-radius: 15px;
       overflow: hidden;
     }
-    /* Cada celda mide 40px x 40px y usa border-box para incluir bordes en sus dimensiones */
+    /* Cada celda mide 40px x 40px e incluye los bordes en sus dimensiones */
     .cell {
       width: 40px;
       height: 40px;
       box-sizing: border-box;
     }
-    /* Las celdas que no son paredes (espacios) */
+    /* Las celdas que no son paredes se muestran sin borde */
     .cell:not(.wall) {
       background-color: white;
       border: none;
@@ -243,6 +247,8 @@
       if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : -1, 0);
       else move(0, dy > 0 ? 1 : -1);
     });
+
+    drawMaze();
   </script>
 </body>
 </html>

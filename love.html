@@ -15,43 +15,44 @@
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
+      overflow: hidden; /* Evita scroll */
     }
     
     /* Encabezado superior */
     .main-header {
       text-align: center;
-      margin: 20px 0;
+      margin: 10px 0;
       color: #fff;
       text-shadow: 1px 1px 2px #000;
     }
     .main-header h1 {
-      font-size: 2.5rem;
+      font-size: 2rem;
       margin: 0;
       font-family: 'Georgia', serif;
     }
     
-    /* Contenedor que agrupa todos los reproductores */
+    /* Contenedor que agrupa todos los reproductores con efecto glass */
     .players-wrapper {
-      border: 2px solid #FFB6C1; /* rosa muy claro */
+      border: 2px solid rgba(255,182,193,0.8); /* rosa transparente */
       border-radius: 12px;
-      padding: 20px;
+      padding: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 20px;
-      background-color: #ffe6f2; /* tono rosa claro diferente */
+      gap: 10px;
+      background-color: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
       max-width: 450px;
-      width: 100%;
-      margin-top: 20px;
-      margin-bottom: 100px; /* para permitir scroll y ver el botón inferior */
+      width: 90%;
+      margin: 10px auto;
     }
 
     .player-container {
-      background-color: inherit;
+      background-color: transparent;
       width: 400px;
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      padding: 15px;
+      padding: 10px;
       position: relative;
       overflow: hidden;
       transition: transform 0.3s ease;
@@ -68,10 +69,10 @@
     }
     
     .cover {
-      width: 80px;
-      height: 80px;
+      width: 60px;
+      height: 60px;
       border-radius: 8px;
-      margin-right: 15px;
+      margin-right: 10px;
       object-fit: cover;
     }
     
@@ -81,25 +82,26 @@
     }
     .info h3 {
       margin: 0;
-      font-size: 18px;
+      font-size: 16px;
     }
     .info p {
       margin: 4px 0 0 0;
-      font-size: 14px;
+      font-size: 12px;
       opacity: 0.8;
     }
     
     .play-btn {
       background: #fff;
-      color: inherit;
+      color: #052962;
       border: none;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
+      width: 35px;
+      height: 35px;
       font-weight: bold;
       cursor: pointer;
       transition: background 0.2s ease;
       z-index: 2;
+      font-size: 16px;
     }
     .play-btn:hover {
       background: #ccc;
@@ -107,10 +109,10 @@
     
     .progress-container {
       width: 100%;
-      height: 8px;
+      height: 6px;
       background: rgba(255,255,255,0.3);
       border-radius: 4px;
-      margin-top: 15px;
+      margin-top: 8px;
       overflow: hidden;
     }
     .progress-bar {
@@ -120,25 +122,26 @@
       transition: width 0.25s linear;
     }
     .time-info {
-      font-size: 12px;
+      font-size: 10px;
       color: #fff;
       text-align: center;
-      margin-top: 5px;
+      margin-top: 4px;
     }
     
     /* Nota emergente (popup) */
     .note {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 8px;
+      right: 8px;
       background: rgba(255,255,255,0.9);
       color: #333;
-      padding: 10px;
+      padding: 6px 8px;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       opacity: 0;
       transition: opacity 0.5s ease;
       pointer-events: none;
+      font-size: 10px;
     }
     .note.visible {
       opacity: 1;
@@ -150,13 +153,13 @@
       left: -9999px;
     }
 
-    /* Botón inferior para abrir el telón */
+    /* Botón inferior para abrir el telón (ahora más arriba) */
     .curtain-btn {
-      margin: 20px 0;
-      padding: 15px;
+      margin: 10px auto;
+      padding: 12px;
       width: 90%;
       max-width: 400px;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: bold;
       background-color: #fff;
       color: #052962;
@@ -190,9 +193,10 @@
     }
     .curtain-content {
       text-align: center;
+      padding: 20px;
     }
     .curtain-header {
-      font-size: 3rem;
+      font-size: 2.5rem;
       margin-bottom: 20px;
       color: #052962;
     }
@@ -202,7 +206,7 @@
       margin-bottom: 20px;
     }
     .curtain-subtext {
-      font-size: 1.5rem;
+      font-size: 1.2rem;
       color: #333;
     }
     /* Botón para cerrar el telón */
@@ -284,7 +288,7 @@
     </div>
   </div>
 
-  <!-- Botón inferior para abrir el telón -->
+  <!-- Botón inferior para abrir el telón (ahora sin margen extra para quepa en pantalla) -->
   <button id="curtainBtn" class="curtain-btn">Abrir Telón</button>
 
   <!-- Overlay (telón) que se mostrará al presionar el botón inferior -->
@@ -416,4 +420,5 @@
   </script>
 </body>
 </html>
+
 

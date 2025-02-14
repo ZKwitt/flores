@@ -44,6 +44,9 @@
       opacity: 0;
       transition: opacity 0.5s ease;
       max-width: 100%; /* Para que no se desborde en pantallas pequeñas */
+      /* Escalamos el laberinto para que en conjunto sea más pequeño */
+      transform: scale(0.8);
+      transform-origin: top center;
     }
     /* Contenedor del laberinto con esquinas redondeadas (recorta cualquier borde exterior) */
     #game-container {
@@ -53,7 +56,7 @@
       border-radius: 15px;
       overflow: hidden;
     }
-    /* Cada celda mide 40px x 40px e incluye bordes en su tamaño */
+    /* Cada celda mide 40px x 40px y usa border-box para incluir bordes en sus dimensiones */
     .cell {
       width: 40px;
       height: 40px;
@@ -214,7 +217,7 @@
           const labyrinthWrapper = document.getElementById("laberinto-wrapper");
           labyrinthWrapper.style.opacity = 0;
           setTimeout(() => {
-            window.location.href = "https://zkwitt.github.io/flores/laberinto3.html";
+            window.location.href = "https://zkwitt.github.io/flores/laberinto2.html";
           }, 500);
         }
       }
@@ -240,7 +243,6 @@
       if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : -1, 0);
       else move(0, dy > 0 ? 1 : -1);
     });
-
   </script>
 </body>
 </html>

@@ -20,14 +20,16 @@
     /* Contenedor principal del "reproductor" */
     .player-container {
       background-color: #052962; /* color de fondo estilo Spotify */
-      width: 400px; /* un poco más ancho */
+      width: 400px;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       display: flex;
       flex-direction: row;
       align-items: center;
-      padding: 15px; /* un poco más de padding */
+      padding: 15px;
+      position: relative;
+      z-index: 2;
     }
 
     /* Imagen de portada (carátula) */
@@ -66,6 +68,7 @@
       font-weight: bold;
       cursor: pointer;
       transition: background-color 0.2s ease;
+      z-index: 3;
     }
     .play-btn:hover {
       background-color: #ccc;
@@ -74,7 +77,7 @@
     /* Contenedor de la nota */
     .note {
       margin-top: 20px;
-      width: 400px; /* mismo ancho que el reproductor */
+      width: 400px;
       background-color: #fff;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -85,9 +88,30 @@
       font-size: 14px;
       color: #333;
     }
+
+    /* Contenedor del video (16:9) */
+    #video-container {
+      width: 400px;
+      height: 225px; /* 16:9 */
+      position: absolute;
+      top: calc(50% - 112.5px);
+      left: calc(50% - 200px);
+      z-index: 1;
+      transition: opacity 0.5s ease;
+      opacity: 0;
+    }
+    /* Se mostrará al reproducir el video */
+    #video-container.visible {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Contenedor del video -->
+  <div id="video-container">
+    <div id="player"></div>
+  </div>
 
   <div class="player-container">
     <!-- Imagen de portada -->
@@ -103,15 +127,10 @@
     <button class="play-btn" id="playBtn">▶</button>
   </div>
 
-  <!-- Aquí ponemos la nota -->
+  <!-- Nota adicional -->
   <div class="note">
     <p>Este es un mensaje adicional o nota que quieras dejar.</p>
   </div>
-
-  <!-- Iframe “invisible” para el video de YouTube -->
-  <div style="position: absolute; left: -9999px;">
-  <div id="player"></div>
-</div>
 
   <!-- Cargar la API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
@@ -120,10 +139,10 @@
     // Esta función la llama automáticamente la API de YouTube cuando está lista
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
-        videoId: 'xAz_DzPUjrM', // IMPORTANTE: Solo el ID, no toda la URL
+        videoId: 'xAz_DzPUjrM', // Solo el ID, no toda la URL
         playerVars: {
-          'autoplay': 0,
-          'controls': 0, // 0 = oculta los controles nativos de YouTube
+          autoplay: 0,
+          controls: 0, // Oculta los controles nativos
         },
         events: {
           'onReady': onPlayerReady
@@ -134,16 +153,19 @@
     // Cuando el reproductor está listo
     function onPlayerReady(event) {
       const playBtn = document.getElementById('playBtn');
+      const videoContainer = document.getElementById('video-container');
       let isPlaying = false;
 
       playBtn.addEventListener('click', () => {
         if (!isPlaying) {
+          // Se muestra el contenedor del video
+          videoContainer.classList.add('visible');
           player.playVideo();
-          playBtn.textContent = '⏸'; // Cambiamos el símbolo a "pausa"
+          playBtn.textContent = '⏸';
           isPlaying = true;
         } else {
           player.pauseVideo();
-          playBtn.textContent = '▶'; // Regresamos el símbolo a "play"
+          playBtn.textContent = '▶';
           isPlaying = false;
         }
       });

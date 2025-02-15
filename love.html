@@ -103,7 +103,7 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       padding: 10px;
       position: relative;
-      /* IMPORTANTE: se elimina overflow:hidden para evitar que el popup se recorte */
+      /* Se elimina overflow:hidden para que el popup no se recorte */
       transition: transform 0.3s ease;
     }
     .player-container.active {
@@ -298,7 +298,7 @@
   <!-- Contenedor de reproductores -->
   <div class="players-wrapper">
     <!-- Player 1: celeste pastel -->
-    <div class="player-container" data-player-index="0" data-note-title="Título 1" data-note-content="Mensaje adicional 1" style="background-color: #A3D2F2;">
+    <div class="player-container" data-player-index="0" data-note-title="Eres mi lugar seguro" data-note-content="Escuchar esta canción me hace sentir triste porque estás lejos, pero feliz porque tengo el lujo de poder extrañarte. Me haces sentir tranquilo y estar contigo se siente como vivir en el espacio sin más preocupaciones, y aunque puede ser incierto lo que pueda pasar, me gusta que sea contigo." style="background-color: #A3D2F2;">
       <div class="top-section">
         <img class="cover" src="img/us1.jpg" alt="Carátula">
         <div class="info">
@@ -314,7 +314,7 @@
     </div>
 
     <!-- Player 2: morado pastel -->
-    <div class="player-container" data-player-index="1" data-note-title="Título 2" data-note-content="Mensaje adicional 2" style="background-color: #B39DDB;">
+    <div class="player-container" data-player-index="1" data-note-title="Hacer nada juntos" data-note-content="Desde que me la enseñaste, no la he dejado de escuchar. Capta perfectamente cómo algo ordinario se convierte en algo especial si es con la persona adecuada. Quiero vivir más momentos así contigo, porque no hay nada mejor que hacer nada contigo, mi amor." style="background-color: #B39DDB;">
       <div class="top-section">
         <img class="cover" src="img/us3.jpg" alt="Carátula">
         <div class="info">
@@ -330,7 +330,7 @@
     </div>
 
     <!-- Player 3: rojo pastel -->
-    <div class="player-container" data-player-index="2" data-note-title="Título 3" data-note-content="Mensaje adicional 3" style="background-color: #FF8A80;">
+    <div class="player-container" data-player-index="2" data-note-title="Es todo suerte" data-note-content="Esta canción me gusta mucho porque trata el amor como un evento casual, pero que solo es el resultado de las probabilidades; no le quita que sea único y hermoso. Puede que nos hayamos conocido por casualidad, pero lo que resultó es una relación que quisiera que durara para siempre." style="background-color: #FF8A80;">
       <div class="top-section">
         <img class="cover" src="img/us2.jpg" alt="Carátula">
         <div class="info">
@@ -399,8 +399,8 @@
     }
 
     function onPlayerReady(event, index) {
-      // Baja el volumen al 30%
-      event.target.setVolume(30);
+      // Baja el volumen al 25% (ajustado ligeramente)
+      event.target.setVolume(25);
       const container = document.querySelectorAll('.player-container')[index];
       const playBtn = container.querySelector('.play-btn');
       let isPlaying = false;
@@ -410,7 +410,6 @@
           players[index].playVideo();
           playBtn.textContent = '⏸';
           isPlaying = true;
-          // Se puede mostrar el popup global al hacer click (opcional)
           removeActiveClassFromAll();
           container.classList.add('active');
           startProgressUpdater(index);
@@ -490,11 +489,11 @@
     // Secuencia de GIFs y textos para el overlay
     const gifSequence = [
       { src: "img/gif1.gif", duration: 4000, text: "Hola dice el pequeño hamster." },
-      { src: "img/gif2.gif", duration: 5000, text: "Parece que alguien quiere darte algo, cierra los ojos." },
+      { src: "img/gif2.gif", duration: 4500, text: "Parece que alguien quiere darte algo, cierra los ojos." },
       { src: "img/gif3.gif", duration: 9000, text: "Para ti." },
       { src: "img/gif4.gif", duration: 10000, text: "Besitos, y feliz san valentín." }
     ];
-    const finalTexts = ["No hay nada mas...", "Lamento no haberte podido darle flores de verdad.", "Te amo."];
+    const finalTexts = ["No hay nada más...", "Lamento no haberte podido darle flores de verdad.", "Te amo."];
 
     function startOverlayAnimation() {
       let index = 0;
@@ -527,3 +526,4 @@
   </script>
 </body>
 </html>
+

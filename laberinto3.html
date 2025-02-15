@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Laberinto 4</title>
+  <title>Laberinto 3</title>
   <style>
     :root {
       /* Color base para las paredes (rosa) */
@@ -42,6 +42,11 @@
       font-size: 2em;
       color: pink;
       transition: opacity 0.5s ease;
+    }
+    /* Estilo para el mensaje del splash screen */
+    #splash-message {
+      font-family: 'Brush Script MT', cursive;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
     }
     /* Contenedor que agrupa el laberinto */
     #laberinto-wrapper {
@@ -104,11 +109,10 @@
   </div>
   
   <script>
-    // Mensajes iniciales actualizados
+    // Mensajes iniciales (2 mensajes)
     const messages = [
-      "Considera el siguiente una venganza",
-      "por las veces que me quedé perdido en tus ojos amor",
-      ""
+      "Hola",
+      "sigue el juego ;)"
     ];
 
     let splashIndex = 0;

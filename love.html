@@ -176,7 +176,7 @@
       margin-top: 4px;
     }
     
-    /* Global popup (global note) que sigue al cursor */
+    /* Global popup (global note) con tamaño constante */
     .note {
       position: fixed;
       background: rgba(255,255,255,0.9);
@@ -188,6 +188,7 @@
       pointer-events: none;
       font-size: 16px;
       z-index: 1000;
+      width: 300px; /* Tamaño fijo */
     }
     .note.visible {
       opacity: 1;
@@ -195,7 +196,7 @@
     .note .note-title {
       display: block;
       background-color: #ffe0f0;
-      color: white;
+      color: #e91e63;  /* Título en rosa oscuro */
       padding: 4px;
       border-bottom: 1px solid pink;
       margin-bottom: 4px;
@@ -399,7 +400,7 @@
     }
 
     function onPlayerReady(event, index) {
-      // Baja el volumen al 25% (ajustado ligeramente)
+      // Baja el volumen al 25%
       event.target.setVolume(25);
       const container = document.querySelectorAll('.player-container')[index];
       const playBtn = container.querySelector('.play-btn');
@@ -526,4 +527,3 @@
   </script>
 </body>
 </html>
-

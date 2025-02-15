@@ -21,8 +21,8 @@
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      /* Fondo con GIF */
-      background: url('img/falling hearts.gif') no-repeat center center fixed;
+      /* Fondo usando "gif6.gif" como referencia */
+      background: url('img/gif6.gif') no-repeat center center fixed;
       background-size: cover;
       color: #333;
     }
@@ -38,19 +38,19 @@
       justify-content: center;
       align-items: center;
       z-index: 1000;
-      font-size: 3em; /* Letras más grandes */
-      color: #c2185b; /* Color más oscuro para mayor legibilidad */
+      font-size: 3em; /* Letras grandes */
+      color: #c2185b; /* Tono oscuro para legibilidad */
       transition: opacity 0.5s ease;
     }
-    /* Estilo para el mensaje del splash (igual que en Laberinto 2) */
+    /* Estilo para el mensaje del splash */
     #splash-message {
       font-family: 'Brush Script MT', cursive;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
     }
     /* Contenedor que agrupa el laberinto */
     #laberinto-wrapper {
       margin: 20px auto;
-      /* Escalado para que el laberinto se ajuste a la pantalla sin scroll vertical */
+      /* Escalado para que el laberinto se ajuste sin generar scroll */
       transform: scale(0.9);
       transform-origin: top center;
       opacity: 0;
@@ -64,7 +64,7 @@
       border-radius: 15px;
       overflow: hidden;
     }
-    /* Cada celda mide 40px x 40px e incluye los bordes en sus dimensiones */
+    /* Cada celda mide 40px x 40px e incluye sus bordes */
     .cell {
       width: 40px;
       height: 40px;
@@ -86,7 +86,7 @@
       background-size: cover;
       background-position: center;
     }
-    /* Meta: se muestra con imagen */
+    /* Meta: se muestra con imagen PNG */
     .goal {
       background-image: url('img/goal.png');
       background-size: cover;
@@ -108,7 +108,7 @@
   </div>
   
   <script>
-    // Mensajes iniciales (2 mensajes)
+    // Mensajes del splash screen
     const messages = [
       "Hola",
       "sigue el juego ;)"
@@ -138,28 +138,19 @@
     }
     showNextSplashMessage();
 
-    // Definición del laberinto (20 filas x 20 columnas)
+    // Definición del laberinto reducido (11 filas x 10 columnas)
     let maze = [
-      "####################",
-      "#P     #     #     #",
-      "# ### ##### # ##   #",
-      "#   #     # #  #   #",
-      "### # ### # #### ###",
-      "#   #   # #      ###",
-      "# ### ### ######  ##",
-      "#   #   #        ###",
-      "##### ### ######  ##",
-      "#     #   #    #  ##",
-      "# ### ##### ## #  ##",
-      "#   #     #  # #  ##",
-      "### ##### #  # #####",
-      "#   #   #    #     #",
-      "# ### # #### ## ####",
-      "#   # #      #     #",
-      "# ### ###### #### ##",
-      "#     #    #       #",
-      "# ###### ##  #### G#",
-      "####################"
+      "##########",
+      "#P       #",
+      "# ###### #",
+      "#       ##",
+      "### ### ##",
+      "#   # # ##",
+      "# ### ####",
+      "# #   # ##",
+      "# ##### ##",
+      "#       G#",
+      "##########"
     ].map(row => row.split(""));
 
     const container = document.getElementById("game-container");
@@ -193,7 +184,7 @@
       });
     }
 
-    // Función para mover al jugador (sin atravesar muros ni salirse del laberinto)
+    // Función para mover al jugador (evitando muros y límites)
     function move(dx, dy) {
       const newX = playerX + dx, newY = playerY + dy;
       if (newX < 0 || newX >= cols || newY < 0 || newY >= rows) return;
@@ -201,7 +192,7 @@
         playerX = newX;
         playerY = newY;
         drawMaze();
-        // Si el jugador llega a la meta ("G"), se aplica fade out y se redirige
+        // Al llegar a la meta ("G") se aplica fade out y redirige
         if (maze[playerY][playerX] === "G") {
           const labyrinthWrapper = document.getElementById("laberinto-wrapper");
           labyrinthWrapper.style.opacity = 0;
@@ -212,7 +203,6 @@
       }
     }
 
-    // Soporte para teclado (flechas y WASD)
     document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") move(0, -1);
       if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") move(0, 1);
@@ -220,7 +210,6 @@
       if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") move(1, 0);
     });
 
-    // Soporte para dispositivos táctiles
     let touchStartX = 0, touchStartY = 0;
     document.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;

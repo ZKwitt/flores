@@ -19,7 +19,7 @@
       padding-top: 20px; /* Un poco más abajo */
     }
     
-    /* Encabezado superior estilizado con línea roja y corazones palpítantes */
+    /* Encabezado superior con logo y texto "Musiquita" */
     .main-header {
       text-align: center;
       margin: 20px 0;
@@ -31,33 +31,14 @@
       font-size: 2rem;
       margin: 0;
       font-family: 'Georgia', serif;
+      display: inline-flex;
+      align-items: center;
       border-bottom: 2px solid red;
       padding-bottom: 5px;
-      display: inline-block;
-      position: relative;
     }
-    .main-header h1::before,
-    .main-header h1::after {
-      content: "❤️";
-      font-size: 1.5rem;
-      color: red;
-      animation: beat 1s infinite;
-    }
-    .main-header h1::before {
-      position: absolute;
-      left: -30px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-    .main-header h1::after {
-      position: absolute;
-      right: -30px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-    @keyframes beat {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.3); }
+    .main-header h1 img {
+      height: 50px;
+      margin-right: 10px;
     }
     
     /* Contenedor de reproductores (bajado un poco) */
@@ -269,9 +250,12 @@
 </head>
 <body>
 
-  <!-- Encabezado superior -->
+  <!-- Encabezado superior con logo y título -->
   <header class="main-header">
-    <h1>Canciones que me recuerdan a ti</h1>
+    <h1>
+      <img src="img/gif6.gif" alt="Logo">
+      Musiquita
+    </h1>
   </header>
 
   <!-- Contenedor de reproductores -->
@@ -398,7 +382,6 @@
           players[index].playVideo();
           playBtn.textContent = '⏸';
           isPlaying = true;
-          // Se muestra el popup de mensaje (nota) mediante fade in
           container.querySelector('.note').classList.add('visible');
           removeActiveClassFromAll();
           container.classList.add('active');
@@ -413,11 +396,11 @@
         }
       });
 
-      // Ahora, para que el popup aparezca al lado del cursor cada vez que se pase el mouse
+      // Popup que sigue al cursor: se posiciona a 5px del cursor
       container.addEventListener('mousemove', (e) => {
         const note = container.querySelector('.note');
-        note.style.left = (e.clientX + 5) + 'px';
-        note.style.top = (e.clientY + 5) + 'px';
+        note.style.left = (e.clientX + 5) + 'px'; // Aquí se ajusta la cercanía (cambiar +5 para modificar)
+        note.style.top = (e.clientY + 5) + 'px';  // Aquí se ajusta la cercanía (cambiar +5 para modificar)
         note.classList.add('visible');
       });
       container.addEventListener('mouseleave', () => {
@@ -474,13 +457,14 @@
       document.getElementById('curtainOverlay').classList.remove('visible');
     });
 
+    // Secuencia de GIFs y textos para el overlay (se corrigió la concatenación del texto)
     const gifSequence = [
       { src: "img/gif1.gif", duration: 4000, text: "Hola dice el pequeño hamster." },
-      { src: "img/gif2.gif", duration: 5000, text: "Parece que alguien quiere darte algo," "cierra los ojos." },
+      { src: "img/gif2.gif", duration: 5000, text: "Parece que alguien quiere darte algo, cierra los ojos." },
       { src: "img/gif3.gif", duration: 9000, text: "Para ti." },
       { src: "img/gif4.gif", duration: 10000, text: "Besitos, y feliz san valentín." }
     ];
-    const finalTexts = ["No hay nada mas...", "Lamento no haberte podido darte flores de verdad.", "Te amo."];
+    const finalTexts = ["No hay nada mas...", "Lamento no haberte podido darle flores de verdad.", "Te amo."];
 
     function startOverlayAnimation() {
       let index = 0;

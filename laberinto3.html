@@ -51,11 +51,12 @@
     /* Contenedor que agrupa el laberinto */
     #laberinto-wrapper {
       margin: 20px auto;
-      /* Se escala a 0.7 para que el laberinto sea más pequeño y quepa en el viewport */
-      transform: scale(0.7);
+      /* Se escala a 0.5 para que el laberinto sea más pequeño y quepa en el viewport */
+      transform: scale(0.5);
       transform-origin: top center;
-      /* Se agrega un máximo de altura para asegurar que no sobrepase el viewport */
+      /* Se agregan restricciones para asegurar que no sobrepase el viewport */
       max-height: 90vh;
+      max-width: 90vw;
       opacity: 0;
       transition: opacity 0.5s ease;
     }

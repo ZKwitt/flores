@@ -19,7 +19,7 @@
       padding-top: 20px; /* Un poco más abajo */
     }
     
-    /* Encabezado superior estilizado con línea y corazones palpítantes */
+    /* Encabezado superior estilizado con línea roja y corazones palpítantes */
     .main-header {
       text-align: center;
       margin: 20px 0;
@@ -77,7 +77,6 @@
     }
 
     .player-container {
-      background-color: transparent;
       width: 400px;
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
@@ -156,14 +155,10 @@
       margin-top: 4px;
     }
     
-    /* Nota emergente (popup) reubicada a la derecha y con dos niveles de texto */
+    /* Nota emergente (popup) que sigue al cursor */
     .note {
-      position: absolute;
-      top: 50%;
-      right: -160px;
-      transform: translateY(-50%);
+      position: fixed;
       background: rgba(255,255,255,0.9);
-      color: #333;
       padding: 10px 12px;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -171,17 +166,23 @@
       transition: opacity 0.5s ease;
       pointer-events: none;
       font-size: 16px;
+      z-index: 10;
     }
     .note.visible {
       opacity: 1;
     }
     .note .note-title {
-      font-size: 18px;
-      font-weight: bold;
+      display: block;
+      background-color: #ffe0f0;
+      color: white;
+      padding: 4px;
+      border-bottom: 1px solid pink;
       margin-bottom: 4px;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
     }
     .note .note-content {
-      font-size: 16px;
+      color: #333;
     }
     
     /* Reproductores de YouTube ocultos */
@@ -275,8 +276,8 @@
 
   <!-- Contenedor de reproductores -->
   <div class="players-wrapper">
-    <!-- Player 1 -->
-    <div class="player-container" data-player-index="0">
+    <!-- Player 1: celeste pastel -->
+    <div class="player-container" data-player-index="0" style="background-color: #A3D2F2;">
       <div class="top-section">
         <img class="cover" src="img/us1.jpg" alt="Carátula">
         <div class="info">
@@ -290,13 +291,13 @@
       </div>
       <div class="time-info">0:00 / 0:00</div>
       <div class="note">
-        <div class="note-title">Título 1</div>
-        <div class="note-content">Mensaje adicional 1</div>
+        <span class="note-title">Título 1</span>
+        <span class="note-content">Mensaje adicional 1</span>
       </div>
     </div>
 
-    <!-- Player 2 -->
-    <div class="player-container" data-player-index="1" style="background-color: #8A2BE2;">
+    <!-- Player 2: morado pastel -->
+    <div class="player-container" data-player-index="1" style="background-color: #B39DDB;">
       <div class="top-section">
         <img class="cover" src="img/us3.jpg" alt="Carátula">
         <div class="info">
@@ -310,13 +311,13 @@
       </div>
       <div class="time-info">0:00 / 0:00</div>
       <div class="note">
-        <div class="note-title">Título 2</div>
-        <div class="note-content">Mensaje adicional 2</div>
+        <span class="note-title">Título 2</span>
+        <span class="note-content">Mensaje adicional 2</span>
       </div>
     </div>
 
-    <!-- Player 3 -->
-    <div class="player-container" data-player-index="2" style="background-color: #FF4500;">
+    <!-- Player 3: rojo pastel -->
+    <div class="player-container" data-player-index="2" style="background-color: #FF8A80;">
       <div class="top-section">
         <img class="cover" src="img/us2.jpg" alt="Carátula">
         <div class="info">
@@ -330,8 +331,8 @@
       </div>
       <div class="time-info">0:00 / 0:00</div>
       <div class="note">
-        <div class="note-title">Título 3</div>
-        <div class="note-content">Mensaje adicional 3</div>
+        <span class="note-title">Título 3</span>
+        <span class="note-content">Mensaje adicional 3</span>
       </div>
     </div>
   </div>
@@ -363,14 +364,7 @@
     const intervals = [];  // Intervalos de actualización
     const videoIds = ['xCx1eSdkyr0', 'ucRVDoFkcxc', 'zv8fu8NhCTQ'];
 
-    const gifSequence = [
-      { src: "img/gif1.gif", duration: 3000, text: "Texto para gif 1" },
-      { src: "img/gif2.gif", duration: 4000, text: "Texto para gif 2" },
-      { src: "img/gif3.gif", duration: 5000, text: "Texto para gif 3" },
-      { src: "img/gif4.gif", duration: 6000, text: "Texto para gif 4" }
-    ];
-    const finalTexts = ["Texto final 1", "Texto final 2", "Texto final 3"];
-
+    // Quita la clase active de todos los contenedores
     function removeActiveClassFromAll() {
       document.querySelectorAll('.player-container').forEach(container => container.classList.remove('active'));
     }
@@ -393,6 +387,8 @@
     }
 
     function onPlayerReady(event, index) {
+      // Baja el volumen al 30%
+      event.target.setVolume(30);
       const container = document.querySelectorAll('.player-container')[index];
       const playBtn = container.querySelector('.play-btn');
       let isPlaying = false;
@@ -402,6 +398,7 @@
           players[index].playVideo();
           playBtn.textContent = '⏸';
           isPlaying = true;
+          // Se muestra el popup de mensaje (nota) mediante fade in
           container.querySelector('.note').classList.add('visible');
           removeActiveClassFromAll();
           container.classList.add('active');
@@ -416,10 +413,16 @@
         }
       });
 
-      container.addEventListener('mouseover', () => {
-        if (players[index].getPlayerState() !== YT.PlayerState.PLAYING) {
-          container.querySelector('.note').classList.remove('visible');
-        }
+      // Ahora, para que el popup aparezca al lado del cursor cada vez que se pase el mouse
+      container.addEventListener('mousemove', (e) => {
+        const note = container.querySelector('.note');
+        note.style.left = (e.clientX + 15) + 'px';
+        note.style.top = (e.clientY + 15) + 'px';
+        note.classList.add('visible');
+      });
+      container.addEventListener('mouseleave', () => {
+        const note = container.querySelector('.note');
+        note.classList.remove('visible');
       });
     }
 
@@ -460,14 +463,24 @@
       return minutes + ':' + (secs < 10 ? '0' : '') + secs;
     }
 
+    // Funcionalidad del botón inferior (telón)
     document.getElementById('curtainBtn').addEventListener('click', function() {
       document.getElementById('curtainOverlay').classList.add('visible');
       startOverlayAnimation();
     });
 
+    // Funcionalidad para cerrar el telón
     document.getElementById('curtainCloseBtn').addEventListener('click', function() {
       document.getElementById('curtainOverlay').classList.remove('visible');
     });
+
+    const gifSequence = [
+      { src: "img/gif1.gif", duration: 3000, text: "Texto para gif 1" },
+      { src: "img/gif2.gif", duration: 4000, text: "Texto para gif 2" },
+      { src: "img/gif3.gif", duration: 5000, text: "Texto para gif 3" },
+      { src: "img/gif4.gif", duration: 6000, text: "Texto para gif 4" }
+    ];
+    const finalTexts = ["Texto final 1", "Texto final 2", "Texto final 3"];
 
     function startOverlayAnimation() {
       let index = 0;

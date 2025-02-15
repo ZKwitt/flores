@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Reproductores Personalizados</title>
+  <title>Musiquita</title>
   <style>
     /* Fondo con gif7.gif */
     body {
@@ -416,8 +416,8 @@
       // Ahora, para que el popup aparezca al lado del cursor cada vez que se pase el mouse
       container.addEventListener('mousemove', (e) => {
         const note = container.querySelector('.note');
-        note.style.left = (e.clientX + 15) + 'px';
-        note.style.top = (e.clientY + 15) + 'px';
+        note.style.left = (e.clientX + 5) + 'px';
+        note.style.top = (e.clientY + 5) + 'px';
         note.classList.add('visible');
       });
       container.addEventListener('mouseleave', () => {
@@ -475,12 +475,12 @@
     });
 
     const gifSequence = [
-      { src: "img/gif1.gif", duration: 3000, text: "Texto para gif 1" },
-      { src: "img/gif2.gif", duration: 4000, text: "Texto para gif 2" },
-      { src: "img/gif3.gif", duration: 5000, text: "Texto para gif 3" },
-      { src: "img/gif4.gif", duration: 6000, text: "Texto para gif 4" }
+      { src: "img/gif1.gif", duration: 4000, text: "Hola dice el pequeño hamster." },
+      { src: "img/gif2.gif", duration: 5000, text: "Parece que alguien quiere darte algo," "cierra los ojos." },
+      { src: "img/gif3.gif", duration: 9000, text: "Para ti." },
+      { src: "img/gif4.gif", duration: 10000, text: "Besitos, y feliz san valentín." }
     ];
-    const finalTexts = ["Texto final 1", "Texto final 2", "Texto final 3"];
+    const finalTexts = ["No hay nada mas...", "Lamento no haberte podido darte flores de verdad.", "Te amo."];
 
     function startOverlayAnimation() {
       let index = 0;

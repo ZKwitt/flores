@@ -28,7 +28,7 @@
       width: 300px;
       height: 30px;
       background-color: #ffe0f0;      /* Fondo rosa claro */
-      border: 2px solid #F48FB1;      /* Contorno rosa un poco más oscuro */
+      border: 2px solid #F48FB1;       /* Contorno rosa un poco más oscuro */
       border-radius: 15px;
       overflow: hidden;
       position: relative;
@@ -60,43 +60,52 @@
     let percentage = 0;
     let phase = 'filling'; // Fase "filling" hasta el 70%, luego "emptying"
     let lastClickTime = 0; // Tiempo del último clic
+    let emptyingTickCount = 0; // Contador de ticks en fase emptying
+    let allowMultipleClicks = false; // Inicialmente, solo se permite un clic
 
     function autoUpdate() {
       let delay; // Retardo según la fase
 
       if (phase === 'filling') {
-        // Incremento automático del 10% cada tick
         percentage += 10;
         if (percentage < 25) {
-          mensajeDiv.innerText = "Cargando recursos...";
+          mensajeDiv.innerText = "Mira una barra de carga";
         } else if (percentage < 50) {
-          mensajeDiv.innerText = "Preparando entorno...";
+          mensajeDiv.innerText = "Que crees que pase cuando carge?";
         } else {
-          mensajeDiv.innerText = "Iniciando carga...";
+          mensajeDiv.innerText = "Que intriga";
         }
         if (percentage >= 70) {
           percentage = 70;
           phase = 'emptying';
+          emptyingTickCount = 0;
+          allowMultipleClicks = false;
           container.style.transform = "rotate(-15deg)";
-          mensajeDiv.innerText = "¡Haz clic para enderezar!";
+          mensajeDiv.innerText = "ohno... que mal";
         }
         delay = 1000; // 1000ms en filling
       } else if (phase === 'emptying') {
-        // En emptying, decrementa 10% cada tick si no se ha clickeado recientemente
+        emptyingTickCount++;
         let now = Date.now();
         if (now - lastClickTime >= 500) {
           percentage -= 10;
           if (percentage < 0) percentage = 0;
         }
         container.style.transform = "rotate(-15deg)";
-        mensajeDiv.innerText = "¡Haz clic para enderezar!";
+        if (emptyingTickCount < 2) {
+          mensajeDiv.innerText = "ohno... que mal";
+        } else if (emptyingTickCount < 4) {
+          mensajeDiv.innerText = "Puedes..ayudar?";
+        } else {
+          mensajeDiv.innerText = "dale click para levantarla";
+        }
         delay = 500; // 500ms en emptying
       }
 
       progress.style.width = percentage + "%";
 
-      // Al llegar al 100%, redirige a Google
       if (percentage >= 100) {
+        mensajeDiv.innerText = "bien hecho amor";
         setTimeout(() => {
           window.location.href = "https://zkwitt.github.io/flores/love.html";
         }, 500);
@@ -106,21 +115,37 @@
       setTimeout(autoUpdate, delay);
     }
 
-    // Cada clic en la barra suma 10% inmediato en fase emptying
     container.addEventListener("click", () => {
       if (phase === 'emptying') {
         lastClickTime = Date.now();
-        percentage += 10;
-        if (percentage > 100) percentage = 100;
-        progress.style.width = percentage + "%";
-        container.style.transform = "rotate(0deg)";
-        mensajeDiv.innerText = "¡Bien!";
-        setTimeout(() => {
-          if (phase === 'emptying' && percentage < 100) {
-            container.style.transform = "rotate(-15deg)";
-            mensajeDiv.innerText = "¡Haz clic para enderezar!";
-          }
-        }, 300);
+        // Primer clic permitido (único inicialmente)
+        if (!allowMultipleClicks) {
+          percentage += 10;
+          if (percentage > 100) percentage = 100;
+          progress.style.width = percentage + "%";
+          container.style.transform = "rotate(0deg)";
+          mensajeDiv.innerText = "CUidado, no la dejes caer!";
+          allowMultipleClicks = true;
+          emptyingTickCount = 0;
+          setTimeout(() => {
+            if (phase === 'emptying' && percentage < 100) {
+              container.style.transform = "rotate(-15deg)";
+              mensajeDiv.innerText = "CUidado, no la dejes caer!";
+            }
+          }, 300);
+        } else { // Clics posteriores permitidos
+          percentage += 10;
+          if (percentage > 100) percentage = 100;
+          progress.style.width = percentage + "%";
+          container.style.transform = "rotate(0deg)";
+          mensajeDiv.innerText = "¡Bien!";
+          setTimeout(() => {
+            if (phase === 'emptying' && percentage < 100) {
+              container.style.transform = "rotate(-15deg)";
+              mensajeDiv.innerText = "CUidado, no la dejes caer!";
+            }
+          }, 300);
+        }
       }
     });
 
@@ -128,3 +153,4 @@
   </script>
 </body>
 </html>
+

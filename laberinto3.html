@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Laberinto 3</title>
   <style>
     :root {
@@ -22,12 +21,12 @@
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      /* Fondo con GIF (reemplaza la URL según corresponda) */
+      /* Fondo con GIF */
       background: url('img/falling hearts.gif') no-repeat center center fixed;
       background-size: cover;
       color: #333;
     }
-    /* Pantalla de introducción (splash screen) */
+    /* Pantalla de introducción (splash screen) con estilo similar a Laberinto 2 */
     #splash-screen {
       position: fixed;
       top: 0;
@@ -39,11 +38,11 @@
       justify-content: center;
       align-items: center;
       z-index: 1000;
-      font-size: 2em;
-      color: pink;
+      font-size: 3em; /* Letras más grandes */
+      color: #c2185b; /* Color más oscuro para mayor legibilidad */
       transition: opacity 0.5s ease;
     }
-    /* Estilo para el mensaje del splash screen */
+    /* Estilo para el mensaje del splash (igual que en Laberinto 2) */
     #splash-message {
       font-family: 'Brush Script MT', cursive;
       text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
@@ -57,7 +56,7 @@
       opacity: 0;
       transition: opacity 0.5s ease;
     }
-    /* Contenedor del laberinto con esquinas redondeadas (recorta cualquier borde exterior) */
+    /* Contenedor del laberinto con esquinas redondeadas */
     #game-container {
       display: grid;
       gap: 0;
@@ -65,10 +64,10 @@
       border-radius: 15px;
       overflow: hidden;
     }
-    /* Cada celda mide 25px x 25px e incluye los bordes en sus dimensiones */
+    /* Cada celda mide 40px x 40px e incluye los bordes en sus dimensiones */
     .cell {
-      width: 25px;
-      height: 25px;
+      width: 40px;
+      height: 40px;
       box-sizing: border-box;
     }
     /* Las celdas que no son paredes se muestran sin borde */
@@ -81,13 +80,13 @@
       background-color: var(--wall-color);
       border: 1px solid var(--wall-border);
     }
-    /* Jugador: se muestra con imagen (reemplaza 'player.png' por la URL de tu imagen) */
+    /* Jugador: se muestra con imagen */
     .player {
       background-image: url('player.png');
       background-size: cover;
       background-position: center;
     }
-    /* Meta: se muestra con imagen (reemplaza 'img/goal.png' por la URL de tu imagen) */
+    /* Meta: se muestra con imagen */
     .goal {
       background-image: url('img/goal.png');
       background-size: cover;
@@ -165,14 +164,14 @@
 
     const container = document.getElementById("game-container");
     const rows = maze.length, cols = maze[0].length;
-    container.style.gridTemplateColumns = `repeat(${cols}, 25px)`;
-    container.style.gridTemplateRows = `repeat(${rows}, 25px)`;
+    container.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+    container.style.gridTemplateRows = `repeat(${rows}, 40px)`;
 
     let playerX = 0, playerY = 0;
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         if (maze[y][x] === "P") {
-          playerX = x; 
+          playerX = x;
           playerY = y;
           maze[y][x] = " ";
           break;
@@ -194,6 +193,7 @@
       });
     }
 
+    // Función para mover al jugador (sin atravesar muros ni salirse del laberinto)
     function move(dx, dy) {
       const newX = playerX + dx, newY = playerY + dy;
       if (newX < 0 || newX >= cols || newY < 0 || newY >= rows) return;
@@ -201,6 +201,7 @@
         playerX = newX;
         playerY = newY;
         drawMaze();
+        // Si el jugador llega a la meta ("G"), se aplica fade out y se redirige
         if (maze[playerY][playerX] === "G") {
           const labyrinthWrapper = document.getElementById("laberinto-wrapper");
           labyrinthWrapper.style.opacity = 0;
@@ -211,6 +212,7 @@
       }
     }
 
+    // Soporte para teclado (flechas y WASD)
     document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") move(0, -1);
       if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") move(0, 1);
@@ -218,6 +220,7 @@
       if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") move(1, 0);
     });
 
+    // Soporte para dispositivos táctiles
     let touchStartX = 0, touchStartY = 0;
     document.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;

@@ -4,36 +4,65 @@
   <meta charset="UTF-8">
   <title>Reproductores Personalizados</title>
   <style>
-    /* Fondo asignado a background.png */
+    /* Fondo con gif7.gif */
     body {
       margin: 0;
       padding: 0;
-      background: url("img/background.png") no-repeat center center fixed;
+      background: url("img/gif7.gif") no-repeat center center fixed;
       background-size: cover;
       font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      overflow: hidden; /* Evita scroll */
+      overflow: hidden;
+      padding-top: 20px; /* Un poco más abajo */
     }
     
-    /* Encabezado superior */
+    /* Encabezado superior estilizado con línea y corazones palpítantes */
     .main-header {
       text-align: center;
-      margin: 10px 0;
+      margin: 20px 0;
       color: #fff;
       text-shadow: 1px 1px 2px #000;
+      position: relative;
     }
     .main-header h1 {
       font-size: 2rem;
       margin: 0;
       font-family: 'Georgia', serif;
+      border-bottom: 2px solid red;
+      padding-bottom: 5px;
+      display: inline-block;
+      position: relative;
+    }
+    .main-header h1::before,
+    .main-header h1::after {
+      content: "❤️";
+      font-size: 1.5rem;
+      color: red;
+      animation: beat 1s infinite;
+    }
+    .main-header h1::before {
+      position: absolute;
+      left: -30px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .main-header h1::after {
+      position: absolute;
+      right: -30px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    @keyframes beat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.3); }
     }
     
-    /* Contenedor que agrupa todos los reproductores con efecto glass */
+    /* Contenedor de reproductores (bajado un poco) */
     .players-wrapper {
-      border: 2px solid rgba(255,182,193,0.8); /* rosa transparente */
+      border: 2px solid rgba(255,182,193,0.8);
       border-radius: 12px;
       padding: 10px;
       display: flex;
@@ -44,7 +73,7 @@
       backdrop-filter: blur(8px);
       max-width: 450px;
       width: 90%;
-      margin: 10px auto;
+      margin: 40px auto 10px auto;
     }
 
     .player-container {
@@ -57,7 +86,6 @@
       overflow: hidden;
       transition: transform 0.3s ease;
     }
-    /* Resalte: cuando esté activo se agranda */
     .player-container.active {
       transform: scale(1.1);
       z-index: 5;
@@ -128,32 +156,40 @@
       margin-top: 4px;
     }
     
-    /* Nota emergente (popup) */
+    /* Nota emergente (popup) reubicada a la derecha y con dos niveles de texto */
     .note {
       position: absolute;
-      top: 8px;
-      right: 8px;
+      top: 50%;
+      right: -160px;
+      transform: translateY(-50%);
       background: rgba(255,255,255,0.9);
       color: #333;
-      padding: 6px 8px;
+      padding: 10px 12px;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       opacity: 0;
       transition: opacity 0.5s ease;
       pointer-events: none;
-      font-size: 10px;
+      font-size: 16px;
     }
     .note.visible {
       opacity: 1;
     }
+    .note .note-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .note .note-content {
+      font-size: 16px;
+    }
     
-    /* Reproductores de YouTube ocultos (fuera de vista) */
+    /* Reproductores de YouTube ocultos */
     .youtube-player {
       position: absolute;
       left: -9999px;
     }
 
-    /* Botón inferior para abrir el telón */
     .curtain-btn {
       margin: 10px auto;
       padding: 12px;
@@ -172,7 +208,6 @@
       background-color: #ccc;
     }
 
-    /* Overlay (telón) */
     .curtain-overlay {
       position: fixed;
       top: 0;
@@ -200,7 +235,6 @@
       margin-bottom: 20px;
       color: #052962;
     }
-    /* Aquí usamos un contenedor para el gif que cambia */
     .curtain-gif-container {
       width: 80%;
       max-width: 300px;
@@ -215,7 +249,6 @@
       font-size: 1.2rem;
       color: #333;
     }
-    /* Botón para cerrar el telón */
     .curtain-close-btn {
       margin-top: 20px;
       padding: 10px 20px;
@@ -256,7 +289,10 @@
         <div class="progress-bar"></div>
       </div>
       <div class="time-info">0:00 / 0:00</div>
-      <div class="note">Nota: Mensaje adicional 1</div>
+      <div class="note">
+        <div class="note-title">Título 1</div>
+        <div class="note-content">Mensaje adicional 1</div>
+      </div>
     </div>
 
     <!-- Player 2 -->
@@ -273,7 +309,10 @@
         <div class="progress-bar"></div>
       </div>
       <div class="time-info">0:00 / 0:00</div>
-      <div class="note">Nota: Mensaje adicional 2</div>
+      <div class="note">
+        <div class="note-title">Título 2</div>
+        <div class="note-content">Mensaje adicional 2</div>
+      </div>
     </div>
 
     <!-- Player 3 -->
@@ -290,14 +329,17 @@
         <div class="progress-bar"></div>
       </div>
       <div class="time-info">0:00 / 0:00</div>
-      <div class="note">Nota: Mensaje adicional 3</div>
+      <div class="note">
+        <div class="note-title">Título 3</div>
+        <div class="note-content">Mensaje adicional 3</div>
+      </div>
     </div>
   </div>
 
   <!-- Botón inferior para abrir el telón -->
   <button id="curtainBtn" class="curtain-btn">Abrir Telón</button>
 
-  <!-- Overlay (telón) que se mostrará al presionar el botón inferior -->
+  <!-- Overlay (telón) -->
   <div id="curtainOverlay" class="curtain-overlay">
     <div class="curtain-content">
       <h1 class="curtain-header">Encabezado Grande</h1>
@@ -319,10 +361,8 @@
   <script>
     const players = [];    // Instancias de YT.Player
     const intervals = [];  // Intervalos de actualización
-    // Usamos distintos videos para este ejemplo; cámbialos según necesites.
     const videoIds = ['xCx1eSdkyr0', 'ucRVDoFkcxc', 'zv8fu8NhCTQ'];
 
-    // Secuencia de gifs y textos (puedes cambiar duraciones y textos fácilmente)
     const gifSequence = [
       { src: "img/gif1.gif", duration: 3000, text: "Texto para gif 1" },
       { src: "img/gif2.gif", duration: 4000, text: "Texto para gif 2" },
@@ -331,7 +371,6 @@
     ];
     const finalTexts = ["Texto final 1", "Texto final 2", "Texto final 3"];
 
-    // Quita la clase active de todos los contenedores
     function removeActiveClassFromAll() {
       document.querySelectorAll('.player-container').forEach(container => container.classList.remove('active'));
     }
@@ -363,9 +402,7 @@
           players[index].playVideo();
           playBtn.textContent = '⏸';
           isPlaying = true;
-          // Mostrar nota (fade in)
           container.querySelector('.note').classList.add('visible');
-          // Remover el resaltado de los demás y marcar este como activo
           removeActiveClassFromAll();
           container.classList.add('active');
           startProgressUpdater(index);
@@ -373,14 +410,12 @@
           players[index].pauseVideo();
           playBtn.textContent = '▶';
           isPlaying = false;
-          // Ocultar la nota (fade out)
           container.querySelector('.note').classList.remove('visible');
           container.classList.remove('active');
           stopProgressUpdater(index);
         }
       });
 
-      // Al pasar el cursor sobre el contenedor, si el video no se reproduce, ocultamos la nota
       container.addEventListener('mouseover', () => {
         if (players[index].getPlayerState() !== YT.PlayerState.PLAYING) {
           container.querySelector('.note').classList.remove('visible');
@@ -425,18 +460,15 @@
       return minutes + ':' + (secs < 10 ? '0' : '') + secs;
     }
 
-    // Funcionalidad del botón inferior (telón)
     document.getElementById('curtainBtn').addEventListener('click', function() {
       document.getElementById('curtainOverlay').classList.add('visible');
       startOverlayAnimation();
     });
 
-    // Funcionalidad para cerrar el telón
     document.getElementById('curtainCloseBtn').addEventListener('click', function() {
       document.getElementById('curtainOverlay').classList.remove('visible');
     });
 
-    // Secuencia del overlay: cambia gif y texto según lo configurado
     function startOverlayAnimation() {
       let index = 0;
       const gifImg = document.querySelector('.curtain-gif');
@@ -452,7 +484,6 @@
             playNextGif();
           }, item.duration);
         } else {
-          // Inicia la secuencia final: 3 cambios de texto, cada 4 segundos.
           let finalIndex = 0;
           function playFinalText() {
             if(finalIndex < finalTexts.length) {
@@ -469,5 +500,3 @@
   </script>
 </body>
 </html>
-
-

@@ -101,7 +101,6 @@
     .players-wrapper .player-container:nth-child(3) { animation-delay: 1.6s; }
     
     /* Reproductores con colores de fondo pastel */
-    /* Player 1: celeste pastel, Player 2: morado pastel, Player 3: rojo pastel */
     .player-container {
       width: 400px;
       border-radius: 12px;
@@ -323,9 +322,12 @@
         font-size: 14px;
       }
       
+      /* Ajuste para el popup: reducir ancho, fuente y centrar */
       .note {
-        width: 90%;
-        left: 5%;
+        width: 80%;
+        left: 50% !important;
+        transform: translateX(-50%);
+        font-size: 14px;
       }
       
       .curtain-btn {
@@ -476,14 +478,21 @@
         }
       });
 
-      // Configura que el popup global siga al cursor al pasar sobre el reproductor
+      // Actualiza el popup global al mover el mouse (o en móviles, lo centra)
       container.addEventListener('mousemove', (e) => {
         const noteTitle = container.getAttribute('data-note-title');
         const noteContent = container.getAttribute('data-note-content');
         const globalNote = document.getElementById('globalNote');
         globalNote.innerHTML = '<span class="note-title">' + noteTitle + '</span><span class="note-content">' + noteContent + '</span>';
-        globalNote.style.left = (e.clientX + 5) + 'px';
-        globalNote.style.top = (e.clientY + 5) + 'px';
+        if(window.innerWidth > 600) {
+          // En PC, sigue el cursor
+          globalNote.style.left = (e.clientX + 5) + 'px';
+          globalNote.style.top = (e.clientY + 5) + 'px';
+        } else {
+          // En móviles, centramos el popup (por ejemplo, en la parte superior)
+          globalNote.style.left = '50%';
+          globalNote.style.top = '20%';
+        }
         globalNote.classList.add('visible');
       });
       container.addEventListener('mouseleave', () => {

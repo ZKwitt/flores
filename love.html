@@ -2,8 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <!-- Permite que se escale correctamente en móviles -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Musiquita</title>
-    <!-- Favicon: se intentará usar gif; si no, se usará flowers.png -->
+  <!-- Favicon: se intentará usar gif; si no, se usará flowers.png -->
   <link rel="icon" type="image/gif" href="img/gif6.gif">
   <link rel="icon" type="image/png" href="img/flowers.png"> 
   <style>
@@ -106,7 +108,6 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       padding: 10px;
       position: relative;
-      /* Se elimina overflow:hidden para que el popup no se recorte */
       transition: transform 0.3s ease;
     }
     .player-container.active {
@@ -191,7 +192,7 @@
       pointer-events: none;
       font-size: 16px;
       z-index: 1000;
-      width: 300px; /* Tamaño fijo */
+      width: 300px;
     }
     .note.visible {
       opacity: 1;
@@ -199,7 +200,7 @@
     .note .note-title {
       display: block;
       background-color: #ffe0f0;
-      color: #e91e63;  /* Título en rosa oscuro */
+      color: #e91e63;
       padding: 4px;
       border-bottom: 1px solid pink;
       margin-bottom: 4px;
@@ -289,6 +290,55 @@
     }
     .curtain-close-btn:hover {
       background-color: #ccc;
+    }
+    
+    /* =============================
+       Ajustes responsivos para móviles
+       ============================= */
+    @media (max-width: 600px) {
+      .player-container {
+        width: 90%;
+        padding: 8px;
+      }
+      
+      .players-wrapper {
+        max-width: 95%;
+        width: 95%;
+        padding: 8px;
+      }
+      
+      .main-header h1 {
+        font-size: 1.8rem;
+        padding-bottom: 4px;
+      }
+      
+      .cover {
+        width: 50px;
+        height: 50px;
+      }
+      
+      .play-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+      }
+      
+      .note {
+        width: 90%;
+        left: 5%;
+      }
+      
+      .curtain-btn {
+        font-size: 1rem;
+      }
+      
+      .curtain-header {
+        font-size: 2rem;
+      }
+      
+      .curtain-subtext {
+        font-size: 1rem;
+      }
     }
   </style>
 </head>

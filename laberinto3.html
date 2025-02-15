@@ -21,12 +21,12 @@
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      /* Fondo usando "gif6.gif" como referencia */
-      background: url('img/gif6.gif') no-repeat center center fixed;
+      /* Fondo con GIF */
+      background: url('img/falling hearts.gif') no-repeat center center fixed;
       background-size: cover;
       color: #333;
     }
-    /* Pantalla de introducción (splash screen) con estilo similar a Laberinto 2 */
+    /* Pantalla de introducción (splash screen) */
     #splash-screen {
       position: fixed;
       top: 0;
@@ -38,25 +38,25 @@
       justify-content: center;
       align-items: center;
       z-index: 1000;
-      font-size: 3em; /* Letras grandes */
-      color: #c2185b; /* Tono oscuro para legibilidad */
+      font-size: 3em; /* Letras más grandes */
+      color: #c2185b; /* Color más oscuro para mayor legibilidad */
       transition: opacity 0.5s ease;
     }
-    /* Estilo para el mensaje del splash */
+    /* Estilo para el mensaje del splash screen */
     #splash-message {
       font-family: 'Brush Script MT', cursive;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
     }
     /* Contenedor que agrupa el laberinto */
     #laberinto-wrapper {
       margin: 20px auto;
-      /* Escalado para que el laberinto se ajuste sin generar scroll */
+      /* Escalado para que el laberinto se ajuste a la pantalla sin scroll vertical */
       transform: scale(0.9);
       transform-origin: top center;
       opacity: 0;
       transition: opacity 0.5s ease;
     }
-    /* Contenedor del laberinto con esquinas redondeadas */
+    /* Contenedor del laberinto con esquinas redondeadas (recorta cualquier borde exterior) */
     #game-container {
       display: grid;
       gap: 0;
@@ -64,7 +64,7 @@
       border-radius: 15px;
       overflow: hidden;
     }
-    /* Cada celda mide 40px x 40px e incluye sus bordes */
+    /* Cada celda mide 40px x 40px e incluye los bordes en sus dimensiones */
     .cell {
       width: 40px;
       height: 40px;
@@ -80,17 +80,23 @@
       background-color: var(--wall-color);
       border: 1px solid var(--wall-border);
     }
-    /* Jugador: se muestra con imagen */
+    /* Jugador: se muestra con imagen (reemplaza 'player.png' por la URL de tu imagen) */
     .player {
       background-image: url('player.png');
       background-size: cover;
       background-position: center;
     }
-    /* Meta: se muestra con imagen PNG */
+    /* Meta: se muestra con imagen PNG y se anima con un sutil efecto "beat" */
     .goal {
       background-image: url('img/goal.png');
       background-size: cover;
       background-position: center;
+      animation: beat 2.5s infinite;
+    }
+    /* Animación "beat" para la meta: aumenta su tamaño un 3% en el centro del ciclo */
+    @keyframes beat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
     }
   </style>
 </head>
@@ -108,10 +114,10 @@
   </div>
   
   <script>
-    // Mensajes del splash screen
+    // Mensajes del splash screen actualizados
     const messages = [
-      "Hola",
-      "sigue el juego ;)"
+      "Considera el siguiente como venganza",
+      "por las veces que me he perdido en tus ojos amor"
     ];
 
     let splashIndex = 0;
@@ -138,19 +144,28 @@
     }
     showNextSplashMessage();
 
-    // Definición del laberinto reducido (11 filas x 10 columnas)
+    // Definición del laberinto (20 filas x 20 columnas)
     let maze = [
-      "##########",
-      "#P       #",
-      "# ###### #",
-      "#       ##",
-      "### ### ##",
-      "#   # # ##",
-      "# ### ####",
-      "# #   # ##",
-      "# ##### ##",
-      "#       G#",
-      "##########"
+      "####################",
+      "#P     #     #     #",
+      "# ### ##### # ##   #",
+      "#   #     # #  #   #",
+      "### # ### # #### ###",
+      "#   #   # #      ###",
+      "# ### ### ######  ##",
+      "#   #   #        ###",
+      "##### ### ######  ##",
+      "#     #   #    #  ##",
+      "# ### ##### ## #  ##",
+      "#   #     #  # #  ##",
+      "### ##### #  # #####",
+      "#   #   #    #     #",
+      "# ### # #### ## ####",
+      "#   # #      #     #",
+      "# ### ###### #### ##",
+      "#     #    #       #",
+      "# ###### ##  #### G#",
+      "####################"
     ].map(row => row.split(""));
 
     const container = document.getElementById("game-container");
@@ -170,6 +185,7 @@
       }
     }
 
+    // Función para dibujar el laberinto
     function drawMaze() {
       container.innerHTML = "";
       maze.forEach((row, y) => {
@@ -184,7 +200,7 @@
       });
     }
 
-    // Función para mover al jugador (evitando muros y límites)
+    // Función para mover al jugador (sin atravesar muros ni salirse del laberinto)
     function move(dx, dy) {
       const newX = playerX + dx, newY = playerY + dy;
       if (newX < 0 || newX >= cols || newY < 0 || newY >= rows) return;
@@ -192,7 +208,7 @@
         playerX = newX;
         playerY = newY;
         drawMaze();
-        // Al llegar a la meta ("G") se aplica fade out y redirige
+        // Si el jugador llega a la meta ("G"), se aplica fade out y se redirige
         if (maze[playerY][playerX] === "G") {
           const labyrinthWrapper = document.getElementById("laberinto-wrapper");
           labyrinthWrapper.style.opacity = 0;
@@ -203,6 +219,7 @@
       }
     }
 
+    // Soporte para teclado (flechas y WASD)
     document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") move(0, -1);
       if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") move(0, 1);

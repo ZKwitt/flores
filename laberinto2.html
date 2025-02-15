@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Laberinto 2</title>
+  <!-- Favicon: se intentará usar gif; si no, se usará flowers.png -->
+  <link rel="icon" type="image/gif" href="img/gif6.gif">
+  <link rel="icon" type="image/png" href="img/flowers.png">
   <style>
     :root {
       /* Color base para las paredes (rosa) */
@@ -25,7 +28,7 @@
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      /* Fondo con GIF (reemplaza 'img/falling hearts.gif' por tu imagen) */
+      /* Fondo con GIF */
       background: url('img/falling hearts.gif') no-repeat center center fixed;
       background-size: cover;
     }
@@ -41,9 +44,14 @@
       justify-content: center;
       align-items: center;
       z-index: 1000;
-      font-size: 2em;
-      color: pink;
+      font-size: 3em; /* Letras más grandes */
+      color: #c2185b; /* Color más oscuro para mayor legibilidad */
       transition: opacity 0.5s ease;
+    }
+    /* Estilo para el mensaje del splash */
+    #splash-message {
+      font-family: 'Brush Script MT', cursive;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
     }
     /* Contenedor que agrupa el laberinto */
     #laberinto-wrapper {
@@ -85,26 +93,17 @@
       background-size: cover;
       background-position: center;
     }
-    /* Meta: se muestra con imagen (reemplaza 'img/goal.png' por la URL de tu imagen) y se anima */
+    /* Meta: se muestra con imagen PNG y se anima con un sutil efecto "beat" */
     .goal {
       background-image: url('img/goal.png');
       background-size: cover;
       background-position: center;
-      animation: tilt 2.5s infinite;
+      animation: beat 2.5s infinite;
     }
-    /* Animación para la meta:
-       - 0%: posición normal
-       - 25%: inclinada 15° a la derecha
-       - 50%: vuelve a 0°
-       - 75%: inclinada 15° a la izquierda
-       - 100%: vuelve a 0°
-    */
-    @keyframes tilt {
-      0%   { transform: rotate(0deg); }
-      25%  { transform: rotate(15deg); }
-      50%  { transform: rotate(0deg); }
-      75%  { transform: rotate(-15deg); }
-      100% { transform: rotate(0deg); }
+    /* Animación "beat" para la meta: aumenta su tamaño un 3% en el centro del ciclo */
+    @keyframes beat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
     }
   </style>
 </head>
@@ -122,13 +121,10 @@
   </div>
   
   <script>
-    // Mensajes del splash screen
+    // Mensajes del splash screen actualizados
     const messages = [
-      "Hola",
-      "Queria hacerte algo lindo por san valentin",
-      "pero una cosa llevo a la otra",
-      "Entonces si quieres ver lo que tengo para ti",
-      "sigue el juego ;)"
+      "Sabes que me gustan los puzzles y no pude perder la oportunidad",
+      "Veamos que sigue,,,"
     ];
 
     let splashIndex = 0;
@@ -255,3 +251,4 @@
   </script>
 </body>
 </html>
+

@@ -16,9 +16,10 @@
       overflow: hidden;
       user-select: none;
     }
-    /* Mensaje superior: más grande y posicionado un poco más arriba de la barra */
+    /* Mensaje superior: más grande y posicionado un poco más arriba de la barra.
+       Para ajustar la separación entre el mensaje y la barra, modifica margin-bottom. */
     #mensaje {
-      margin-bottom: 30px;
+      margin-bottom: 4px; /* Cambia este valor para ajustar la separación */
       color: #C2185B;
       font-family: Arial, sans-serif;
       font-size: 20px;
@@ -75,9 +76,9 @@
           if (percentage < 25) {
             mensajeDiv.innerText = "Mira una barra de carga";
           } else if (percentage < 50) {
-            mensajeDiv.innerText = "Que crees que pase cuando carge?";
+            mensajeDiv.innerText = "¿Qué crees que pase cuando cargue?";
           } else {
-            mensajeDiv.innerText = "Que intriga";
+            mensajeDiv.innerText = "¡Qué intriga!";
           }
         }
         if (percentage >= 70) {
@@ -87,7 +88,7 @@
           allowMultipleClicks = false;
           container.style.transform = "rotate(-15deg)";
           if (!clickMessageActive) {
-            mensajeDiv.innerText = "ohno... que mal";
+            mensajeDiv.innerText = "¡Oh no... qué mal!";
           }
         }
         delay = 2000; // Lento: 2000ms en filling
@@ -101,11 +102,11 @@
         container.style.transform = "rotate(-15deg)";
         if (!clickMessageActive) {
           if (emptyingTickCount < 2) {
-            mensajeDiv.innerText = "ohno... que mal";
+            mensajeDiv.innerText = "¡Oh no... qué mal!";
           } else if (emptyingTickCount < 4) {
-            mensajeDiv.innerText = "Puedes..ayudar?";
+            mensajeDiv.innerText = "¿Puedes ayudar?";
           } else {
-            mensajeDiv.innerText = "dale click para levantarla";
+            mensajeDiv.innerText = "¡Dale click para levantarla!";
           }
         }
         delay = 300; // Más rápido: 300ms en emptying
@@ -114,7 +115,7 @@
       progress.style.width = percentage + "%";
 
       if (percentage >= 100) {
-        mensajeDiv.innerText = "bien hecho amor";
+        mensajeDiv.innerText = "Bien hecho, amor";
         setTimeout(() => {
           window.location.href = "https://zkwitt.github.io/flores/love.html";
         }, 1000); // 1 segundo de mensaje final
@@ -135,7 +136,7 @@
           if (percentage > 100) percentage = 100;
           progress.style.width = percentage + "%";
           container.style.transform = "rotate(0deg)";
-          mensajeDiv.innerText = "CUidado, no la dejes caer!";
+          mensajeDiv.innerText = "¡Cuidado, no la dejes caer!";
           allowMultipleClicks = true;
           setTimeout(() => {
             container.style.transform = "rotate(-15deg)";

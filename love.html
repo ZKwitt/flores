@@ -4,7 +4,17 @@
   <meta charset="UTF-8">
   <title>Musiquita</title>
   <style>
-    /* Fondo con gif7.gif */
+    /* Animaciones generales */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    
+    /* Fondo con gif7.gif y fade in de toda la página */
     body {
       margin: 0;
       padding: 0;
@@ -16,10 +26,11 @@
       align-items: center;
       min-height: 100vh;
       overflow: hidden;
-      padding-top: 20px; /* Un poco más abajo */
+      padding-top: 20px;
+      animation: fadeIn 1s ease forwards;
     }
     
-    /* Encabezado superior con logo y texto "Musiquita" */
+    /* Encabezado superior con línea roja y corazones palpítantes */
     .main-header {
       text-align: center;
       margin: 20px 0;
@@ -31,17 +42,36 @@
       font-size: 2rem;
       margin: 0;
       font-family: 'Georgia', serif;
-      display: inline-flex;
-      align-items: center;
+      display: inline-block;
+      position: relative;
       border-bottom: 2px solid red;
       padding-bottom: 5px;
     }
-    .main-header h1 img {
-      height: 50px;
-      margin-right: 10px;
+    .main-header h1::before,
+    .main-header h1::after {
+      content: "❤️";
+      font-size: 1.5rem;
+      color: red;
+      animation: beat 1s infinite;
+    }
+    .main-header h1::before {
+      position: absolute;
+      left: -30px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .main-header h1::after {
+      position: absolute;
+      right: -30px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    @keyframes beat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.3); }
     }
     
-    /* Contenedor de reproductores (bajado un poco) */
+    /* Contenedor de reproductores */
     .players-wrapper {
       border: 2px solid rgba(255,182,193,0.8);
       border-radius: 12px;
@@ -56,14 +86,24 @@
       width: 90%;
       margin: 40px auto 10px auto;
     }
-
+    /* Animación popIn para cada reproductor (aparecen uno a uno) */
+    .players-wrapper .player-container {
+      opacity: 0;
+      animation: popIn 0.5s ease forwards;
+    }
+    .players-wrapper .player-container:nth-child(1) { animation-delay: 1s; }
+    .players-wrapper .player-container:nth-child(2) { animation-delay: 1.3s; }
+    .players-wrapper .player-container:nth-child(3) { animation-delay: 1.6s; }
+    
+    /* Reproductores con colores de fondo pastel */
+    /* Player 1: celeste pastel, Player 2: morado pastel, Player 3: rojo pastel */
     .player-container {
       width: 400px;
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       padding: 10px;
       position: relative;
-      overflow: hidden;
+      /* IMPORTANTE: se elimina overflow:hidden para evitar que el popup se recorte */
       transition: transform 0.3s ease;
     }
     .player-container.active {
@@ -136,7 +176,7 @@
       margin-top: 4px;
     }
     
-    /* Nota emergente (popup) que sigue al cursor */
+    /* Global popup (global note) que sigue al cursor */
     .note {
       position: fixed;
       background: rgba(255,255,255,0.9);
@@ -147,7 +187,7 @@
       transition: opacity 0.5s ease;
       pointer-events: none;
       font-size: 16px;
-      z-index: 10;
+      z-index: 1000;
     }
     .note.visible {
       opacity: 1;
@@ -171,7 +211,8 @@
       position: absolute;
       left: -9999px;
     }
-
+    
+    /* Estilos para el overlay (telón) */
     .curtain-btn {
       margin: 10px auto;
       padding: 12px;
@@ -189,7 +230,6 @@
     .curtain-btn:hover {
       background-color: #ccc;
     }
-
     .curtain-overlay {
       position: fixed;
       top: 0;
@@ -250,18 +290,15 @@
 </head>
 <body>
 
-  <!-- Encabezado superior con logo y título -->
+  <!-- Encabezado superior con corazones -->
   <header class="main-header">
-    <h1>
-      <img src="img/gif6.gif" alt="Logo">
-      Musiquita
-    </h1>
+    <h1>Canciones que me recuerdan a ti</h1>
   </header>
 
   <!-- Contenedor de reproductores -->
   <div class="players-wrapper">
     <!-- Player 1: celeste pastel -->
-    <div class="player-container" data-player-index="0" style="background-color: #A3D2F2;">
+    <div class="player-container" data-player-index="0" data-note-title="Título 1" data-note-content="Mensaje adicional 1" style="background-color: #A3D2F2;">
       <div class="top-section">
         <img class="cover" src="img/us1.jpg" alt="Carátula">
         <div class="info">
@@ -274,14 +311,10 @@
         <div class="progress-bar"></div>
       </div>
       <div class="time-info">0:00 / 0:00</div>
-      <div class="note">
-        <span class="note-title">Título 1</span>
-        <span class="note-content">Mensaje adicional 1</span>
-      </div>
     </div>
 
     <!-- Player 2: morado pastel -->
-    <div class="player-container" data-player-index="1" style="background-color: #B39DDB;">
+    <div class="player-container" data-player-index="1" data-note-title="Título 2" data-note-content="Mensaje adicional 2" style="background-color: #B39DDB;">
       <div class="top-section">
         <img class="cover" src="img/us3.jpg" alt="Carátula">
         <div class="info">
@@ -294,14 +327,10 @@
         <div class="progress-bar"></div>
       </div>
       <div class="time-info">0:00 / 0:00</div>
-      <div class="note">
-        <span class="note-title">Título 2</span>
-        <span class="note-content">Mensaje adicional 2</span>
-      </div>
     </div>
 
     <!-- Player 3: rojo pastel -->
-    <div class="player-container" data-player-index="2" style="background-color: #FF8A80;">
+    <div class="player-container" data-player-index="2" data-note-title="Título 3" data-note-content="Mensaje adicional 3" style="background-color: #FF8A80;">
       <div class="top-section">
         <img class="cover" src="img/us2.jpg" alt="Carátula">
         <div class="info">
@@ -314,10 +343,6 @@
         <div class="progress-bar"></div>
       </div>
       <div class="time-info">0:00 / 0:00</div>
-      <div class="note">
-        <span class="note-title">Título 3</span>
-        <span class="note-content">Mensaje adicional 3</span>
-      </div>
     </div>
   </div>
 
@@ -327,7 +352,7 @@
   <!-- Overlay (telón) -->
   <div id="curtainOverlay" class="curtain-overlay">
     <div class="curtain-content">
-      <h1 class="curtain-header">Encabezado Grande</h1>
+      <h1 class="curtain-header">Te amo mucho mivida</h1>
       <div class="curtain-gif-container">
         <img src="img/gif1.gif" alt="Gif" class="curtain-gif">
       </div>
@@ -340,6 +365,9 @@
   <div id="player0" class="youtube-player"></div>
   <div id="player1" class="youtube-player"></div>
   <div id="player2" class="youtube-player"></div>
+
+  <!-- Elemento global para los pop ups que siguen al cursor -->
+  <div id="globalNote" class="note"></div>
 
   <!-- Cargar la API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
@@ -382,7 +410,7 @@
           players[index].playVideo();
           playBtn.textContent = '⏸';
           isPlaying = true;
-          container.querySelector('.note').classList.add('visible');
+          // Se puede mostrar el popup global al hacer click (opcional)
           removeActiveClassFromAll();
           container.classList.add('active');
           startProgressUpdater(index);
@@ -390,22 +418,24 @@
           players[index].pauseVideo();
           playBtn.textContent = '▶';
           isPlaying = false;
-          container.querySelector('.note').classList.remove('visible');
           container.classList.remove('active');
           stopProgressUpdater(index);
         }
       });
 
-      // Popup que sigue al cursor: se posiciona a 5px del cursor
+      // Configura que el popup global siga al cursor al pasar sobre el reproductor
       container.addEventListener('mousemove', (e) => {
-        const note = container.querySelector('.note');
-        note.style.left = (e.clientX + 5) + 'px'; // Aquí se ajusta la cercanía (cambiar +5 para modificar)
-        note.style.top = (e.clientY + 5) + 'px';  // Aquí se ajusta la cercanía (cambiar +5 para modificar)
-        note.classList.add('visible');
+        const noteTitle = container.getAttribute('data-note-title');
+        const noteContent = container.getAttribute('data-note-content');
+        const globalNote = document.getElementById('globalNote');
+        globalNote.innerHTML = '<span class="note-title">' + noteTitle + '</span><span class="note-content">' + noteContent + '</span>';
+        globalNote.style.left = (e.clientX + 5) + 'px';
+        globalNote.style.top = (e.clientY + 5) + 'px';
+        globalNote.classList.add('visible');
       });
       container.addEventListener('mouseleave', () => {
-        const note = container.querySelector('.note');
-        note.classList.remove('visible');
+        const globalNote = document.getElementById('globalNote');
+        globalNote.classList.remove('visible');
       });
     }
 
@@ -457,7 +487,7 @@
       document.getElementById('curtainOverlay').classList.remove('visible');
     });
 
-    // Secuencia de GIFs y textos para el overlay (se corrigió la concatenación del texto)
+    // Secuencia de GIFs y textos para el overlay
     const gifSequence = [
       { src: "img/gif1.gif", duration: 4000, text: "Hola dice el pequeño hamster." },
       { src: "img/gif2.gif", duration: 5000, text: "Parece que alguien quiere darte algo, cierra los ojos." },

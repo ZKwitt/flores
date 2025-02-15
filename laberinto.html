@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Laberinto 2</title>
+  <!-- Favicon: se intentará usar un GIF; si no es posible, se usará flowers.png -->
+  <link rel="icon" type="image/gif" href="img/gif6.gif">
+  <link rel="icon" type="image/png" href="img/flowers.png">
   <style>
     :root {
       /* Color base para las paredes (rosa) */
@@ -16,7 +19,7 @@
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      /* Fondo con GIF (reemplaza 'background.gif' por tu imagen) */
+      /* Fondo con GIF */
       background: url('img/falling hearts.gif') no-repeat center center fixed;
       background-size: cover;
     }
@@ -49,7 +52,7 @@
       opacity: 0;
       transition: opacity 0.5s ease;
     }
-    /* Contenedor del laberinto con esquinas redondeadas (las cuales recortan cualquier borde exterior) */
+    /* Contenedor del laberinto con esquinas redondeadas */
     #game-container {
       display: grid;
       gap: 0;
@@ -63,12 +66,12 @@
       height: 40px;
       box-sizing: border-box;
     }
-    /* Las celdas que no son paredes (espacios) */
+    /* Celdas sin pared */
     .cell:not(.wall) {
       background-color: white;
       border: none;
     }
-    /* Las paredes: bloques rosa con borde (cuadrícula) */
+    /* Las paredes: bloques rosa con borde */
     .wall { 
       background-color: var(--wall-color);
       border: 1px solid var(--wall-border);
@@ -79,9 +82,9 @@
       background-size: cover;
       background-position: center;
     }
-    /* Meta (logo) con GIF y efecto "beat" */
+    /* Meta (goal) usando PNG y con animación "beat" reducida */
     .goal {
-      background-image: url('img/gif6.gif'); /* Ruta actualizada al GIF */
+      background-image: url('img/goal.png');
       background-size: cover;
       background-position: center;
       animation: beat 1s infinite;
@@ -91,7 +94,7 @@
         transform: scale(1);
       }
       50% {
-        transform: scale(1.05);
+        transform: scale(1.03);
       }
     }
   </style>
@@ -113,10 +116,10 @@
     // Mensajes del splash screen con temática romántica
     const messages = [
       "Hola, mi amor",
-      "He tejido un sendero de suspiros y estrellas",
-      "Cada latido te acerca a mi corazón",
-      "Sigue el laberinto y descubre mi secreto",
-      "Con todo mi amor, para ti"
+      "Queria regalarte algo bonito para este san valentin",
+      "Es un pequeño gesto para demostrarte mi cariño",
+      "Sigue el laberinto y descubre que tengo para ti",
+      "mua"
     ];
 
     let splashIndex = 0;
@@ -237,5 +240,3 @@
   </script>
 </body>
 </html>
-
-

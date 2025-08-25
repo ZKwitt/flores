@@ -133,19 +133,27 @@ async function loadProductsAll(){
 }
 
 function renderProducts(products, sheetKey){
-  if (!products.length){ contentEl.innerHTML='No hay productos'; return; }
-  const grid = document.createElement('div'); grid.className='grid';
+  if (!products.length){ 
+    contentEl.innerHTML='No hay productos'; 
+    return; 
+  }
+  const grid = document.createElement('div'); 
+  grid.className='grid';
+
   products.forEach(p=>{
     const d = p.data || {};
     const name = firstKeyValue(d, ['name','nombre','producto']) || 'Sin nombre';
     const price = firstKeyValue(d, ['price','precio']) || '';
     const stock = Number(firstKeyValue(d, ['stock','cantidad']) || 0);
     const icon = firstKeyValue(d, ['icon','emoji']) || '🛍️';
-    const cat = firstKeyValue(d, ['category','categoria']) || '';
+    const cat  = firstKeyValue(d, ['category','categoria']) || '';
 
     const card = document.createElement('div');
     card.className='card'+(stock<=0?' out':'');
-    card.dataset.row=p.row; card.dataset.sheetKey=sheetKey;
+
+    // ✅ Si no hay sheetKey explícito (caso "todos"), usamos la categoría
+    card.dataset.row = p.row; 
+    card.dataset.sheetKey = sheetKey || cat;
 
     card.innerHTML=`
       <div style="display:flex;gap:10px;align-items:center">
@@ -179,7 +187,9 @@ function renderProducts(products, sheetKey){
 
     grid.appendChild(card);
   });
-  contentEl.innerHTML=''; contentEl.appendChild(grid);
+
+  contentEl.innerHTML=''; 
+  contentEl.appendChild(grid);
 }
 
 /* ======= Pedir producto ======= */

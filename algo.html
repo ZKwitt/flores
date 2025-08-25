@@ -5,182 +5,43 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Catálogo Bonnie Makeup</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{
-      font-family:'Inter',system-ui,Arial;
-      background:linear-gradient(135deg,#ff9a9e 0%,#fecfef 50%,#fecfef 100%);
-      min-height:100vh;
-      padding:20px;
-      overflow-x:hidden;
-      color:#111;
+    :root{
+      --bg:#fafafa; --card:#fff; --muted:#666; --accent:#111;
+      --radius:10px;
     }
-
-    /* Header */
-    .header{text-align:center;margin-bottom:30px;position:relative}
-    .header::before{
-      content:'';position:absolute;top:-20px;left:50%;
-      transform:translateX(-50%);
-      width:100px;height:4px;
-      background:linear-gradient(45deg,#ff6b6b,#4ecdc4,#45b7d1);
-      border-radius:2px;
-    }
-    .header h1{
-      font-size:3rem;
-      background:linear-gradient(45deg,#667eea,#764ba2,#ff6b6b);
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
-      text-shadow:0 4px 20px rgba(0,0,0,0.1);
-      margin-bottom:8px;
-    }
-    .header p{font-size:1.1rem;color:#555;font-style:italic}
-
-    /* Tabs (categorías) */
-    #tabs{
-      display:flex;flex-wrap:wrap;gap:12px;justify-content:center;
-      margin-bottom:24px;
-    }
-    .tab{
-      background:rgba(255,255,255,0.9);
-      padding:10px 20px;
-      border-radius:25px;
-      border:2px solid transparent;
-      font-weight:600;
-      cursor:pointer;
-      transition:.3s;
-      color:#666;
-    }
-    .tab:hover,.tab.active{
-      background:linear-gradient(45deg,#667eea,#764ba2);
-      color:#fff;
-      transform:translateY(-2px);
-      box-shadow:0 6px 20px rgba(102,126,234,.3);
-    }
-
-    /* Productos grid */
+    body{font-family:Inter, system-ui, Arial; margin:0; padding:18px; background:var(--bg); color:#111}
+    h1{margin:6px 0 14px 0}
+    #app{max-width:1100px;margin:0 auto}
+    #tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .tab{background:#fff;border:1px solid #e6e6e6;padding:8px 12px;border-radius:999px;cursor:pointer}
+    .tab.active{background:var(--accent);color:#fff}
     #content{min-height:160px}
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-      gap:20px;
-    }
-
-    .card{
-      background:rgba(255,255,255,0.95);
-      backdrop-filter:blur(15px);
-      border-radius:20px;
-      padding:20px;
-      border:1px solid rgba(255,255,255,0.2);
-      box-shadow:0 12px 30px rgba(0,0,0,0.08);
-      transition:.35s cubic-bezier(0.175,0.885,0.32,1.275);
-      display:flex;
-      flex-direction:column;
-      position:relative;
-      overflow:hidden;
-    }
-    .card::before{
-      content:'';position:absolute;top:0;left:-100%;
-      width:100%;height:100%;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);
-      transition:.5s;
-    }
-    .card:hover{transform:translateY(-6px) scale(1.02)}
-    .card:hover::before{left:100%}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+    .card{background:var(--card);border:1px solid #eee;border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 6px rgba(20,20,20,0.03)}
     .card.out{opacity:.5}
-
-    /* Contenedor inferior */
-    .card-footer{
-      margin-top:auto;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:8px;
-    }
-
-    .icon{
-      width:60px;height:60px;
-      border-radius:50%;
-      display:flex;align-items:center;justify-content:center;
-      font-size:26px;
-      background:linear-gradient(45deg,#667eea,#764ba2);
-      margin:0 auto 12px;
-      color:#fff;
-      box-shadow:0 6px 18px rgba(102,126,234,0.3);
-    }
-    .name{font-weight:700;font-size:1.05rem;text-align:center;min-height:40px}
-    .cat{font-size:12px;color:#888;text-align:center}
-    .price{
-      font-size:1.6rem;font-weight:700;
-      background:linear-gradient(45deg,#ff6b6b,#4ecdc4);
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
-      text-align:center;
-    }
-    .stock{
-      background:linear-gradient(45deg,#667eea,#764ba2);
-      color:#fff;font-size:.9rem;font-weight:600;
-      padding:6px 14px;border-radius:20px;
-      margin:0 auto;
-      box-shadow:0 4px 12px rgba(102,126,234,0.25);
-    }
-
-    .actions{display:flex;gap:8px;margin-top:8px;align-items:center;justify-content:center}
-    button.btn{padding:8px 10px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
+    .meta{display:flex;align-items:center;justify-content:space-between}
+    .icon{font-size:28px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#f4f4f4}
+    .name{font-weight:700}
+    .cat{font-size:12px;color:var(--muted)}
+    .price{font-weight:700}
+    .stock{font-weight:600}
+    .actions{display:flex;gap:8px;margin-top:6px;align-items:center}
+    button.btn{padding:8px 10px;border-radius:8px;border:0;cursor:pointer}
     button.order{background:#111;color:#fff}
     button.order[disabled]{opacity:.5;cursor:not-allowed}
     button.small{padding:6px 8px;border:1px solid #ddd;background:#fff}
     .qty{min-width:20px;text-align:center;font-weight:600}
-
-    /* Debug */
-    #debug{
-      margin-top:20px;background:#fff;
-      padding:12px;border-radius:10px;
-      border:1px solid #eee;
-      white-space:pre-wrap;font-size:13px;color:#222;
-      max-width:1100px;margin-left:auto;margin-right:auto;
-    }
-
-    /* Loading styles */
-    #tabs, #content{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:1.2rem;
-      font-weight:600;
-      color:#555;
-      font-style:italic;
-      text-align:center;
-      padding:20px;
-    }
-
-    /* Floating emojis */
-    .floating-shapes{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1}
-    .shape{position:absolute;opacity:.08;animation:float 6s ease-in-out infinite;font-size:2rem}
-    .shape:nth-child(1){top:20%;left:10%;animation-delay:0s}
-    .shape:nth-child(2){top:60%;left:80%;animation-delay:2s}
-    .shape:nth-child(3){top:30%;left:60%;animation-delay:4s}
-    @keyframes float{
-      0%,100%{transform:translateY(0) rotate(0deg)}
-      50%{transform:translateY(-20px) rotate(180deg)}
-    }
+    #debug{margin-top:14px;background:#fff;padding:10px;border-radius:8px;border:1px solid #eee;white-space:pre-wrap;font-size:13px;color:#222}
   </style>
 </head>
 <body>
-  <div class="floating-shapes">
-    <div class="shape">💄</div>
-    <div class="shape">✨</div>
-    <div class="shape">💋</div>
-  </div>
-
-  <div class="header">
-    <h1>💄 Marrie</h1>
-    <p>Belleza que inspira, calidad que perdura</p>
-  </div>
-
   <div id="app">
+    <h1>💄 Marrie</h1>
     <div id="tabs">Cargando categorías...</div>
     <div id="content">Cargando productos...</div>
     <div id="debug">Debug: —</div>
   </div>
+
 <script>
 const API_URL = "https://d.thepersonmrt.workers.dev/"; 
 const tabsEl = document.getElementById('tabs');

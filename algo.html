@@ -184,7 +184,9 @@ async function loadProductsFor(sheetKey){
   currentInfo.innerText = 'Cargando ' + sheetKey + '...';
   lastLoadedSheetKey = sheetKey;
   try {
-    const url = API_URL + '?sheetKey=' + encodeURIComponent(sheetKey);
+    const u = new URL(API_URL);
+u.searchParams.set('sheetKey', sheetKey);
+const url = u.toString();
     dbg('-> Haciendo GET a: ' + url);
     // fetch directo (sin fallback JSONP) para ver exactamente la respuesta que recibe el navegador
     const resp = await fetch(url, { method: 'GET', cache: 'no-store' });

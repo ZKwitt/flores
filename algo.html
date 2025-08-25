@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tienda dinámica</title>
+  <title>Catálogo Bonnie Makeup</title>
   <style>
     :root{
       --bg:#fafafa; --card:#fff; --muted:#666; --accent:#111;
@@ -36,7 +36,7 @@
 </head>
 <body>
   <div id="app">
-    <h1>Tienda dinámica</h1>
+    <h1>💄 Marrie</h1>
     <div id="tabs">Cargando categorías...</div>
     <div id="content">Cargando productos...</div>
     <div id="debug">Debug: —</div>
@@ -81,7 +81,7 @@ function renderTabs(sheets){
 
   // Botón especial "Todos"
   const allBtn = document.createElement('button');
-  allBtn.className = 'tab';
+  allBtn.className = 'tab active';
   allBtn.innerText = "Todos";
   allBtn.onclick = () => {
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -101,7 +101,6 @@ function renderTabs(sheets){
       loadProductsFor(s.key);
     };
     tabsEl.appendChild(btn);
-    if (i===0){ btn.classList.add('active'); loadProductsFor(s.key); }
   });
 }
 

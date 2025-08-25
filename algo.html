@@ -130,13 +130,6 @@
     button.small{padding:6px 8px;border:1px solid #ddd;background:#fff}
     .qty{min-width:20px;text-align:center;font-weight:600}
 
-/* Animación sutil */
-@keyframes pulse {
-  0%,100% { opacity: 0.7; transform: scale(1); }
-  50%     { opacity: 1;   transform: scale(1.05); }
-}
-
-
     /* Debug */
     #debug{
       margin-top:20px;background:#fff;
@@ -147,19 +140,17 @@
     }
 
     /* Loading styles */
-    /* SOLO cuando está cargando */
-#tabs.loading,
-#content.loading {
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:1.2rem;
-  font-weight:600;
-  color:#555;
-  font-style:italic;
-  text-align:center;
-  padding:20px;
-}
+    #tabs, #content{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:1.2rem;
+      font-weight:600;
+      color:#555;
+      font-style:italic;
+      text-align:center;
+      padding:20px;
+    }
 
     /* Floating emojis */
     .floating-shapes{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1}
@@ -187,6 +178,7 @@
 
   <div id="app">
     <div id="tabs">Cargando categorías...</div>
+    <div id="content">Cargando productos...</div>
     <div id="debug">Debug: —</div>
   </div>
 <script>
@@ -258,10 +250,7 @@ function renderTabs(sheets){
 /* ======= Cargar productos ======= */
 async function loadProductsFor(sheetKey){
   lastLoadedSheetKey = sheetKey;
-contentEl.classList.add("loading");
-contentEl.innerHTML = "Cargando...";
-
-
+  contentEl.innerHTML = 'Cargando...';
   try {
     const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
     const data = await r.json();
@@ -270,15 +259,11 @@ contentEl.innerHTML = "Cargando...";
     lastProductsCache = products;
     renderProducts(products, sheetKey);
   } catch(err){ dbg(err); contentEl.innerHTML='Error cargando productos'; }
-  contentEl.classList.remove("loading");
-contentEl.innerHTML = `<div class="grid"> ... </div>`;
 }
 
 async function loadProductsAll(){
   lastLoadedSheetKey = "ALL";
-  contentEl.classList.add("loading");
-contentEl.innerHTML = "Cargando...";
-  contentEl.innerHTML = '';
+  contentEl.innerHTML = 'Cargando todos los productos... (puede tardar)';
   try {
     const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
     const data = await r.json();
@@ -287,8 +272,6 @@ contentEl.innerHTML = "Cargando...";
     lastProductsCache = products;
     renderProducts(products, "ALL");
   } catch(err){ dbg(err); contentEl.innerHTML='Error cargando productos'; }
-  contentEl.classList.remove("loading");
-contentEl.innerHTML = `<div class="grid"> ... </div>`;
 }
 
 function renderProducts(products, sheetKey){

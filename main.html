@@ -1,141 +1,336 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" href="img/flowers.png" type="image/x-icon">
-    <title>Flowers</title>
+    <title>Catálogo Bonnie Makeup</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&display=swap');
-        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
-
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #000;
-            color: #fff;
+        * {
             margin: 0;
-            font-family: 'Amatic SC', cursive;
+            padding: 0;
+            box-sizing: border-box;
         }
-
-        .message-container {
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .header {
             text-align: center;
-            font-size: 2em;
-            transition: opacity 1s;
-            opacity: 0;
-            position: absolute;
-        }
-
-        .letter {
-            display: inline-block;
-            opacity: 0;
-            transition: opacity 0.1s;
-        }
-
-        .heart {
-            display: none;
+            margin-bottom: 40px;
             position: relative;
-            text-align: center;
-            margin-top: 20px;
-            font-size: 50px;
-            color: #fff;
-            cursor: pointer;
-            text-decoration: none;
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background-color: transparent;
-            transition: background-color 0.3s;
         }
-
-        .heart::before {
-            content: "\f004";
-            font-family: 'Font Awesome 5 Free';
-            font-weight: 900;
+        
+        .header::before {
+            content: '';
             position: absolute;
-            top: 50%;
+            top: -20px;
             left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 2em;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            border-radius: 2px;
         }
-
-        .heart:hover {
-            background-color: rgba(255, 0, 0, 0.3);
-            color: red;
+        
+        .header h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-
-        .heart:hover::before {
-            animation: heartbeat 1s infinite;
+        
+        .header p {
+            font-size: 1.2rem;
+            color: #666;
+            font-style: italic;
         }
-
-        @keyframes heartbeat {
-            0%, 100% {
-                transform: translate(-50%, -50%) scale(1);
-            }
-            50% {
-                transform: translate(-50%, -50%) scale(1.2);
-            }
+        
+        .catalog-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            padding: 20px 0;
+        }
+        
+        .product-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+        
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+        
+        .product-card:hover::before {
+            left: 100%;
+        }
+        
+        .product-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 24px;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .product-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .product-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        
+        .price {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stock {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .category-labios { border-left: 5px solid #ff6b6b; }
+        .category-ojos { border-left: 5px solid #4ecdc4; }
+        .category-rostro { border-left: 5px solid #45b7d1; }
+        .category-cuidado { border-left: 5px solid #96ceb4; }
+        .category-accesorios { border-left: 5px solid #feca57; }
+        .category-kits { border-left: 5px solid #ff9ff3; }
+        
+        .floating-shapes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .shape {
+            position: absolute;
+            opacity: 0.1;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .shape:nth-child(1) { top: 20%; left: 10%; animation-delay: 0s; }
+        .shape:nth-child(2) { top: 60%; left: 80%; animation-delay: 2s; }
+        .shape:nth-child(3) { top: 30%; left: 60%; animation-delay: 4s; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        .search-filter {
+            max-width: 1400px;
+            margin: 0 auto 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid transparent;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .filter-btn:hover, .filter-btn.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2.5rem; }
+            .catalog-container { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+            .search-filter { padding: 0 20px; }
         }
     </style>
 </head>
-
 <body>
-    <div class="message-container" id="message1"></div>
-    <div class="message-container" id="message2"></div>
-    <a href="flower.html" class="heart" id="heartLink"></a>
-
+    <div class="floating-shapes">
+        <div class="shape">💄</div>
+        <div class="shape">✨</div>
+        <div class="shape">💋</div>
+    </div>
+    
+    <div class="header">
+        <h1>💄 Marrie</h1>
+        <p>Belleza que inspira, calidad que perdura</p>
+    </div>
+    
+    <div class="search-filter">
+        <button class="filter-btn active" onclick="filterProducts('all')">Todos</button>
+        <button class="filter-btn" onclick="filterProducts('labios')">💋 Labios</button>
+        <button class="filter-btn" onclick="filterProducts('ojos')">👁 Ojos</button>
+        <button class="filter-btn" onclick="filterProducts('rostro')">✨ Rostro</button>
+        <button class="filter-btn" onclick="filterProducts('cuidado')">🌿 Cuidado</button>
+        <button class="filter-btn" onclick="filterProducts('accesorios')">🎀 Accesorios</button>
+        <button class="filter-btn" onclick="filterProducts('kits')">🎁 Kits</button>
+    </div>
+    
+    <div class="catalog-container" id="catalogContainer">
+    </div>
+    
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const messages = [
-                { text: 'Mensaje 1', element: document.getElementById('message1') },
-                { text: 'Mensaje 2', element: document.getElementById('message2') },
-            ];
-            const heartLink = document.getElementById('heartLink');
-            let currentMessageIndex = 0;
-            const delayBetweenMessages = 2000;
-
-            function showMessage(index) {
-                if (index > 0) {
-                    messages[index - 1].element.style.opacity = 0;
-                }
-                if (index < messages.length) {
-                    const message = messages[index].element;
-                    message.innerHTML = '';
-                    let charIndex = 0;
-                    const text = messages[index].text;
-                    for (const char of text) {
-                        const span = document.createElement('span');
-                        span.classList.add('letter');
-                        span.textContent = char;
-                        message.appendChild(span);
-                    }
-                    message.style.opacity = 1;
-
-                    function showNextLetter() {
-                        if (charIndex < message.children.length) {
-                            message.children[charIndex].style.opacity = 1;
-                            charIndex++;
-                            setTimeout(showNextLetter, 100);
-                        } else {
-                            setTimeout(() => {
-                                showMessage(index + 1);
-                            }, delayBetweenMessages);
-                        }
-                    }
-                    showNextLetter();
-                } else {
-                    heartLink.style.display = 'block';
-                }
+        const products = [
+            {name: "MARCADOR DELINEADOR DE LABIOS", price: 9600, stock: 1, category: "labios", icon: "💋"},
+            {name: "PESTAÑINA TRANSPARENTE ACIDO HIALURONICO", price: 14400, stock: 2, category: "ojos", icon: "👁"},
+            {name: "PESTAÑINA TRANSPARENTE", price: 7200, stock: 1, category: "ojos", icon: "👁"},
+            {name: "PESTAÑINA CON DELINEADOR", price: 11500, stock: 1, category: "ojos", icon: "👁"},
+            {name: "MASCARA KARITE", price: 11500, stock: 1, category: "cuidado", icon: "🌿"},
+            {name: "LABIAL EN BARRA COREANO RETRACTIL", price: 13000, stock: 2, category: "labios", icon: "💄"},
+            {name: "LABIAL COREANO EN BARRA PRESENTACION DE LUJO", price: 29000, stock: 2, category: "labios", icon: "💄"},
+            {name: "LABIAL LIQUIDO + DELINEADOR DE LABIOS", price: 29000, stock: 2, category: "labios", icon: "💋"},
+            {name: "BRILLO RETRACTIL CON COLOR", price: 7200, stock: 1, category: "labios", icon: "✨"},
+            {name: "GLOSS RETRACTIL CON COLOR SATINADO", price: 8500, stock: 1, category: "labios", icon: "✨"},
+            {name: "GLOSS CON COLOR FAT OIL", price: 8500, stock: 1, category: "labios", icon: "✨"},
+            {name: "GLOSS CON COLOR EFECTO HUMEDO", price: 11500, stock: 1, category: "labios", icon: "✨"},
+            {name: "AIRPODS HELLO KITTY", price: 23000, stock: 2, category: "accesorios", icon: "🎀"},
+            {name: "GLOSS BABY BLOOMSHELL", price: 38500, stock: 2, category: "labios", icon: "🌸"},
+            {name: "LIP OIL BLOOM SEDUCTION", price: 23000, stock: 1, category: "labios", icon: "🌹"},
+            {name: "GLOSS MAGICO LLAVERITO MARIPOSA", price: 21500, stock: 1, category: "labios", icon: "🦋"},
+            {name: "EXFOLIANTE DE LABIOS BLOOMSHELL", price: 11500, stock: 1, category: "cuidado", icon: "🌿"},
+            {name: "HIDRATANTE EN BARRA HELLO KITTY", price: 10000, stock: 1, category: "cuidado", icon: "🐱"},
+            {name: "LIP TINT FRUIT", price: 7200, stock: 1, category: "labios", icon: "🍓"},
+            {name: "TINTA CON DESTELLOS ENGOL", price: 17500, stock: 1, category: "labios", icon: "✨"},
+            {name: "BRILLO MAGICO HELLO KITTY", price: 20000, stock: 2, category: "labios", icon: "🐱"},
+            {name: "RUBOR OSITO", price: 20000, stock: 2, category: "rostro", icon: "🐻"},
+            {name: "RUBOR EN GEL SANRIO", price: 8500, stock: 1, category: "rostro", icon: "🌸"},
+            {name: "RUBOR MAGICO CON BORLITA APLICADORA", price: 8500, stock: 1, category: "rostro", icon: "✨"},
+            {name: "RUBOR EN CREMA HUELLITA BLOOMSHELL", price: 29000, stock: 1, category: "rostro", icon: "🐾"},
+            {name: "ILUMINADOR BAKING POWDER", price: 15500, stock: 2, category: "rostro", icon: "✨"},
+            {name: "POLVOS SUELTOS TRANSLUCIDOS", price: 14500, stock: 1, category: "rostro", icon: "✨"},
+            {name: "POLVOS COMPACTOS TRANSLUCIDOS Y BANANA", price: 31500, stock: 2, category: "rostro", icon: "🍌"},
+            {name: "POLVO DE HADAS CORA HELLO KITTY", price: 11500, stock: 1, category: "rostro", icon: "🧚‍♀"},
+            {name: "BONNIE CARRITO DE PERFUMES CON FEROMONAS", price: 36000, stock: 1, category: "cuidado", icon: "🛒"},
+            {name: "BONNIE PERFUMES CON FEROMONAS (MORADO Y VERDE)", price: 29000, stock: 2, category: "cuidado", icon: "🌺"},
+            {name: "BONNIE CASITA DE PRODUCTOS CAPILARES (VERDE)", price: 62500, stock: 1, category: "cuidado", icon: "🏠"},
+            {name: "BONNIE SHINE BOX (AZUL)", price: 48000, stock: 1, category: "kits", icon: "📦"},
+            {name: "BONNIE MANTEQUILLAS", price: 43000, stock: 2, category: "cuidado", icon: "🧈"},
+            {name: "BONNIE TOALLITAS CAPILARES", price: 17500, stock: 1, category: "cuidado", icon: "🧽"},
+            {name: "BONNIE JABONES ARTESANALES", price: 14500, stock: 1, category: "cuidado", icon: "🧼"},
+            {name: "VELO FACIAL ANIMALITOS", price: 4500, stock: 1, category: "cuidado", icon: "🐰"},
+            {name: "BROCHA DOBLE PARA CEJAS GLITTER", price: 8500, stock: 2, category: "ojos", icon: "🖌"},
+            {name: "DELINEADOR EN PLUMON", price: 20000, stock: 2, category: "ojos", icon: "🖊"},
+            {name: "ILUMINADOR BAKING POWDER", price: 11500, stock: 1, category: "rostro", icon: "✨"},
+            {name: "RUBOR ENGOL CON BORLITA", price: 43000, stock: 2, category: "rostro", icon: "🌹"},
+            {name: "GLOSS MAGICO CON FLOR", price: 43000, stock: 3, category: "labios", icon: "🌺"},
+            {name: "RUBOR EN BARRA", price: 29000, stock: 2, category: "rostro", icon: "💄"},
+            {name: "KIT DE LABIOS", price: 43000, stock: 2, category: "kits", icon: "💋"},
+            {name: "KIT DE ROSAS", price: 22500, stock: 1, category: "kits", icon: "🌹"},
+            {name: "KIT DE ACIDO HIALURONICO SERUM 100 ML", price: 53500, stock: 1, category: "cuidado", icon: "💧"},
+            {name: "BONNIE CAJITA DE PERFUMES CAPILARES CON DESTELLOS", price: 44500, stock: 1, category: "cuidado", icon: "📦"},
+            {name: "PAÑITOS HUMEDOS CAPY BARA", price: 11500, stock: 2, category: "cuidado", icon: "🧽"},
+            {name: "RUBOR STITCH", price: 11500, stock: 1, category: "rostro", icon: "👽"},
+            {name: "ILUMINADOR STITCH", price: 11500, stock: 1, category: "rostro", icon: "👽"},
+            {name: "TERMO DOBLE LABUBU", price: 80500, stock: 2, category: "accesorios", icon: "🥤"},
+            {name: "PALETA 24 LOFCHE", price: 29000, stock: 1, category: "rostro", icon: "🎨"},
+            {name: "COMBO HELLO KITTY", price: 48000, stock: 1, category: "kits", icon: "🐱"},
+            {name: "COMBO JABONES + CEPILLO", price: 36000, stock: 1, category: "kits", icon: "🧼"},
+            {name: "COMBO ARROZ", price: 60000, stock: 1, category: "kits", icon: "🍚"}
+        ];
+        
+        function renderProducts(productsToRender = products) {
+            const container = document.getElementById('catalogContainer');
+            container.innerHTML = '';
+            
+            productsToRender.forEach(product => {
+                const card = document.createElement('div');
+                card.className = product-card category-${product.category};
+                card.innerHTML = `
+                    <div class="product-icon">${product.icon}</div>
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-details">
+                        <div class="price">$${product.price.toLocaleString()}</div>
+                        <div class="stock">${product.stock} en stock</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        function filterProducts(category) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (category === 'all') {
+                renderProducts();
+            } else {
+                const filtered = products.filter(product => product.category === category);
+                renderProducts(filtered);
             }
-
-            showMessage(currentMessageIndex);
-        });
+        }
+        
+        // Initialize
+        renderProducts();
     </script>
 </body>
-
 </html>

@@ -123,7 +123,7 @@ async function loadProductsFor(sheetKey){
 }
 
 async function loadProductsAll(){
-  lastLoadedSheetKey = Null;
+  lastLoadedSheetKey = "ALL";
   contentEl.innerHTML = 'Cargando todos los productos... (puede tardar)';
   try {
     const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
@@ -156,7 +156,7 @@ function renderProducts(products, sheetKey){
 
     // ✅ Si no hay sheetKey explícito (caso "todos"), usamos la categoría
     card.dataset.row = p.row; 
-    card.dataset.sheetKey = sheetKey || cat;
+    card.dataset.sheetKey = (sheetKey === "ALL") ? cat : sheetKey;
 
     card.innerHTML=`
       <div style="display:flex;gap:10px;align-items:center">

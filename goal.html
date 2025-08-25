@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Prueba Worker Productos</title>
+</head>
+<body>
+  <h1>Prueba carga de productos desde Worker</h1>
+  <pre id="output">Cargando...</pre>
+
+  <script>
+    async function testFetch() {
+      const output = document.getElementById("output");
+      try {
+        console.log("➡️ Pidiendo al Worker...");
+        const resp = await fetch("https://d.thepersonmrt.workers.dev/?all=1");
+
+        console.log("✅ Estado HTTP:", resp.status);
+
+        const txt = await resp.text();
+        console.log("📦 Texto crudo recibido:", txt.slice(0, 500));
+
+        let data;
+        try {
+          data = JSON.parse(txt);
+          console.log("📊 JSON parseado:", data);
+          output.textContent = JSON.stringify(data, null, 2);
+        } catch (e) {
+          console.error("❌ Error parseando JSON:", e);
+          output.textContent = "Error parseando JSON.\n\nRespuesta cruda:\n" + txt;
+        }
+      } catch (err) {
+        console.error("❌ Error en fetch:", err);
+        output.textContent = "Error en fetch: " + err;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", testFetch);
+  </script>
+</body>
+</html>

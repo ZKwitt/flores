@@ -106,18 +106,21 @@ function renderTabs(sheets){
 }
 
 /* ======= Cargar productos ======= */
-async function loadProductsFor(sheetKey){
-  lastLoadedSheetKey = sheetKey;
-  contentEl.innerHTML = 'Cargando...';
+async function loadProducts() {
   try {
-    const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
-    const data = await r.json();
-    if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
-    const products = data.products || [];
-    lastProductsCache = products;
-    renderProducts(products, sheetKey);
-  } catch(err){ dbg(err); contentEl.innerHTML='Error cargando productos'; }
+    console.log("Pidiendo al Worker...");
+    const resp = await fetch("https://d.thepersonmrt.workers.dev/?all=1");
+    console.log("Estado HTTP:", resp.status);
+    const txt = await resp.text();
+    console.log("Texto crudo recibido:", txt.slice(0,200)); // primeras líneas
+    const data = JSON.parse(txt);
+    console.log("JSON parseado:", data);
+    renderProductsAll(data);
+  } catch (err) {
+    console.error("Error en loadProducts:", err);
+  }
 }
+
 
 async function loadProductsAll(){
   lastLoadedSheetKey = "ALL";

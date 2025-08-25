@@ -225,15 +225,15 @@
         <p>Belleza que inspira, calidad que perdura</p>
     </div>
     
-    <div class="search-filter">
-        <button class="filter-btn active" onclick="filterProducts('all', event)">Todos</button>
-        <button class="filter-btn active" onclick="filterProducts('labios', event)">💋 Labios</button>
-        <button class="filter-btn active" onclick="filterProducts('ojos', event)">👁 Ojos</button>
-        <button class="filter-btn active" onclick="filterProducts('rostro', event)">✨ Rostro</button>
-        <button class="filter-btn active" onclick="filterProducts('cuidado', event)">🌿 Cuidado</button>
-        <button class="filter-btn active" onclick="filterProducts('accesorios', event)">🎀 Accesorios</button>
-        <button class="filter-btn active" onclick="filterProducts('kits', event)">🎁 Kits</button>
-    </div>
+  <div class="search-filter">
+  <button class="filter-btn active" data-category="all">Todos</button>
+  <button class="filter-btn" data-category="labios">💋 Labios</button>
+  <button class="filter-btn" data-category="ojos">👁 Ojos</button>
+  <button class="filter-btn" data-category="rostro">✨ Rostro</button>
+  <button class="filter-btn" data-category="cuidado">🌿 Cuidado</button>
+  <button class="filter-btn" data-category="accesorios">🎀 Accesorios</button>
+  <button class="filter-btn" data-category="kits">🎁 Kits</button>
+</div>
     
     <div class="catalog-container" id="catalogContainer">
     </div>
@@ -297,24 +297,60 @@
             {name: "COMBO ARROZ", price: 60000, stock: 1, category: "kits", icon: "🍚"}
         ];
         
-        function renderProducts(productsToRender = products) {
-            const container = document.getElementById('catalogContainer');
-            container.innerHTML = '';
-            
-            productsToRender.forEach(product => {
-                const card = document.createElement('div');
-                card.className = `product-card category-${product.category}`;
-                card.innerHTML = `
-                    <div class="product-icon">${product.icon}</div>
-                    <div class="product-name">${product.name}</div>
-                    <div class="product-details">
-                        <div class="price">$${product.price.toLocaleString()}</div>
-                        <div class="stock">${product.stock} en stock</div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
+function renderProducts(productsToRender = products) {
+  const container = document.getElementById('catalogContainer');
+  container.innerHTML = '';
+
+  const fragment = document.createDocumentFragment();
+
+  productsToRender.forEach(product => {
+    // sanitizar categoría para usar en clase
+    const rawCat = product.category || 'uncategorized';
+    const safeCat = String(rawCat).replace(/[^a-z0-9-_]/gi, '').toLowerCase();
+
+    const card = document.createElement('div');
+    card.className = `product-card category-${safeCat}`;
+    card.setAttribute('role', 'article');
+    card.setAttribute('aria-label', `${product.name || 'Producto'} - ${product.price ? '$' + Number(product.price).toLocaleString() : 'precio no disponible'}`);
+
+    const icon = document.createElement('div');
+    icon.className = 'product-icon';
+    icon.textContent = product.icon || '💄';
+
+    const name = document.createElement('div');
+    name.className = 'product-name';
+    name.textContent = product.name || 'Sin nombre';
+
+    const details = document.createElement('div');
+    details.className = 'product-details';
+
+    const price = document.createElement('div');
+    price.className = 'price';
+    if (typeof product.price === 'number' && !Number.isNaN(product.price)) {
+      price.textContent = `$${product.price.toLocaleString()}`;
+    } else {
+      price.textContent = '—';
+    }
+
+    const stock = document.createElement('div');
+    stock.className = 'stock';
+    const stockNum = Number.isInteger(product.stock) ? product.stock : 0;
+    stock.textContent = `${stockNum} en stock`;
+    stock.setAttribute('aria-live', 'polite');
+
+    details.appendChild(price);
+    details.appendChild(stock);
+
+    card.appendChild(icon);
+    card.appendChild(name);
+    card.appendChild(details);
+
+    fragment.appendChild(card);
+  });
+
+  container.appendChild(fragment);
+}
+
         
         function filterProducts(category) {
             // Update active button
@@ -334,5 +370,6 @@
     </script>
 </body>
 </html>
+
 
 

@@ -1,126 +1,226 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Prueba Sheets (actualizado)</title>
+  <title>Tienda dinámica (Sheets)</title>
   <style>
-    body{font-family:system-ui,Arial; padding:18px; max-width:680px}
-    label,input,button{font-size:16px}
-    input{padding:6px; margin-right:8px}
-    pre{background:#f4f4f4;padding:10px;border-radius:6px;white-space:pre-wrap}
-    .row{margin-top:12px}
+    body{font-family:system-ui,Arial;padding:18px;max-width:1100px;margin:0 auto}
+    header{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .tab{padding:8px 12px;border-radius:8px;border:1px solid #ddd;cursor:pointer;background:white}
+    .tab.active{background:#111;color:white}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+    .card{border:1px solid #eee;padding:12px;border-radius:8px;display:flex;flex-direction:column;gap:8px}
+    .icon{font-size:26px}
+    .meta{display:flex;justify-content:space-between;align-items:center}
+    .stock{font-weight:600}
+    .disabled{opacity:.5;pointer-events:none}
+    #debug{background:#f5f5f5;padding:8px;border-radius:6px;white-space:pre-wrap; margin-top:12px;}
   </style>
 </head>
 <body>
-  <h2>Lectura / Escritura Google Sheets</h2>
-
-  <div>Valor en Sheets: <strong id="valor">—</strong></div>
-
-  <div class="row">
-    <label for="nuevoValor">Nuevo valor:</label>
-    <input id="nuevoValor" type="number" />
-    <button id="btnUpdate">Actualizar (POST)</button>
-    <button id="btnGet">Forzar GET</button>
+  <h1>Tienda</h1>
+  <div id="tabs">Cargando categorías...</div>
+  <div style="margin-top:12px;">
+    <button id="refresh">Refrescar actual</button>
+    <span id="currentInfo" style="margin-left:12px;color:#666"></span>
   </div>
 
-  <h3>Debug / respuesta cruda</h3>
-  <pre id="raw">—</pre>
+  <div id="content" style="margin-top:14px">—</div>
 
-  <script>
-    // REEMPLAZA aquí si tu URL del webapp es distinta
-    const API_URL = "https://script.google.com/macros/s/AKfycbxvv-7mtrkCC8sKZyYS2WSuDvSeSQNYTFqDBofM_WSAe_a6urzUfBaLnPGaDs5mSyBwwA/exec";
+  <div id="debug"></div>
 
-    const outRaw = (s) => document.getElementById('raw').innerText = s;
-    const setValor = (v) => document.getElementById('valor').innerText = v ?? '—';
+<script>
+const API_URL = "AehSKLiTf8ZsnKeMcHRRgllAUIjJ00oNA1EysPCPR1eQLxA08SPGWFInNUAtacCWzIzmZhdBIWbU2v3JE9kedygKyH03NOF4vlU8X_Zp2_MODOjGE4PgKDQww3ndCPn2kIPdf3XS201UFNCl33Rm"; // <-- pega aquí tu URL del Web App
 
-    async function cargar() {
-      outRaw("GET -> " + API_URL + "\n\nEsperando respuesta...");
-      try {
-        const res = await fetch(API_URL, { method: 'GET' });
-        const text = await res.text();
-        outRaw("GET status: " + res.status + "\n\n" + text);
-        try {
-          const json = JSON.parse(text);
-          if (json.error) {
-            setValor("ERROR: " + json.message);
-          } else {
-            setValor(json.cantidad);
-          }
-        } catch(err) {
-          // Si la respuesta no es JSON, intentar JSONP fallback
-          outRaw(outRaw() + "\n\nRespuesta no JSON. Intentando JSONP fallback...");
-          jsonpFallback();
-        }
-      } catch (err) {
-        outRaw("Fetch GET fallo: " + err + "\nIntentando JSONP fallback...");
-        jsonpFallback();
-      }
+const $ = id => document.getElementById(id);
+const tabsEl = $('tabs');
+const contentEl = $('content');
+const debugEl = $('debug');
+const refreshBtn = $('refresh');
+const currentInfo = $('currentInfo');
+
+function dbg(t){ debugEl.innerText = t; }
+
+async function fetchJSON(url, opts){
+  const r = await fetch(url, opts);
+  const text = await r.text();
+  try { return JSON.parse(text); }
+  catch(e){ throw new Error("Respuesta no JSON: " + text); }
+}
+
+// Cargar lista de hojas (keys)
+async function loadSheetsList(){
+  try {
+    const data = await fetchJSON(API_URL);
+    if (data.error) throw new Error(data.message || "Error al listar sheets");
+    renderTabs(data.sheets || []);
+  } catch(err) {
+    tabsEl.innerText = "No se pudieron cargar categorías. Revisa deploy y permisos.";
+    dbg("Error loadSheetsList: " + err);
+  }
+}
+
+function renderTabs(sheets){
+  tabsEl.innerHTML = '';
+  sheets.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.className = 'tab';
+    b.innerText = s.key;
+    b.dataset.key = s.key;
+    b.dataset.sheetName = s.sheetName;
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      loadProductsFor(s.key);
+    });
+    tabsEl.appendChild(b);
+    if (i===0) { b.classList.add('active'); } // seleccionar futuro
+  });
+  // auto-select primer tab si existe:
+  const first = document.querySelector('.tab.active');
+  if (first) loadProductsFor(first.dataset.key);
+}
+
+// Cargar productos para una sheetKey
+async function loadProductsFor(sheetKey){
+  contentEl.innerHTML = 'Cargando productos...';
+  currentInfo.innerText = 'Cargando ' + sheetKey + '...';
+  try {
+    const data = await fetchJSON(API_URL + '?sheetKey=' + encodeURIComponent(sheetKey));
+    if (data.error) throw new Error(data.message || "error GET");
+    renderProducts(data.products || [], sheetKey, data.headers || []);
+    currentInfo.innerText = 'Categoria: ' + sheetKey + ' (' + (data.products.length) + ' items)';
+    dbg('GET OK: sheetKey=' + sheetKey + '\nHeaders: ' + JSON.stringify(data.headers || []));
+  } catch(err) {
+    contentEl.innerHTML = 'Error cargando productos.';
+    dbg('Error loadProductsFor: ' + err);
+    currentInfo.innerText = '';
+  }
+}
+
+// Render de productos flex (busca campos comunes: name, price, stock, icon, category)
+function renderProducts(products, sheetKey, headers){
+  if (!products.length) { contentEl.innerHTML = '<div style="color:#777">No hay productos</div>'; return; }
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  products.forEach(p => {
+    // p: { row: N, data: {header1: value1, ...} }
+    const d = p.data;
+    // intentamos sacar campos típicos con tolerancia a nombres
+    const name = firstKeyValue(d, ['name','producto','nombre','title']) || 'Sin nombre';
+    const price = firstKeyValue(d, ['price','precio','cost']) || '';
+    const stock = Number(firstKeyValue(d, ['stock','cantidad','qty','existencias']) || 0);
+    const icon = firstKeyValue(d, ['icon','emoji']) || '';
+    const category = firstKeyValue(d, ['category','categoria']) || '';
+    const card = document.createElement('div');
+    card.className = 'card' + (stock<=0 ? ' disabled' : '');
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="icon">${escapeHTML(icon)}</div>
+        <div style="flex:1">
+          <div style="font-weight:700">${escapeHTML(name)}</div>
+          <div style="color:#666;font-size:13px">${escapeHTML(category)}</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div>$ ${price !== '' ? Number(price).toLocaleString() : '-'}</div>
+        <div class="stock">Stock: <span class="stockval">${stock}</span></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-order" ${stock<=0 ? 'disabled' : ''}>Pedir</button>
+        <button class="btn-refresh" title="Refrescar producto">🔁</button>
+      </div>
+    `;
+    // attach buttons
+    card.querySelector('.btn-order').addEventListener('click', () => pedido(sheetKey, p.row, card));
+    card.querySelector('.btn-refresh').addEventListener('click', () => refreshRow(sheetKey, p.row, card));
+    grid.appendChild(card);
+  });
+  contentEl.innerHTML = '';
+  contentEl.appendChild(grid);
+}
+
+// Buscar primer valor en objeto con los posibles nombres de clave (case-insensitive)
+function firstKeyValue(obj, keys) {
+  var map = {};
+  for (var k in obj) map[k.toString().toLowerCase()] = obj[k];
+  for (var i=0;i<keys.length;i++){
+    var v = map[keys[i].toLowerCase()];
+    if (v !== undefined) return v;
+  }
+  // si no coincidió, intentar retornar la primera propiedad útil
+  var any = Object.keys(obj).length ? obj[Object.keys(obj)[0]] : undefined;
+  return any;
+}
+
+async function pedido(sheetKey, row, cardEl) {
+  const stockSpan = cardEl.querySelector('.stockval');
+  const before = Number(stockSpan.innerText || 0);
+  if (before <= 0) { alert('Stock agotado'); return; }
+
+  dbg('POST decrement row=' + row + ' sheet=' + sheetKey);
+  try {
+    const form = new URLSearchParams();
+    form.append('action','decrement');
+    form.append('sheetKey', sheetKey);
+    form.append('row', String(row));
+
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/x-www-form-urlencoded'},
+      body: form.toString()
+    });
+
+    const text = await res.text();
+    dbg('POST status: ' + res.status + '\n\n' + text);
+    const json = JSON.parse(text);
+    if (json.error) { alert('Error: ' + json.message); return; }
+
+    const newStock = Number(json.newStock);
+    stockSpan.innerText = newStock;
+    if (newStock <= 0) {
+      cardEl.classList.add('disabled');
+      cardEl.querySelector('.btn-order').disabled = true;
     }
+  } catch(err) {
+    dbg('Error pedido: ' + err);
+    alert('No se pudo procesar el pedido. Revisa la consola/debug.');
+  }
+}
 
-    // JSONP fallback (por si CORS bloquea el GET)
-    function jsonpFallback() {
-      const callbackName = 'cb_' + Date.now();
-      window[callbackName] = function(obj) {
-        setValor(obj.cantidad);
-        outRaw("JSONP OK: " + JSON.stringify(obj));
-        delete window[callbackName];
-        script.remove();
-      };
-      const script = document.createElement('script');
-      script.src = API_URL + '?callback=' + callbackName;
-      script.onerror = function() {
-        outRaw("JSONP error: no se pudo cargar el script. Revisa la URL o permisos del web app.");
-        delete window[callbackName];
-        script.remove();
-      };
-      document.body.appendChild(script);
+// refrescar una fila específica (vuelve a GET la hoja y actualiza sólo la tarjeta)
+async function refreshRow(sheetKey, row, cardEl) {
+  dbg('Refrescando fila ' + row + ' de ' + sheetKey);
+  try {
+    const data = await fetchJSON(API_URL + '?sheetKey=' + encodeURIComponent(sheetKey));
+    // buscar product con la misma row
+    const prod = (data.products || []).find(p => Number(p.row) === Number(row));
+    if (!prod) { dbg('Fila no encontrada'); return; }
+    const stock = Number(firstKeyValue(prod.data, ['stock','cantidad','qty']) || 0);
+    cardEl.querySelector('.stockval').innerText = stock;
+    if (stock <= 0) {
+      cardEl.classList.add('disabled');
+      cardEl.querySelector('.btn-order').disabled = true;
+    } else {
+      cardEl.classList.remove('disabled');
+      cardEl.querySelector('.btn-order').disabled = false;
     }
+    dbg('Refrescar OK row=' + row + ' stock=' + stock);
+  } catch(err) {
+    dbg('Error refreshRow: ' + err);
+  }
+}
 
-    // POST usando application/x-www-form-urlencoded para evitar preflight CORS
-    async function actualizar() {
-      const nuevo = document.getElementById('nuevoValor').value;
-      if (nuevo === "") { alert("Ingresa un valor antes de actualizar."); return; }
+refreshBtn.addEventListener('click', () => {
+  const active = document.querySelector('.tab.active');
+  if (active) loadProductsFor(active.dataset.key);
+});
 
-      outRaw("POST -> " + API_URL + "\nPayload: cantidad=" + nuevo + "\n\nEnviando...");
-      try {
-        const form = new URLSearchParams();
-        form.append('cantidad', nuevo);
+function escapeHTML(s){ return String(s||''); } // básico
 
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: form.toString()
-        });
-
-        const text = await res.text();
-        outRaw("POST status: " + res.status + "\n\n" + text);
-
-        try {
-          const json = JSON.parse(text);
-          if (json.error) {
-            alert("Error del servidor: " + json.message);
-          } else {
-            // opcional: notificar éxito
-            console.log("POST OK:", json);
-          }
-        } catch (e) {
-          console.warn("Respuesta POST no JSON:", text);
-        }
-      } catch (err) {
-        outRaw("POST fallo: " + err);
-        alert("Error al enviar POST. Revisa la consola o el panel Network.");
-      }
-
-      // refrescar el valor tras el POST
-      setTimeout(cargar, 300); // pequeño retraso para mayor fiabilidad
-    }
-
-    document.getElementById('btnGet').addEventListener('click', cargar);
-    document.getElementById('btnUpdate').addEventListener('click', actualizar);
-
-    // carga inicial
-    cargar();
-  </script>
+// init
+loadSheetsList();
+</script>
 </body>
 </html>

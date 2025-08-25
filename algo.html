@@ -1,36 +1,125 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>Prueba Sheets</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prueba Sheets (actualizado)</title>
+  <style>
+    body{font-family:system-ui,Arial; padding:18px; max-width:680px}
+    label,input,button{font-size:16px}
+    input{padding:6px; margin-right:8px}
+    pre{background:#f4f4f4;padding:10px;border-radius:6px;white-space:pre-wrap}
+    .row{margin-top:12px}
+  </style>
 </head>
 <body>
-  <h1>Valor en Sheets: <span id="valor"></span></h1>
-  
-  <input type="number" id="nuevoValor" placeholder="Nuevo valor">
-  <button onclick="actualizar()">Actualizar Sheets</button>
+  <h2>Lectura / Escritura Google Sheets</h2>
+
+  <div>Valor en Sheets: <strong id="valor">—</strong></div>
+
+  <div class="row">
+    <label for="nuevoValor">Nuevo valor:</label>
+    <input id="nuevoValor" type="number" />
+    <button id="btnUpdate">Actualizar (POST)</button>
+    <button id="btnGet">Forzar GET</button>
+  </div>
+
+  <h3>Debug / respuesta cruda</h3>
+  <pre id="raw">—</pre>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbw0qr1c4p41HcvKmLDIy07EQFpVo3e7ZIFkwesOKUUINvmLBjZLBrdsJkv_3hL3WEfr2Q/exec"; // <-- cambia esto
+    // REEMPLAZA aquí si tu URL del webapp es distinta
+    const API_URL = "https://script.google.com/macros/s/AKfycbw0qr1c4p41HcvKmLDIy07EQFpVo3e7ZIFkwesOKUUINvmLBjZLBrdsJkv_3hL3WEfr2Q/exec";
 
-    // Leer valor del sheet
+    const outRaw = (s) => document.getElementById('raw').innerText = s;
+    const setValor = (v) => document.getElementById('valor').innerText = v ?? '—';
+
     async function cargar() {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      document.getElementById("valor").innerText = data.cantidad;
+      outRaw("GET -> " + API_URL + "\n\nEsperando respuesta...");
+      try {
+        const res = await fetch(API_URL, { method: 'GET' });
+        const text = await res.text();
+        outRaw("GET status: " + res.status + "\n\n" + text);
+        try {
+          const json = JSON.parse(text);
+          if (json.error) {
+            setValor("ERROR: " + json.message);
+          } else {
+            setValor(json.cantidad);
+          }
+        } catch(err) {
+          // Si la respuesta no es JSON, intentar JSONP fallback
+          outRaw(outRaw() + "\n\nRespuesta no JSON. Intentando JSONP fallback...");
+          jsonpFallback();
+        }
+      } catch (err) {
+        outRaw("Fetch GET fallo: " + err + "\nIntentando JSONP fallback...");
+        jsonpFallback();
+      }
     }
 
-    // Actualizar valor en el sheet
+    // JSONP fallback (por si CORS bloquea el GET)
+    function jsonpFallback() {
+      const callbackName = 'cb_' + Date.now();
+      window[callbackName] = function(obj) {
+        setValor(obj.cantidad);
+        outRaw("JSONP OK: " + JSON.stringify(obj));
+        delete window[callbackName];
+        script.remove();
+      };
+      const script = document.createElement('script');
+      script.src = API_URL + '?callback=' + callbackName;
+      script.onerror = function() {
+        outRaw("JSONP error: no se pudo cargar el script. Revisa la URL o permisos del web app.");
+        delete window[callbackName];
+        script.remove();
+      };
+      document.body.appendChild(script);
+    }
+
+    // POST usando application/x-www-form-urlencoded para evitar preflight CORS
     async function actualizar() {
-      const nuevo = document.getElementById("nuevoValor").value;
-      await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({cantidad: nuevo}),
-        headers: {"Content-Type": "application/json"}
-      });
-      cargar(); // refrescar
+      const nuevo = document.getElementById('nuevoValor').value;
+      if (nuevo === "") { alert("Ingresa un valor antes de actualizar."); return; }
+
+      outRaw("POST -> " + API_URL + "\nPayload: cantidad=" + nuevo + "\n\nEnviando...");
+      try {
+        const form = new URLSearchParams();
+        form.append('cantidad', nuevo);
+
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: form.toString()
+        });
+
+        const text = await res.text();
+        outRaw("POST status: " + res.status + "\n\n" + text);
+
+        try {
+          const json = JSON.parse(text);
+          if (json.error) {
+            alert("Error del servidor: " + json.message);
+          } else {
+            // opcional: notificar éxito
+            console.log("POST OK:", json);
+          }
+        } catch (e) {
+          console.warn("Respuesta POST no JSON:", text);
+        }
+      } catch (err) {
+        outRaw("POST fallo: " + err);
+        alert("Error al enviar POST. Revisa la consola o el panel Network.");
+      }
+
+      // refrescar el valor tras el POST
+      setTimeout(cargar, 300); // pequeño retraso para mayor fiabilidad
     }
 
+    document.getElementById('btnGet').addEventListener('click', cargar);
+    document.getElementById('btnUpdate').addEventListener('click', actualizar);
+
+    // carga inicial
     cargar();
   </script>
 </body>

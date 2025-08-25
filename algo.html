@@ -1,3 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tienda dinámica</title>
+  <style>
+    :root{
+      --bg:#fafafa; --card:#fff; --muted:#666; --accent:#111;
+      --radius:10px;
+    }
+    body{font-family:Inter, system-ui, Arial; margin:0; padding:18px; background:var(--bg); color:#111}
+    h1{margin:6px 0 14px 0}
+    #app{max-width:1100px;margin:0 auto}
+    #tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .tab{background:#fff;border:1px solid #e6e6e6;padding:8px 12px;border-radius:999px;cursor:pointer}
+    .tab.active{background:var(--accent);color:#fff}
+    #content{min-height:160px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+    .card{background:var(--card);border:1px solid #eee;border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 6px rgba(20,20,20,0.03)}
+    .card.out{opacity:.5}
+    .meta{display:flex;align-items:center;justify-content:space-between}
+    .icon{font-size:28px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#f4f4f4}
+    .name{font-weight:700}
+    .cat{font-size:12px;color:var(--muted)}
+    .price{font-weight:700}
+    .stock{font-weight:600}
+    .actions{display:flex;gap:8px;margin-top:6px;align-items:center}
+    button.btn{padding:8px 10px;border-radius:8px;border:0;cursor:pointer}
+    button.order{background:#111;color:#fff}
+    button.order[disabled]{opacity:.5;cursor:not-allowed}
+    button.small{padding:6px 8px;border:1px solid #ddd;background:#fff}
+    .qty{min-width:20px;text-align:center;font-weight:600}
+    #debug{margin-top:14px;background:#fff;padding:10px;border-radius:8px;border:1px solid #eee;white-space:pre-wrap;font-size:13px;color:#222}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>Tienda dinámica</h1>
+    <div id="tabs">Cargando categorías...</div>
+    <div id="content">Cargando productos...</div>
+    <div id="debug">Debug: —</div>
+  </div>
+
 <script>
 const API_URL = "https://d.thepersonmrt.workers.dev/"; 
 const tabsEl = document.getElementById('tabs');
@@ -168,3 +212,5 @@ async function handleOrder(card, qty){
 /* ======= Init ======= */
 loadCategories();
 </script>
+</body>
+</html>

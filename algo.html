@@ -25,11 +25,12 @@
     .cat{font-size:12px;color:var(--muted)}
     .price{font-weight:700}
     .stock{font-weight:600}
-    .actions{display:flex;gap:8px;margin-top:6px}
+    .actions{display:flex;gap:8px;margin-top:6px;align-items:center}
     button.btn{padding:8px 10px;border-radius:8px;border:0;cursor:pointer}
     button.order{background:#111;color:#fff}
     button.order[disabled]{opacity:.5;cursor:not-allowed}
     button.small{padding:6px 8px;border:1px solid #ddd;background:#fff}
+    .qty{min-width:20px;text-align:center;font-weight:600}
     #debug{margin-top:14px;background:#fff;padding:10px;border-radius:8px;border:1px solid #eee;white-space:pre-wrap;font-size:13px;color:#222}
   </style>
 </head>
@@ -78,6 +79,19 @@ async function loadCategories(){
 }
 function renderTabs(sheets){
   tabsEl.innerHTML = '';
+
+  // Botón "Todos"
+  const allBtn = document.createElement('button');
+  allBtn.className = 'tab';
+  allBtn.innerText = 'Todos';
+  allBtn.onclick = ()=> {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    allBtn.classList.add('active');
+    loadAllProducts();
+  };
+  tabsEl.appendChild(allBtn);
+
+  // Botones por sheet
   sheets.forEach((s, i)=>{
     const btn = document.createElement('button');
     btn.className = 'tab';
@@ -106,6 +120,18 @@ async function loadProductsFor(sheetKey){
     renderProducts(products, sheetKey);
   } catch(err){ dbg(err); contentEl.innerHTML='Error cargando productos'; }
 }
+async function loadAllProducts(){
+  contentEl.innerHTML = 'Cargando...';
+  try {
+    const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
+    const data = await r.json();
+    if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
+    const products = data.products || [];
+    lastProductsCache = products;
+    renderProducts(products, 'all');
+  } catch(err){ dbg(err); contentEl.innerHTML='Error cargando productos'; }
+}
+
 function renderProducts(products, sheetKey){
   if (!products.length){ contentEl.innerHTML='No hay productos'; return; }
   const grid = document.createElement('div'); grid.className='grid';
@@ -133,16 +159,31 @@ function renderProducts(products, sheetKey){
         <div class="stock">Stock: <span class="stockval">${stock}</span></div>
       </div>
       <div class="actions">
+        <button class="small minus">-</button>
+        <span class="qty">1</span>
+        <button class="small plus">+</button>
         <button class="btn order" ${stock<=0?'disabled':''}>Pedir</button>
       </div>`;
-    card.querySelector('.order').onclick=()=>handleOrder(card);
+    
+    // Manejo de cantidad
+    const qtyEl = card.querySelector('.qty');
+    card.querySelector('.minus').onclick=()=>{
+      let q = parseInt(qtyEl.innerText)||1;
+      if(q>1) qtyEl.innerText = q-1;
+    };
+    card.querySelector('.plus').onclick=()=>{
+      let q = parseInt(qtyEl.innerText)||1;
+      qtyEl.innerText = q+1;
+    };
+
+    card.querySelector('.order').onclick=()=>handleOrder(card, parseInt(qtyEl.innerText)||1);
     grid.appendChild(card);
   });
   contentEl.innerHTML=''; contentEl.appendChild(grid);
 }
 
 /* ======= Pedir producto ======= */
-async function handleOrder(card){
+async function handleOrder(card, qty){
   const sheetKey = card.dataset.sheetKey;
   const row = card.dataset.row;
   const stockSpan = card.querySelector('.stockval');
@@ -156,6 +197,7 @@ async function handleOrder(card){
     form.append('action','decrement');
     form.append('sheetKey',sheetKey);
     form.append('row',row);
+    form.append('qty', qty);
     const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:form});
     const data=await r.json();
     if (data.error) throw new Error(data.message);
@@ -169,8 +211,5 @@ async function handleOrder(card){
 /* ======= Init ======= */
 loadCategories();
 </script>
-</body>
-</html>
-
 </body>
 </html>

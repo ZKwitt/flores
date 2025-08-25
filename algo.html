@@ -130,22 +130,23 @@
     button.small{padding:6px 8px;border:1px solid #ddd;background:#fff}
     .qty{min-width:20px;text-align:center;font-weight:600}
 
-    .loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+    /* Solo cuando está cargando */
+.loading {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
 
-  font-size: 1.3rem;
-  font-weight: 600;
-  font-style: italic;
-  color: #555;
+  font-size:1.3rem;
+  font-weight:600;
+  font-style:italic;
+  color:#555;
 
-  padding: 30px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 15px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-  animation: pulse 1.8s infinite;
+  padding:30px;
+  background:rgba(255,255,255,0.6);
+  border-radius:15px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.08);
+  animation:pulse 1.8s infinite;
 }
 
 /* Animación sutil */
@@ -274,7 +275,8 @@ function renderTabs(sheets){
 /* ======= Cargar productos ======= */
 async function loadProductsFor(sheetKey){
   lastLoadedSheetKey = sheetKey;
-  contentEl.innerHTML = 'Cargando...';
+contentEl.innerHTML = '<div class="loading">Cargando productos...</div>';
+
   try {
     const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
     const data = await r.json();

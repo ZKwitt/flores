@@ -1,226 +1,354 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tienda dinámica (Sheets)</title>
+  <title>Tienda dinámica (Google Sheets)</title>
   <style>
-    body{font-family:system-ui,Arial;padding:18px;max-width:1100px;margin:0 auto}
-    header{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-    .tab{padding:8px 12px;border-radius:8px;border:1px solid #ddd;cursor:pointer;background:white}
-    .tab.active{background:#111;color:white}
+    :root{
+      --bg:#fafafa; --card:#fff; --muted:#666; --accent:#111;
+      --success:#1a7f37; --danger:#c0392b;
+      --radius:10px;
+    }
+    body{font-family:Inter, system-ui, Arial; margin:0; padding:18px; background:var(--bg); color:#111}
+    h1{margin:6px 0 14px 0}
+    #app{max-width:1100px;margin:0 auto}
+    #tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .tab{background:#fff;border:1px solid #e6e6e6;padding:8px 12px;border-radius:999px;cursor:pointer}
+    .tab.active{background:var(--accent);color:#fff}
+    #controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    #refresh{padding:8px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer}
+    #content{min-height:160px}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-    .card{border:1px solid #eee;padding:12px;border-radius:8px;display:flex;flex-direction:column;gap:8px}
-    .icon{font-size:26px}
-    .meta{display:flex;justify-content:space-between;align-items:center}
+    .card{background:var(--card);border:1px solid #eee;border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 6px rgba(20,20,20,0.03)}
+    .card.out{opacity:.5}
+    .meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .icon{font-size:28px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#f4f4f4}
+    .name{font-weight:700}
+    .cat{font-size:12px;color:var(--muted)}
+    .price{font-weight:700}
     .stock{font-weight:600}
-    .disabled{opacity:.5;pointer-events:none}
-    #debug{background:#f5f5f5;padding:8px;border-radius:6px;white-space:pre-wrap; margin-top:12px;}
+    .actions{display:flex;gap:8px;margin-top:6px}
+    button.btn{padding:8px 10px;border-radius:8px;border:0;cursor:pointer}
+    button.order{background:#111;color:#fff}
+    button.order[disabled]{opacity:.5;cursor:not-allowed}
+    button.small{padding:6px 8px;border:1px solid #ddd;background:#fff}
+    #debug{margin-top:14px;background:#fff;padding:10px;border-radius:8px;border:1px solid #eee;white-space:pre-wrap;font-size:13px;color:#222}
+    .topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+    .search{padding:8px;border-radius:8px;border:1px solid #ddd;background:#fff;min-width:220px}
+    .hint{font-size:13px;color:var(--muted)}
+    @media (max-width:520px){
+      .grid{grid-template-columns:repeat(1,1fr)}
+    }
   </style>
 </head>
 <body>
-  <h1>Tienda</h1>
-  <div id="tabs">Cargando categorías...</div>
-  <div style="margin-top:12px;">
-    <button id="refresh">Refrescar actual</button>
-    <span id="currentInfo" style="margin-left:12px;color:#666"></span>
+  <div id="app">
+    <h1>Tienda dinámica</h1>
+    <div class="topbar">
+      <div id="tabs">Cargando categorías...</div>
+      <div style="flex:1"></div>
+      <input id="search" class="search" placeholder="Buscar producto..." />
+      <button id="refresh" title="Refrescar categoría actual">🔁 Refrescar</button>
+    </div>
+
+    <div id="controls" style="align-items:center">
+      <div class="hint">Selecciona una categoría (las hojas configuradas en el Apps Script)</div>
+      <div id="currentInfo" style="margin-left:auto;color:var(--muted)"></div>
+    </div>
+
+    <div id="content">Cargando productos...</div>
+
+    <div id="debug">Debug: —</div>
   </div>
 
-  <div id="content" style="margin-top:14px">—</div>
-
-  <div id="debug"></div>
-
 <script>
-const API_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgOTapx48zcAKW4A3Ng4eWIQ23CjzY91Z8kie6YAEmw2mysKtFZFy2HPJYQfiUUNXYBo7cFduFD0YCR-eFrN2BmecZVdrRp8uif05QmePE9MqxWdbfX7KxAX2bHmJG_hKz0mve_XtKEpMH3EoNNHAjq8hN1x2hp9anKg6zmfisYelEwcxWHAwC3cBvR-426VvE1tSZzdRMMbCnOIOExSz-rZURKDz0szMnpbq9wPSG-g6vPYp8mKgWMaQvXEFn9XSMp2lWRu91nieDC6AOPIrSbsOb7hj6_bdrLLTnY&lib=MVvKytvcgtkEcfJU0h31CPln6dGmfhwj8"; // <-- pega aquí tu URL del Web App
+/* ========== CONFIG (reemplaza solo API_URL) ========== */
+const API_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgOTapx48zcAKW4A3Ng4eWIQ23CjzY91Z8kie6YAEmw2mysKtFZFy2HPJYQfiUUNXYBo7cFduFD0YCR-eFrN2BmecZVdrRp8uif05QmePE9MqxWdbfX7KxAX2bHmJG_hKz0mve_XtKEpMH3EoNNHAjq8hN1x2hp9anKg6zmfisYelEwcxWHAwC3cBvR-426VvE1tSZzdRMMbCnOIOExSz-rZURKDz0szMnpbq9wPSG-g6vPYp8mKgWMaQvXEFn9XSMp2lWRu91nieDC6AOPIrSbsOb7hj6_bdrLLTnY&lib=MVvKytvcgtkEcfJU0h31CPln6dGmfhwj8"; // <-- Pega la URL del Web App (https://script.google.com/macros/s/AKfy.../exec)
+/* ==================================================== */
 
-const $ = id => document.getElementById(id);
-const tabsEl = $('tabs');
-const contentEl = $('content');
-const debugEl = $('debug');
-const refreshBtn = $('refresh');
-const currentInfo = $('currentInfo');
+const tabsEl = document.getElementById('tabs');
+const contentEl = document.getElementById('content');
+const debugEl = document.getElementById('debug');
+const refreshBtn = document.getElementById('refresh');
+const searchInput = document.getElementById('search');
+const currentInfo = document.getElementById('currentInfo');
 
-function dbg(t){ debugEl.innerText = t; }
+function dbg(txt){ debugEl.innerText = txt; console.log(txt); }
 
-async function fetchJSON(url, opts){
-  const r = await fetch(url, opts);
-  const text = await r.text();
-  try { return JSON.parse(text); }
-  catch(e){ throw new Error("Respuesta no JSON: " + text); }
+// Util: safe JSON fetch with text read
+async function fetchText(url, opts){ const r = await fetch(url, opts); const text = await r.text(); return {status: r.status, text}; }
+
+// Generic fetchJSON with fallback to JSONP (for GET)
+async function fetchJSONWithFallback(url, {jsonpCallbackIfFail=true} = {}) {
+  try {
+    const r = await fetch(url, { method: 'GET', cache: 'no-store' });
+    const text = await r.text();
+    // try parse JSON
+    try { return JSON.parse(text); } catch(e) { 
+      // if not JSON and JSONP allowed, try JSONP if server supports callback param
+      if (jsonpCallbackIfFail) {
+        return await jsonpGet(url);
+      }
+      throw new Error("Respuesta no JSON: " + text);
+    }
+  } catch (err) {
+    // fallback to JSONP
+    if (jsonpCallbackIfFail) {
+      return await jsonpGet(url);
+    }
+    throw err;
+  }
 }
 
-// Cargar lista de hojas (keys)
-async function loadSheetsList(){
+// JSONP helper: appends callback=... to url
+function jsonpGet(url){
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*9999);
+    const u = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
+    const script = document.createElement('script');
+    window[cb] = function(data){
+      resolve(data);
+      cleanup();
+    };
+    script.src = u;
+    script.onerror = function(e){ cleanup(); reject(new Error('JSONP load error')); };
+    document.body.appendChild(script);
+    function cleanup(){
+      try{ delete window[cb]; }catch(e){}
+      script.remove();
+    }
+    // safety timeout
+    setTimeout(()=>{ if (window[cb]) { cleanup(); reject(new Error('JSONP timeout')); } }, 7000);
+  });
+}
+
+/* ========== Helpers para nombres de columnas flexibles ========== */
+function firstKeyValue(obj, keys){
+  if (!obj) return undefined;
+  const map = {};
+  Object.keys(obj).forEach(k => { map[k.toLowerCase()] = obj[k]; });
+  for (let i=0;i<keys.length;i++){
+    const v = map[keys[i].toLowerCase()];
+    if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+  }
+  // fallback: any non-empty field
+  for (let k in obj) if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') return obj[k];
+  return undefined;
+}
+function fmtPrice(v){ return (v===null||v===undefined||v==='') ? '-' : Number(v).toLocaleString(); }
+function escapeHTML(s){ return String(s===undefined||s===null ? '' : s); }
+
+/* ========== UI - cargar lista de sheets (categorías) ========== */
+async function loadCategories(){
+  tabsEl.innerHTML = 'Cargando categorías...';
   try {
-    const data = await fetchJSON(API_URL);
-    if (data.error) throw new Error(data.message || "Error al listar sheets");
-    renderTabs(data.sheets || []);
-  } catch(err) {
-    tabsEl.innerText = "No se pudieron cargar categorías. Revisa deploy y permisos.";
-    dbg("Error loadSheetsList: " + err);
+    const data = await fetchJSONWithFallback(API_URL);
+    if (!data || !data.sheets) throw new Error('Respuesta invalida (esperaba {sheets: [...]})');
+    renderTabs(data.sheets);
+    dbg('Categorias cargadas: ' + JSON.stringify(data.sheets.map(s=>s.key)));
+  } catch (err) {
+    tabsEl.innerHTML = 'Error cargando categorías';
+    dbg('Error loadCategories: ' + err);
   }
 }
 
 function renderTabs(sheets){
   tabsEl.innerHTML = '';
   sheets.forEach((s, i) => {
-    const b = document.createElement('button');
-    b.className = 'tab';
-    b.innerText = s.key;
-    b.dataset.key = s.key;
-    b.dataset.sheetName = s.sheetName;
-    b.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
+    const btn = document.createElement('button');
+    btn.className = 'tab';
+    btn.innerText = s.key;
+    btn.dataset.key = s.key;
+    btn.title = s.sheetName || s.key;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      btn.classList.add('active');
       loadProductsFor(s.key);
     });
-    tabsEl.appendChild(b);
-    if (i===0) { b.classList.add('active'); } // seleccionar futuro
+    tabsEl.appendChild(btn);
+    if (i === 0) btn.classList.add('active'); // marcar primera
   });
-  // auto-select primer tab si existe:
+  // auto-select first
   const first = document.querySelector('.tab.active');
   if (first) loadProductsFor(first.dataset.key);
 }
 
-// Cargar productos para una sheetKey
+/* ========== UI - cargar productos de una sheetKey ========== */
+let lastLoadedSheetKey = null;
+let lastProductsCache = []; // cache for filter/search
+
 async function loadProductsFor(sheetKey){
   contentEl.innerHTML = 'Cargando productos...';
   currentInfo.innerText = 'Cargando ' + sheetKey + '...';
+  lastLoadedSheetKey = sheetKey;
   try {
-    const data = await fetchJSON(API_URL + '?sheetKey=' + encodeURIComponent(sheetKey));
-    if (data.error) throw new Error(data.message || "error GET");
-    renderProducts(data.products || [], sheetKey, data.headers || []);
-    currentInfo.innerText = 'Categoria: ' + sheetKey + ' (' + (data.products.length) + ' items)';
-    dbg('GET OK: sheetKey=' + sheetKey + '\nHeaders: ' + JSON.stringify(data.headers || []));
-  } catch(err) {
-    contentEl.innerHTML = 'Error cargando productos.';
+    const url = API_URL + '?sheetKey=' + encodeURIComponent(sheetKey);
+    const data = await fetchJSONWithFallback(url);
+    if (data.error) throw new Error(data.message || JSON.stringify(data));
+    const products = data.products || [];
+    lastProductsCache = products;
+    renderProducts(products, sheetKey, data.headers || []);
+    currentInfo.innerText = `Categoría: ${sheetKey} — ${products.length} items`;
+    dbg('GET OK sheetKey=' + sheetKey + ' products=' + products.length);
+  } catch (err) {
+    contentEl.innerHTML = '<div style="color:#c0392b">Error cargando productos. Revisa debug.</div>';
     dbg('Error loadProductsFor: ' + err);
     currentInfo.innerText = '';
   }
 }
 
-// Render de productos flex (busca campos comunes: name, price, stock, icon, category)
 function renderProducts(products, sheetKey, headers){
-  if (!products.length) { contentEl.innerHTML = '<div style="color:#777">No hay productos</div>'; return; }
+  if (!products || !products.length) {
+    contentEl.innerHTML = '<div style="color:#666">No hay productos en esta categoría</div>';
+    return;
+  }
+  // render grid
   const grid = document.createElement('div');
   grid.className = 'grid';
+  // apply current search filter
+  const q = (searchInput.value || '').trim().toLowerCase();
+
   products.forEach(p => {
-    // p: { row: N, data: {header1: value1, ...} }
-    const d = p.data;
-    // intentamos sacar campos típicos con tolerancia a nombres
-    const name = firstKeyValue(d, ['name','producto','nombre','title']) || 'Sin nombre';
+    const d = p.data || {};
+    const name = firstKeyValue(d, ['name','nombre','producto','title']) || 'Sin nombre';
     const price = firstKeyValue(d, ['price','precio','cost']) || '';
     const stock = Number(firstKeyValue(d, ['stock','cantidad','qty','existencias']) || 0);
     const icon = firstKeyValue(d, ['icon','emoji']) || '';
     const category = firstKeyValue(d, ['category','categoria']) || '';
+
+    if (q) {
+      const hay = (String(name)+String(category)+String(icon)).toLowerCase();
+      if (!hay.includes(q)) return; // skip
+    }
+
     const card = document.createElement('div');
-    card.className = 'card' + (stock<=0 ? ' disabled' : '');
+    card.className = 'card' + (stock <= 0 ? ' out' : '');
+    card.dataset.row = p.row;
+    card.dataset.sheetKey = sheetKey;
+
     card.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="icon">${escapeHTML(icon)}</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="icon">${escapeHTML(icon || '🛍️')}</div>
         <div style="flex:1">
-          <div style="font-weight:700">${escapeHTML(name)}</div>
-          <div style="color:#666;font-size:13px">${escapeHTML(category)}</div>
+          <div class="name">${escapeHTML(name)}</div>
+          <div class="cat">${escapeHTML(category)}</div>
         </div>
       </div>
       <div class="meta">
-        <div>$ ${price !== '' ? Number(price).toLocaleString() : '-'}</div>
+        <div class="price">$ ${fmtPrice(price)}</div>
         <div class="stock">Stock: <span class="stockval">${stock}</span></div>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-order" ${stock<=0 ? 'disabled' : ''}>Pedir</button>
-        <button class="btn-refresh" title="Refrescar producto">🔁</button>
+      <div class="actions">
+        <button class="btn order" ${stock<=0 ? 'disabled' : ''}>Pedir</button>
+        <button class="btn small refresh">🔁</button>
+        <button class="btn small details">Detalles</button>
       </div>
     `;
-    // attach buttons
-    card.querySelector('.btn-order').addEventListener('click', () => pedido(sheetKey, p.row, card));
-    card.querySelector('.btn-refresh').addEventListener('click', () => refreshRow(sheetKey, p.row, card));
+    // bind buttons
+    const orderBtn = card.querySelector('.order');
+    const refreshBtnCard = card.querySelector('.refresh');
+    orderBtn.addEventListener('click', () => handleOrder(card));
+    refreshBtnCard.addEventListener('click', () => refreshRow(sheetKey, p.row, card));
+
     grid.appendChild(card);
   });
+
   contentEl.innerHTML = '';
   contentEl.appendChild(grid);
 }
 
-// Buscar primer valor en objeto con los posibles nombres de clave (case-insensitive)
-function firstKeyValue(obj, keys) {
-  var map = {};
-  for (var k in obj) map[k.toString().toLowerCase()] = obj[k];
-  for (var i=0;i<keys.length;i++){
-    var v = map[keys[i].toLowerCase()];
-    if (v !== undefined) return v;
-  }
-  // si no coincidió, intentar retornar la primera propiedad útil
-  var any = Object.keys(obj).length ? obj[Object.keys(obj)[0]] : undefined;
-  return any;
-}
-
-async function pedido(sheetKey, row, cardEl) {
+/* ========== Ordenar / Pedir producto (POST form-urlencoded) ========== */
+async function handleOrder(cardEl){
+  const sheetKey = cardEl.dataset.sheetKey;
+  const row = Number(cardEl.dataset.row);
   const stockSpan = cardEl.querySelector('.stockval');
   const before = Number(stockSpan.innerText || 0);
   if (before <= 0) { alert('Stock agotado'); return; }
 
-  dbg('POST decrement row=' + row + ' sheet=' + sheetKey);
+  // disable UI while procesando
+  const orderBtn = cardEl.querySelector('.order');
+  orderBtn.disabled = true;
+  orderBtn.innerText = 'Procesando...';
+
   try {
     const form = new URLSearchParams();
     form.append('action','decrement');
     form.append('sheetKey', sheetKey);
     form.append('row', String(row));
 
-    const res = await fetch(API_URL, {
+    const r = await fetch(API_URL, {
       method: 'POST',
-      headers: {'Content-Type':'application/x-www-form-urlencoded'},
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: form.toString()
     });
+    const text = await r.text();
+    dbg('POST status: ' + r.status + '\n' + text);
+    let json;
+    try { json = JSON.parse(text); } catch(e){ throw new Error('Respuesta POST inválida: ' + text); }
 
-    const text = await res.text();
-    dbg('POST status: ' + res.status + '\n\n' + text);
-    const json = JSON.parse(text);
-    if (json.error) { alert('Error: ' + json.message); return; }
+    if (json.error) { throw new Error(json.message || 'Error servidor'); }
 
     const newStock = Number(json.newStock);
     stockSpan.innerText = newStock;
     if (newStock <= 0) {
-      cardEl.classList.add('disabled');
-      cardEl.querySelector('.btn-order').disabled = true;
+      cardEl.classList.add('out');
+      orderBtn.disabled = true;
+    } else {
+      orderBtn.disabled = false;
     }
-  } catch(err) {
-    dbg('Error pedido: ' + err);
-    alert('No se pudo procesar el pedido. Revisa la consola/debug.');
+    orderBtn.innerText = 'Pedir';
+    dbg(`Pedido OK row=${row} old=${json.oldStock} new=${json.newStock}`);
+  } catch (err) {
+    console.error(err);
+    dbg('Error handleOrder: ' + err);
+    alert('No se pudo completar el pedido. Revisa debug.');
+    // re-enable
+    orderBtn.disabled = false;
+    orderBtn.innerText = 'Pedir';
   }
 }
 
-// refrescar una fila específica (vuelve a GET la hoja y actualiza sólo la tarjeta)
-async function refreshRow(sheetKey, row, cardEl) {
-  dbg('Refrescando fila ' + row + ' de ' + sheetKey);
+/* ========== Refrescar fila específica (GET + actualizar tarjeta) ========== */
+async function refreshRow(sheetKey, row, cardEl){
+  dbg('Refrescando fila ' + row + ' de ' + sheetKey + ' ...');
   try {
-    const data = await fetchJSON(API_URL + '?sheetKey=' + encodeURIComponent(sheetKey));
-    // buscar product con la misma row
+    const data = await fetchJSONWithFallback(API_URL + '?sheetKey=' + encodeURIComponent(sheetKey));
     const prod = (data.products || []).find(p => Number(p.row) === Number(row));
-    if (!prod) { dbg('Fila no encontrada'); return; }
-    const stock = Number(firstKeyValue(prod.data, ['stock','cantidad','qty']) || 0);
-    cardEl.querySelector('.stockval').innerText = stock;
+    if (!prod) { dbg('Fila no encontrada al refrescar'); return; }
+    const stock = Number(firstKeyValue(prod.data, ['stock','cantidad','qty','existencias']) || 0);
+    const stockSpan = cardEl.querySelector('.stockval');
+    stockSpan.innerText = stock;
     if (stock <= 0) {
-      cardEl.classList.add('disabled');
-      cardEl.querySelector('.btn-order').disabled = true;
+      cardEl.classList.add('out');
+      cardEl.querySelector('.order').disabled = true;
     } else {
-      cardEl.classList.remove('disabled');
-      cardEl.querySelector('.btn-order').disabled = false;
+      cardEl.classList.remove('out');
+      cardEl.querySelector('.order').disabled = false;
     }
-    dbg('Refrescar OK row=' + row + ' stock=' + stock);
-  } catch(err) {
+    dbg('Refresh OK row=' + row + ' stock=' + stock);
+  } catch (err) {
     dbg('Error refreshRow: ' + err);
   }
 }
 
-refreshBtn.addEventListener('click', () => {
+/* ========== Utilities: refresh active category, search ======= */
+async function refreshActive(){
   const active = document.querySelector('.tab.active');
   if (active) loadProductsFor(active.dataset.key);
+}
+
+refreshBtn.addEventListener('click', refreshActive);
+searchInput.addEventListener('input', () => {
+  // re-render from lastProductsCache; simple debounce
+  if (!lastProductsCache) return;
+  renderProducts(lastProductsCache, lastLoadedSheetKey);
 });
 
-function escapeHTML(s){ return String(s||''); } // básico
+/* ========== Init ========== */
+loadCategories();
+dbg('Inicializando tienda. API_URL=' + API_URL + '\nConsejo: si GET falla por CORS, prueba JSONP fallback (ya habilitado). Para POST se usa application/x-www-form-urlencoded.).');
 
-// init
-loadSheetsList();
 </script>
 </body>
 </html>

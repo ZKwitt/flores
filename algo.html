@@ -178,25 +178,51 @@ function renderTabs(sheets){
 let lastLoadedSheetKey = null;
 let lastProductsCache = []; // cache for filter/search
 
+// Reemplaza temporalmente la función loadProductsFor por esta para debug
 async function loadProductsFor(sheetKey){
-  contentEl.innerHTML = 'Cargando productos...';
+  contentEl.innerHTML = 'Cargando productos (debug)...';
   currentInfo.innerText = 'Cargando ' + sheetKey + '...';
   lastLoadedSheetKey = sheetKey;
   try {
     const url = API_URL + '?sheetKey=' + encodeURIComponent(sheetKey);
-    const data = await fetchJSONWithFallback(url);
-    if (data.error) throw new Error(data.message || JSON.stringify(data));
+    dbg('-> Haciendo GET a: ' + url);
+    // fetch directo (sin fallback JSONP) para ver exactamente la respuesta que recibe el navegador
+    const resp = await fetch(url, { method: 'GET', cache: 'no-store' });
+    dbg('HTTP status: ' + resp.status);
+    const text = await resp.text();
+    dbg('Raw response:\n' + text);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      dbg('ERROR parseando JSON: ' + e + '\n(la respuesta no es JSON válido)');
+      contentEl.innerHTML = '<div style="color:#c0392b">Respuesta no JSON. Mira debug.</div>';
+      currentInfo.innerText = '';
+      return;
+    }
+
+    // Mostrar en debug el objeto y comprobar products
+    dbg('Parsed JSON:\n' + JSON.stringify(data, null, 2));
+
+    if (data.error) {
+      contentEl.innerHTML = '<div style="color:#c0392b">Error del servidor: ' + (data.message||JSON.stringify(data)) + '</div>';
+      currentInfo.innerText = '';
+      return;
+    }
+
     const products = data.products || [];
+    dbg('products length = ' + products.length + ' (primer item: ' + (products[0] ? JSON.stringify(products[0]) : 'none') + ')');
+
     lastProductsCache = products;
     renderProducts(products, sheetKey, data.headers || []);
     currentInfo.innerText = `Categoría: ${sheetKey} — ${products.length} items`;
-    dbg('GET OK sheetKey=' + sheetKey + ' products=' + products.length);
   } catch (err) {
-    contentEl.innerHTML = '<div style="color:#c0392b">Error cargando productos. Revisa debug.</div>';
-    dbg('Error loadProductsFor: ' + err);
+    contentEl.innerHTML = '<div style="color:#c0392b">Error fetch en cliente. Revisa consola.</div>';
+    dbg('Error loadProductsFor (cliente): ' + err);
     currentInfo.innerText = '';
   }
 }
+
 
 function renderProducts(products, sheetKey, headers){
   if (!products || !products.length) {

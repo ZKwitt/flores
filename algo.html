@@ -90,6 +90,7 @@ function renderTabs(sheets){
   };
   tabsEl.appendChild(allBtn);
 
+  // Resto de categorías
   sheets.forEach((s, i)=>{
     const btn = document.createElement('button');
     btn.className = 'tab';
@@ -102,6 +103,9 @@ function renderTabs(sheets){
     };
     tabsEl.appendChild(btn);
   });
+
+  // 🚀 Cargar "Todos" automáticamente al inicio
+  loadProductsAll();
 }
 
 /* ======= Cargar productos ======= */

@@ -158,6 +158,57 @@
     <div id="debug">Debug: —</div>
   </div>
 
+  <!-- Añade estos estilos (puedes ponerlos en tu CSS) -->
+<style>
+/* Carrito (esquina inferior derecha) */
+#cart-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  background: #0b84ff;
+  color: white;
+  border: none;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  cursor: pointer;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  z-index:9999;
+}
+#cart-btn .badge { background:#ff4757; padding:4px 7px; border-radius:999px; font-weight:700; }
+#cart-popup-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center; z-index:10000; }
+#cart-popup { background:white; width:90%; max-width:560px; border-radius:10px; padding:18px; box-shadow:0 8px 28px rgba(0,0,0,0.2); max-height:80vh; overflow:auto; }
+#cart-popup h3 { margin-top:0; }
+.cart-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #eee; }
+.cart-item .left { flex:1; }
+.cart-item .right { text-align:right; min-width:110px; }
+#cart-popup .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
+.small-btn { padding:8px 10px; border-radius:8px; border:1px solid #ddd; background:#f7f7f7; cursor:pointer; }
+.confirm-btn { background:#0b84ff; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
+.empty-msg { text-align:center; color:#666; padding:18px 0; }
+</style>
+
+<!-- Añade esto en tu HTML (por ejemplo al final del body) -->
+<button id="cart-btn" title="Abrir carrito" style="display:none">
+  <span id="cart-icon">🛒</span>
+  <span id="cart-summary">Carrito</span>
+  <span class="badge" id="cart-count">0</span>
+</button>
+
+<div id="cart-popup-overlay">
+  <div id="cart-popup" role="dialog" aria-modal="true">
+    <h3>Confirmar pedido</h3>
+    <div id="cart-items-container"></div>
+    <div id="cart-total" style="margin-top:12px;font-weight:700"></div>
+    <div class="actions">
+      <button class="small-btn" id="cart-close">Seguir comprando</button>
+      <button class="confirm-btn" id="cart-confirm">Confirmar y enviar por WhatsApp</button>
+    </div>
+  </div>
+</div>
+  
 <script>
 const API_URL = "https://d.thepersonmrt.workers.dev/"; 
 const tabsEl = document.getElementById('tabs');

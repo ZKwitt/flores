@@ -229,7 +229,184 @@ function firstKeyValue(obj, keys){
 }
 function fmtPrice(v){ return (v===''||v==null) ? '-' : Number(v).toLocaleString(); }
 
-/* ======= Cargar categorías ======= */
+/* ----------------- Carrito ----------------- */
+const WHATSAPP_NUMBER = '573207378992'; // <-- Reemplaza por tu número en formato internacional sin '+', ej: 573001234567
+let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
+
+const cartBtn = document.getElementById('cart-btn');
+const cartCountEl = document.getElementById('cart-count');
+const cartSummaryEl = document.getElementById('cart-summary');
+const cartOverlay = document.getElementById('cart-popup-overlay');
+const cartItemsContainer = document.getElementById('cart-items-container');
+const cartTotalEl = document.getElementById('cart-total');
+const cartCloseBtn = document.getElementById('cart-close');
+const cartConfirmBtn = document.getElementById('cart-confirm');
+
+function saveCart(){
+  localStorage.setItem('shop_cart_v1', JSON.stringify(cart));
+}
+function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
+
+function updateCartUI(){
+  const count = cart.reduce((s,i)=>s+i.qty,0);
+  const total = cart.reduce((s,i)=> s + (Number(i.price||0) * Number(i.qty||0)), 0);
+  cartCountEl.innerText = count;
+  cartSummaryEl.innerText = `Carrito ${count>0? '• ' + count + ' items':''}`;
+  cartBtn.style.display = 'flex';
+  cartBtn.title = count ? `${count} item(s) en carrito — Total $ ${fmtPrice(total)}` : 'Carrito vacío';
+  saveCart();
+}
+
+function parsePriceFromCardText(txt){
+  // txt ejemplo: "$ 1,234"
+  if(!txt) return 0;
+  return Number(String(txt).replace(/[^\d.-]/g,'') || 0);
+}
+
+/* Abre modal con items */
+function openCartModal(){
+  if(cart.length === 0){
+    alert('El carrito está vacío');
+    return;
+  }
+  cartItemsContainer.innerHTML = '';
+  cart.forEach(it => {
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    const left = document.createElement('div');
+    left.className = 'left';
+    left.innerHTML = `<strong>${it.name}</strong><div style="font-size:13px;color:#666">Precio: $ ${fmtPrice(it.price)} · Nota: ${it.sheetKey}</div>`;
+    const right = document.createElement('div');
+    right.className = 'right';
+    right.innerHTML = `<div>Cant: ${it.qty}</div><div style="font-weight:700">$ ${fmtPrice(Number(it.price) * Number(it.qty))}</div>`;
+    div.appendChild(left); div.appendChild(right);
+    cartItemsContainer.appendChild(div);
+  });
+  const total = cart.reduce((s,i)=>s + (Number(i.price||0)*Number(i.qty||0)),0);
+  cartTotalEl.innerText = 'Total: $ ' + fmtPrice(total);
+  cartOverlay.style.display = 'flex';
+}
+
+/* Cerrar modal */
+function closeCartModal(){ cartOverlay.style.display = 'none'; }
+
+/* Añadir al carrito */
+function addToCart(card, qty){
+  const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
+  const row = card.dataset.row;
+  const name = card.querySelector('.name')?.innerText || 'Sin nombre';
+  const price = parsePriceFromCardText(card.querySelector('.price')?.innerText || '') || 0;
+  const stockSpan = card.querySelector('.stockval');
+  const available = Number(stockSpan?.innerText || 0);
+
+  // validar stock
+  if(qty > available){
+    alert('No hay suficiente stock disponible.');
+    return;
+  }
+
+  const key = `${sheetKey}::${row}`;
+  const existing = cart.find(i=>cartItemKey(i) === key);
+  if(existing){
+    const newQty = Math.min(available, existing.qty + qty);
+    existing.qty = newQty;
+  } else {
+    cart.push({ sheetKey, row, name, price, qty });
+  }
+  updateCartUI();
+  dbg('Añadido al carrito: ' + name + ' x' + qty);
+}
+
+/* Enviar pedido: decrement en servidor y abrir WhatsApp */
+async function sendOrderAndWhatsapp(){
+  if(cart.length === 0) return alert('Carrito vacío');
+  cartConfirmBtn.disabled = true;
+  cartConfirmBtn.innerText = 'Procesando...';
+
+  try{
+    // Mandar decrement para cada item (se puede optimizar en lote si el API lo admite)
+    const promises = cart.map(it => {
+      const form = new URLSearchParams();
+      form.append('action','decrement');
+      form.append('sheetKey', it.sheetKey);
+      form.append('row', it.row);
+      form.append('amount', it.qty);
+      return fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:form })
+        .then(r=>r.json())
+        .then(res => {
+          if(res.error) throw new Error(res.message || 'Error API');
+          return { ok:true, ...res, item: it };
+        });
+    });
+
+    const results = await Promise.all(promises);
+    // Si llegamos aquí, todos ok
+    // Actualizar stock en los cards visibles
+    results.forEach(r => {
+      const it = r.item;
+      // buscar card con matching dataset
+      const selector = `.card[data-row="${it.row}"][data-sheet-key="${it.sheetKey}"], .card[data-row="${it.row}"][data-sheetkey="${it.sheetKey}"]`;
+      // nota: algunas implementaciones usan dataset con mayúsculas; buscaremos por atributo dataset
+      const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
+        // comparar sin importar mayúsculas
+        const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
+        const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
+        return sk === it.sheetKey && rrow === it.row.toString();
+      });
+      cards.forEach(card => {
+        const stockSpan = card.querySelector('.stockval');
+        if(stockSpan && typeof r.newStock !== 'undefined'){
+          stockSpan.innerText = Number(r.newStock);
+          const orderBtn = card.querySelector('.order');
+          if(Number(r.newStock) <= 0){
+            card.classList.add('out');
+            if(orderBtn) orderBtn.disabled = true;
+          } else {
+            if(orderBtn) orderBtn.disabled = false;
+          }
+        }
+      });
+    });
+
+    // Construir mensaje para WhatsApp
+    let msg = 'buenas noches, me interesaria comprar:%0A';
+    cart.forEach(it => {
+      msg += `- ${it.name}, precio: $ ${fmtPrice(it.price)}, cantidad: ${it.qty}%0A`;
+    });
+    msg += '%0Amuchas gracias';
+
+    // Abrir WhatsApp
+    if(!WHATSAPP_NUMBER || WHATSAPP_NUMBER.includes('WHATSAPP_NUMBER_HERE')){
+      // El usuario no reemplazó número
+      alert('Por favor reemplaza WHATSAPP_NUMBER_HERE por el número de destino en el script.');
+    } else {
+      const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
+      window.open(waUrl, '_blank');
+    }
+
+    // Limpiar carrito
+    cart = [];
+    saveCart();
+    updateCartUI();
+    closeCartModal();
+  }catch(err){
+    dbg(err);
+    alert('Error al procesar el pedido: ' + (err.message || err));
+  }finally{
+    cartConfirmBtn.disabled = false;
+    cartConfirmBtn.innerText = 'Confirmar y enviar por WhatsApp';
+  }
+}
+
+/* Inicializar botones del modal */
+if(cartCloseBtn) cartCloseBtn.onclick = closeCartModal;
+if(cartConfirmBtn) cartConfirmBtn.onclick = sendOrderAndWhatsapp;
+if(cartBtn) cartBtn.onclick = openCartModal;
+
+/* Mostrar carrito incluso si vacío (badge 0) */
+updateCartUI();
+
+/* ----------------- Cargar categorías (tu código original) -----------------*/
 async function loadCategories(){
   try {
     const r = await fetch(API_URL, {cache:'no-store'});
@@ -319,7 +496,7 @@ function renderProducts(products, sheetKey){
     const card = document.createElement('div');
     card.className='card'+(stock<=0?' out':'');
 
-    // ✅ Si no hay sheetKey explícito (caso "todos"), usamos la categoría
+    // Si no hay sheetKey explícito (caso "todos"), usamos la categoría
     card.dataset.row = p.row; 
     card.dataset.sheetKey = (sheetKey === "ALL") ? cat : sheetKey;
 
@@ -351,7 +528,12 @@ function renderProducts(products, sheetKey){
     let qty = 1;
     minusBtn.onclick = ()=>{ if(qty>1){ qty--; qtyEl.innerText=qty; } };
     plusBtn.onclick = ()=>{ if(qty < stock){ qty++; qtyEl.innerText=qty; } };
-    orderBtn.onclick = ()=>handleOrder(card, qty);
+    // <-- Cambiado: ahora añadimos al carrito en vez de decrementar inmediatamente
+    orderBtn.onclick = ()=> {
+      addToCart(card, qty);
+      // reset qty visual a 1
+      qty = 1; qtyEl.innerText = qty;
+    };
 
     grid.appendChild(card);
   });
@@ -360,33 +542,8 @@ function renderProducts(products, sheetKey){
   contentEl.appendChild(grid);
 }
 
-/* ======= Pedir producto ======= */
-async function handleOrder(card, qty){
-  const sheetKey = card.dataset.sheetKey;
-  const row = card.dataset.row;
-  const stockSpan = card.querySelector('.stockval');
-  const before = Number(stockSpan.innerText||0);
-  if (before<=0){ alert('Sin stock'); return; }
-  if (qty > before){ alert('No hay suficiente stock'); return; }
-
-  const btn = card.querySelector('.order');
-  btn.disabled=true; btn.innerText='...';
-  try{
-    const form=new URLSearchParams();
-    form.append('action','decrement');
-    form.append('sheetKey',sheetKey);
-    form.append('row',row);
-    form.append('amount', qty); // enviar cantidad
-    const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:form});
-    const data=await r.json();
-    if (data.error) throw new Error(data.message);
-    const newStock=Number(data.newStock);
-    stockSpan.innerText=newStock;
-    if (newStock<=0){ card.classList.add('out'); btn.disabled=true; }
-    btn.innerText='Pedir';
-  }catch(err){ dbg(err); alert('Error pedido'); btn.disabled=false; btn.innerText='Pedir'; }
-}
-  
+/* ======= Init ======= */
+loadCategories();
 
 /* ======= Init ======= */
 loadCategories();

@@ -256,11 +256,9 @@
       const s = String(v).trim();
       if (s === '') return '-';
       const n = parsePriceNumber(s);
-      // Si el original contiene sólo dígitos, puntos o comas lo tratamos como número
       if (/^[\d\.\,]+$/.test(s)) {
-        return Number(n).toLocaleString('de-DE'); // e.g. 8000 -> "8.000"
+        return Number(n).toLocaleString('de-DE');
       }
-      // Si no es solo número (texto libre), devolvemos exactamente lo escrito
       return s;
     }
 
@@ -270,20 +268,15 @@
       let s = String(v).trim();
       if (s === '') return 0;
       s = s.replace(/\s+/g, '');
-      // eliminar puntos como separador de miles
       s = s.replace(/\./g, '');
-      // convertir coma decimal a punto
       s = s.replace(/,/g, '.');
-      // eliminar caracteres inválidos
       s = s.replace(/[^0-9.\-]/g, '');
       const n = Number(s);
       return isNaN(n) ? 0 : n;
     }
 
-    /* Extra: parsea textos tipo "$ 9.500" o "9.500" -> devuelve número */
     function parsePriceFromCardText(txt){
       if (!txt) return 0;
-      // quitar símbolo $ y espacios
       let s = String(txt).replace(/\$/g, '').trim();
       return parsePriceNumber(s);
     }
@@ -304,7 +297,6 @@
     function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
     function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
 
-    /* Obtener stock original: desde el card si existe, sino desde lastProductsCache */
     function getOriginalStock(sheetKey, row){
       const card = Array.from(document.querySelectorAll('.card')).find(c => {
         const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
@@ -323,12 +315,10 @@
       return 0;
     }
 
-    /* reservedQty en carrito para un item dado */
     function getReservedQty(sheetKey, row){
       return cart.filter(i => i.sheetKey === sheetKey && String(i.row) === String(row)).reduce((s,i)=>s+Number(i.qty||0), 0);
     }
 
-    /* Actualiza la visualización del stock en las tarjetas (usa data-orig-stock) */
     function refreshCardStockDisplay(sheetKey, row){
       const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
         const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
@@ -362,12 +352,10 @@
       saveCart();
     }
 
-    /* Agregar al carrito y reservar visualmente stock */
     function addToCart(card, qty){
       const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
       const row = card.dataset.row;
       const name = card.querySelector('.name')?.innerText || 'Sin nombre';
-      // guardamos el precio original (texto) y el número para cálculos
       const priceRaw = card.dataset.price !== undefined ? card.dataset.price : (card.querySelector('.price')?.innerText || '');
       const priceNum = parsePriceNumber(priceRaw);
       const origStock = getOriginalStock(sheetKey, row);
@@ -387,13 +375,11 @@
         cart.push({ sheetKey, row, name, price: priceRaw, _priceNum: priceNum, qty });
       }
 
-      // actualizar visualmente
       refreshCardStockDisplay(sheetKey,row);
       updateCartUI();
       dbg('Añadido al carrito: ' + name + ' x' + qty);
     }
 
-    /* ---------- Modal: renderizado con controles para editar/eliminar ---------- */
     function renderCartModal(){
       cartItemsContainer.innerHTML = '';
       if(cart.length === 0){
@@ -434,7 +420,6 @@
       const total = cart.reduce((s,i)=>s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)),0);
       cartTotalEl.innerText = 'Total: $ ' + Number(total).toLocaleString();
 
-      // listeners para los controles
       Array.from(cartItemsContainer.querySelectorAll('.cart-minus')).forEach(btn=>{
       btn.onclick = (e)=>{
         const idx = Number(btn.dataset.idx);
@@ -444,9 +429,9 @@
           refreshCardStockDisplay(cart[idx].sheetKey, cart[idx].row);
           saveCart(); updateCartUI(); renderCartModal();
         } else {
-          const it = cart[idx];             // guardo el item ANTES de eliminar
+          const it = cart[idx];
           cart.splice(idx,1);
-          refreshCardStockDisplay(it.sheetKey, it.row); // actualizo la tarjeta
+          refreshCardStockDisplay(it.sheetKey, it.row);
           saveCart(); updateCartUI(); renderCartModal();
         }
       };
@@ -479,7 +464,6 @@
       });
     }
 
-    /* Abre modal con items */
     function openCartModal(){
       if(cart.length === 0){
         alert('El carrito está vacío');
@@ -489,10 +473,8 @@
       if(cartOverlay) cartOverlay.style.display = 'flex';
     }
 
-    /* Cerrar modal */
     function closeCartModal(){ if(cartOverlay) cartOverlay.style.display = 'none'; }
 
-    /* Enviar pedido: decrement en servidor y abrir WhatsApp */
     async function sendOrderAndWhatsapp(){
       if(cart.length === 0) return alert('Carrito vacío');
       cartConfirmBtn.disabled = true;
@@ -515,7 +497,6 @@
 
         const results = await Promise.all(promises);
 
-        // Actualizar stock en cards (según newStock devuelto)
         results.forEach(r => {
           const it = r.item;
           const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
@@ -540,7 +521,6 @@
           });
         });
 
-        // Construir mensaje para WhatsApp (precio mostrado tal cual)
         let msg = 'buenas noches, me interesaria comprar:%0A';
         cart.forEach(it => {
           msg += `- ${it.name}, precio: $ ${fmtPrice(it.price)}, cantidad: ${it.qty}%0A`;
@@ -554,7 +534,6 @@
           window.open(waUrl, '_blank');
         }
 
-        // Limpiar carrito
         cart = [];
         saveCart();
         updateCartUI();
@@ -568,15 +547,12 @@
       }
     }
 
-    /* Inicializar botones del modal */
     if(cartCloseBtn) cartCloseBtn.onclick = closeCartModal;
     if(cartConfirmBtn) cartConfirmBtn.onclick = sendOrderAndWhatsapp;
     if(cartBtn) cartBtn.onclick = openCartModal;
 
-    /* Mostrar carrito incluso si vacío (badge 0) */
     updateCartUI();
 
-    /* ----------------- Cargar categorías y renderProductos (con soporte de reservas) -----------------*/
     async function loadCategories(){
       try {
         const r = await fetch(API_URL, {cache:'no-store'});
@@ -618,7 +594,6 @@
       loadProductsAll();
     }
 
-    /* ======= Cargar productos ======= */
     async function loadProductsFor(sheetKey){
       lastLoadedSheetKey = sheetKey;
       if(contentEl) contentEl.innerHTML = 'Cargando...';
@@ -645,19 +620,6 @@
       } catch(err){ dbg(err); if(contentEl) contentEl.innerHTML='Error cargando productos'; }
     }
 
-    /* --- Helpers: validar URL / escape --- */
-    function isImageUrl(s){
-      if(!s || typeof s !== 'string') return false;
-      try{
-        const u = new URL(s);
-        // solo http(s)
-        if(u.protocol !== 'http:' && u.protocol !== 'https:') return false;
-        // comprobar extensión común de imagen (acepta querystrings)
-        return /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(u.pathname);
-      }catch(e){
-        return false;
-      }
-    }
     function escapeHtml(str){
       if(str === undefined || str === null) return '';
       return String(str)
@@ -668,7 +630,59 @@
         .replace(/'/g,'&#39;');
     }
 
-    /* ====== Reemplazamos renderProducts por esta versión que soporta URLs de imagen en icon ----- */
+    /* --- Nuevo helper: crear icono probando a cargar la URL (acepta URLs sin extensión) --- */
+    function createIconElementTryLoad(rawIcon, name, fallbackEmoji = '🛍️') {
+      const wrapper = document.createElement('div');
+      wrapper.style.display = 'inline-block';
+      wrapper.style.verticalAlign = 'middle';
+
+      const fallback = document.createElement('div');
+      fallback.className = 'icon-fallback';
+      fallback.innerText = (rawIcon && !/^(https?:)?\/\//i.test(rawIcon)) ? rawIcon : fallbackEmoji;
+      wrapper.appendChild(fallback);
+
+      if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
+        const img = new Image();
+        img.className = 'product-img';
+        img.alt = name || 'imagen';
+        img.referrerPolicy = 'no-referrer';
+
+        let aborted = false;
+        const to = setTimeout(() => {
+          aborted = true;
+          try { img.src = ''; } catch(e){}
+        }, 5000);
+
+        img.onload = () => {
+          if (aborted) return;
+          clearTimeout(to);
+          const okSize = (img.naturalWidth && img.naturalWidth > 8) || (img.width && img.width > 8);
+          if (okSize) {
+            wrapper.insertBefore(img, fallback);
+            fallback.style.display = 'none';
+          } else {
+            img.remove();
+          }
+        };
+
+        img.onerror = () => {
+          clearTimeout(to);
+          console.warn('No se pudo cargar imagen:', rawIcon);
+          img.remove();
+        };
+
+        try {
+          img.src = rawIcon;
+        } catch(e){
+          clearTimeout(to);
+          console.warn('Error asignando src a imagen:', e);
+        }
+      }
+
+      return wrapper;
+    }
+
+    /* ====== Reemplazamos renderProducts por esta versión que usa createIconElementTryLoad ----- */
     function renderProducts(products, sheetKey){
       if (!products || !products.length){
         if(contentEl) contentEl.innerHTML = 'No hay productos';
@@ -685,22 +699,6 @@
         const rawIcon = firstKeyValue(d, ['icon','emoji','image','img']) || '🛍️';
         const cat  = firstKeyValue(d, ['category','categoria']) || '';
 
-        // decidir si rawIcon es URL de imagen
-        let iconHtml = '';
-        if(isImageUrl(rawIcon)){
-          // si hay url -> img; además dejamos un span-fallback con el emoji original en caso de error
-          iconHtml = `
-            <div style="display:inline-block;vertical-align:middle">
-              <img class="product-img" src="${escapeHtml(rawIcon)}" alt="${escapeHtml(name)}"
-                   onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-block'">
-              <span class="icon-fallback" style="display:none">${escapeHtml(firstKeyValue(d, ['icon','emoji']) || '🛍️')}</span>
-            </div>`;
-        } else {
-          // no es url -> mostramos el emoji/texto tal cual
-          iconHtml = `<div class="icon-fallback">${escapeHtml(rawIcon)}</div>`;
-        }
-
-        // construir tarjeta
         const card = document.createElement('div');
         card.className='card'+(stock<=0?' out':'');
         card.dataset.origStock = stock;
@@ -711,9 +709,10 @@
         const reserved = getReservedQty(card.dataset.sheetKey, card.dataset.row);
         const available = Math.max(0, stock - reserved);
 
+        // montamos innerHTML con un placeholder para el icono
         card.innerHTML=`
           <div style="display:flex;gap:10px;align-items:center;flex-direction:column">
-            ${iconHtml}
+            <div class="icon-placeholder"></div>
             <div style="flex:1;width:100%">
               <div class="name">${escapeHtml(name)}</div>
               <div class="cat">${escapeHtml(cat)}</div>
@@ -729,6 +728,11 @@
             <button class="small plus">+</button>
             <button class="btn order" ${available<=0?'disabled':''}>Pedir</button>
           </div>`;
+
+        // reemplazar placeholder por el elemento que intenta cargar la imagen
+        const placeholder = card.querySelector('.icon-placeholder');
+        const iconEl = createIconElementTryLoad(rawIcon, name, '🛍️');
+        if (placeholder) placeholder.replaceWith(iconEl);
 
         const qtyEl = card.querySelector('.qty');
         const minusBtn = card.querySelector('.minus');
@@ -751,7 +755,6 @@
       if(contentEl){ contentEl.innerHTML=''; contentEl.appendChild(grid); }
     }
 
-    /* ======= Init ======= */
     loadCategories();
   </script>
 </body>

@@ -140,34 +140,56 @@
     }
 
     /* Carrito (esquina inferior derecha) */
-#cart-btn {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  background: #0b84ff;
-  color: white;
-  border: none;
-  padding: 12px 14px;
-  border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-  cursor: pointer;
-  display:flex;
-  gap:10px;
-  align-items:center;
-  z-index:9999;
-}
-#cart-btn .badge { background:#ff4757; padding:4px 7px; border-radius:999px; font-weight:700; }
-#cart-popup-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center; z-index:10000; }
-#cart-popup { background:white; width:90%; max-width:560px; border-radius:10px; padding:18px; box-shadow:0 8px 28px rgba(0,0,0,0.2); max-height:80vh; overflow:auto; }
-#cart-popup h3 { margin-top:0; }
-.cart-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #eee; }
-.cart-item .left { flex:1; }
-.cart-item .right { text-align:right; min-width:110px; }
-#cart-popup .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
-.small-btn { padding:8px 10px; border-radius:8px; border:1px solid #ddd; background:#f7f7f7; cursor:pointer; }
-.confirm-btn { background:#0b84ff; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
-.empty-msg { text-align:center; color:#666; padding:18px 0; }
-    
+    #cart-btn {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: #0b84ff;
+      color: white;
+      border: none;
+      padding: 12px 14px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+      cursor: pointer;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      z-index:9999;
+    }
+    #cart-btn .badge { background:#ff4757; padding:4px 7px; border-radius:999px; font-weight:700; }
+    #cart-popup-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center; z-index:10000; }
+    #cart-popup { background:white; width:90%; max-width:560px; border-radius:10px; padding:18px; box-shadow:0 8px 28px rgba(0,0,0,0.2); max-height:80vh; overflow:auto; }
+    #cart-popup h3 { margin-top:0; }
+    .cart-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #eee; }
+    .cart-item .left { flex:1; }
+    .cart-item .right { text-align:right; min-width:110px; }
+    #cart-popup .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
+    .small-btn { padding:8px 10px; border-radius:8px; border:1px solid #ddd; background:#f7f7f7; cursor:pointer; }
+    .confirm-btn { background:#0b84ff; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
+    .empty-msg { text-align:center; color:#666; padding:18px 0; }
+
+    /* Image / fallback small helpers */
+    .product-img {
+      width:60px;
+      height:60px;
+      object-fit:cover;
+      border-radius:50%;
+      display:inline-block;
+      vertical-align:middle;
+      box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    }
+    .icon-fallback {
+      display:inline-block;
+      width:60px;
+      height:60px;
+      line-height:60px;
+      text-align:center;
+      font-size:26px;
+      border-radius:50%;
+      color:#fff;
+      background:linear-gradient(45deg,#667eea,#764ba2);
+      box-shadow:0 6px 18px rgba(102,126,234,0.3);
+    }
   </style>
 </head>
 <body>
@@ -189,24 +211,23 @@
   </div>
 
   <!-- Añade esto en tu HTML (por ejemplo al final del body) -->
-<button id="cart-btn" title="Abrir carrito" style="display:none">
-  <span id="cart-icon">🛒</span>
-  <span id="cart-summary">Carrito</span>
-  <span class="badge" id="cart-count">0</span>
-</button>
+  <button id="cart-btn" title="Abrir carrito" style="display:none">
+    <span id="cart-icon">🛒</span>
+    <span id="cart-summary">Carrito</span>
+    <span class="badge" id="cart-count">0</span>
+  </button>
 
-<div id="cart-popup-overlay">
-  <div id="cart-popup" role="dialog" aria-modal="true">
-    <h3>Confirmar pedido</h3>
-    <div id="cart-items-container"></div>
-    <div id="cart-total" style="margin-top:12px;font-weight:700"></div>
-    <div class="actions">
-      <button class="small-btn" id="cart-close">Seguir comprando</button>
-      <button class="confirm-btn" id="cart-confirm">Confirmar y enviar por WhatsApp</button>
+  <div id="cart-popup-overlay">
+    <div id="cart-popup" role="dialog" aria-modal="true">
+      <h3>Confirmar pedido</h3>
+      <div id="cart-items-container"></div>
+      <div id="cart-total" style="margin-top:12px;font-weight:700"></div>
+      <div class="actions">
+        <button class="small-btn" id="cart-close">Seguir comprando</button>
+        <button class="confirm-btn" id="cart-confirm">Confirmar y enviar por WhatsApp</button>
+      </div>
     </div>
   </div>
-</div>
-</body>
 <script>
 const API_URL = "https://d.thepersonmrt.workers.dev/"; 
 const tabsEl = document.getElementById('tabs');
@@ -624,7 +645,10 @@ async function loadProductsAll(){
 }
 
 function renderProducts(products, sheetKey){
-  if (!products.length){ if(contentEl) contentEl.innerHTML='No hay productos'; return; }
+  if (!products || !products.length){
+    if(contentEl) contentEl.innerHTML = 'No hay productos';
+    return;
+  }
   const grid = document.createElement('div'); 
   grid.className='grid';
 
@@ -633,30 +657,43 @@ function renderProducts(products, sheetKey){
     const name = firstKeyValue(d, ['name','nombre','producto']) || 'Sin nombre';
     const price = firstKeyValue(d, ['price','precio']) || '';
     const stock = Number(firstKeyValue(d, ['stock','cantidad']) || 0);
-    const icon = firstKeyValue(d, ['icon','emoji']) || '🛍️';
+    const rawIcon = firstKeyValue(d, ['icon','emoji','image','img']) || '🛍️'; // lee varios keys por si acaso
     const cat  = firstKeyValue(d, ['category','categoria']) || '';
 
+    // decidir si rawIcon es URL de imagen
+    let iconHtml = '';
+    if(isImageUrl(rawIcon)){
+      // si hay url -> img; además dejamos un span-fallback con el emoji original en caso de error
+      // usamos onerror para ocultar la img y mostrar el fallback
+      const fallback = escapeHtml(String(rawIcon).startsWith('http') ? '' : rawIcon) || escapeHtml(firstKeyValue(d, ['icon','emoji'])||'🛍️');
+      iconHtml = `
+        <div style="position:relative;display:inline-block">
+          <img class="product-img" src="${escapeHtml(rawIcon)}" alt="${escapeHtml(name)}"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block'">
+          <span class="icon-fallback" style="display:none">${escapeHtml(firstKeyValue(d, ['icon','emoji']) || '🛍️')}</span>
+        </div>`;
+    } else {
+      // no es url -> mostramos el emoji/texto tal cual
+      iconHtml = `<div class="icon-fallback">${escapeHtml(rawIcon)}</div>`;
+    }
+
+    // construir tarjeta
     const card = document.createElement('div');
     card.className='card'+(stock<=0?' out':'');
-    // guardar stock original para cálculos de reserva
     card.dataset.origStock = stock;
-    // guardar precio original en data-price para usar luego
     card.dataset.price = price;
-
-    // Si no hay sheetKey explícito (caso "todos"), usamos la categoría
-    card.dataset.row = p.row; 
+    card.dataset.row = p.row;
     card.dataset.sheetKey = (sheetKey === "ALL") ? cat : sheetKey;
 
-    // calcular stock disponible restando lo reservado en cart
     const reserved = getReservedQty(card.dataset.sheetKey, card.dataset.row);
     const available = Math.max(0, stock - reserved);
 
     card.innerHTML=`
       <div style="display:flex;gap:10px;align-items:center">
-        <div class="icon">${icon}</div>
+        ${iconHtml}
         <div style="flex:1">
-          <div class="name">${name}</div>
-          <div class="cat">${cat}</div>
+          <div class="name">${escapeHtml(name)}</div>
+          <div class="cat">${escapeHtml(cat)}</div>
         </div>
       </div>
       <div class="meta">
@@ -690,7 +727,6 @@ function renderProducts(products, sheetKey){
 
   if(contentEl){ contentEl.innerHTML=''; contentEl.appendChild(grid); }
 }
-
 /* ======= Init ======= */
 loadCategories();
 </script>

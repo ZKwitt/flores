@@ -229,8 +229,8 @@ function firstKeyValue(obj, keys){
 }
 function fmtPrice(v){ return (v===''||v==null) ? '-' : Number(v).toLocaleString(); }
 
-/* ----------------- Carrito ----------------- */
-const WHATSAPP_NUMBER = '573207378992'; // <-- Reemplaza por tu número en formato internacional sin '+', ej: 573001234567
+/* ----------------- Carrito (mejorado: editar/eliminar y reserva visual de stock) ----------------- */
+const WHATSAPP_NUMBER = '573207378992';
 let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
 
 const cartBtn = document.getElementById('cart-btn');
@@ -242,13 +242,63 @@ const cartTotalEl = document.getElementById('cart-total');
 const cartCloseBtn = document.getElementById('cart-close');
 const cartConfirmBtn = document.getElementById('cart-confirm');
 
-function saveCart(){
-  localStorage.setItem('shop_cart_v1', JSON.stringify(cart));
-}
+function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
 function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
+function fmtPrice(v){ return (v===''||v==null) ? '-' : Number(v).toLocaleString(); }
 
+/* Obtener stock original: desde el card si existe, sino desde lastProductsCache */
+function getOriginalStock(sheetKey, row){
+  // buscar card en DOM
+  const card = Array.from(document.querySelectorAll('.card')).find(c => {
+    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
+    const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
+    return sk === (sheetKey||'') && rrow === (row||'').toString();
+  });
+  if(card && card.dataset.origStock !== undefined) return Number(card.dataset.origStock || 0);
+  // fallback: buscar en lastProductsCache (si está disponible)
+  if(window.lastProductsCache && Array.isArray(window.lastProductsCache)){
+    const p = window.lastProductsCache.find(pp => String(pp.row) === String(row) && ((pp.sheetKey && pp.sheetKey===sheetKey) || true));
+    if(p){
+      const d = p.data || {};
+      const stock = firstKeyValue(d, ['stock','cantidad']) || 0;
+      return Number(stock || 0);
+    }
+  }
+  return 0;
+}
+
+/* reservedQty en carrito para un item dado */
+function getReservedQty(sheetKey, row){
+  return cart.filter(i => i.sheetKey === sheetKey && String(i.row) === String(row)).reduce((s,i)=>s+Number(i.qty||0), 0);
+}
+
+/* Actualiza la visualización del stock en las tarjetas (usa data-orig-stock) */
+function refreshCardStockDisplay(sheetKey, row){
+  const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
+    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
+    const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
+    return sk === (sheetKey||'') && rrow === (row||'').toString();
+  });
+  const origStock = getOriginalStock(sheetKey, row);
+  const reserved = getReservedQty(sheetKey, row);
+  const avail = Math.max(0, origStock - reserved);
+  cards.forEach(card => {
+    const stockSpan = card.querySelector('.stockval');
+    if(stockSpan) stockSpan.innerText = avail;
+    const orderBtn = card.querySelector('.order');
+    if(avail <= 0){
+      card.classList.add('out');
+      if(orderBtn) orderBtn.disabled = true;
+    } else {
+      card.classList.remove('out');
+      if(orderBtn) orderBtn.disabled = false;
+    }
+  });
+}
+
+/* Actualizar UI del carrito (contador + título) */
 function updateCartUI(){
-  const count = cart.reduce((s,i)=>s+i.qty,0);
+  const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
   const total = cart.reduce((s,i)=> s + (Number(i.price||0) * Number(i.qty||0)), 0);
   cartCountEl.innerText = count;
   cartSummaryEl.innerText = `Carrito ${count>0? '• ' + count + ' items':''}`;
@@ -257,49 +307,16 @@ function updateCartUI(){
   saveCart();
 }
 
-function parsePriceFromCardText(txt){
-  // txt ejemplo: "$ 1,234"
-  if(!txt) return 0;
-  return Number(String(txt).replace(/[^\d.-]/g,'') || 0);
-}
-
-/* Abre modal con items */
-function openCartModal(){
-  if(cart.length === 0){
-    alert('El carrito está vacío');
-    return;
-  }
-  cartItemsContainer.innerHTML = '';
-  cart.forEach(it => {
-    const div = document.createElement('div');
-    div.className = 'cart-item';
-    const left = document.createElement('div');
-    left.className = 'left';
-    left.innerHTML = `<strong>${it.name}</strong><div style="font-size:13px;color:#666">Precio: $ ${fmtPrice(it.price)} · Nota: ${it.sheetKey}</div>`;
-    const right = document.createElement('div');
-    right.className = 'right';
-    right.innerHTML = `<div>Cant: ${it.qty}</div><div style="font-weight:700">$ ${fmtPrice(Number(it.price) * Number(it.qty))}</div>`;
-    div.appendChild(left); div.appendChild(right);
-    cartItemsContainer.appendChild(div);
-  });
-  const total = cart.reduce((s,i)=>s + (Number(i.price||0)*Number(i.qty||0)),0);
-  cartTotalEl.innerText = 'Total: $ ' + fmtPrice(total);
-  cartOverlay.style.display = 'flex';
-}
-
-/* Cerrar modal */
-function closeCartModal(){ cartOverlay.style.display = 'none'; }
-
-/* Añadir al carrito */
+/* Agregar al carrito y reservar visualmente stock */
 function addToCart(card, qty){
   const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
   const row = card.dataset.row;
   const name = card.querySelector('.name')?.innerText || 'Sin nombre';
   const price = parsePriceFromCardText(card.querySelector('.price')?.innerText || '') || 0;
-  const stockSpan = card.querySelector('.stockval');
-  const available = Number(stockSpan?.innerText || 0);
+  const origStock = getOriginalStock(sheetKey, row);
+  const reserved = getReservedQty(sheetKey,row);
+  const available = Math.max(0, origStock - reserved);
 
-  // validar stock
   if(qty > available){
     alert('No hay suficiente stock disponible.');
     return;
@@ -308,23 +325,124 @@ function addToCart(card, qty){
   const key = `${sheetKey}::${row}`;
   const existing = cart.find(i=>cartItemKey(i) === key);
   if(existing){
-    const newQty = Math.min(available, existing.qty + qty);
-    existing.qty = newQty;
+    existing.qty = Math.min(origStock, existing.qty + qty);
   } else {
     cart.push({ sheetKey, row, name, price, qty });
   }
+
+  // actualizar visualmente
+  refreshCardStockDisplay(sheetKey,row);
   updateCartUI();
   dbg('Añadido al carrito: ' + name + ' x' + qty);
 }
 
-/* Enviar pedido: decrement en servidor y abrir WhatsApp */
+/* ---------- Modal: renderizado con controles para editar/eliminar ---------- */
+function renderCartModal(){
+  cartItemsContainer.innerHTML = '';
+  if(cart.length === 0){
+    cartItemsContainer.innerHTML = `<div class="empty-msg">El carrito está vacío</div>`;
+    cartTotalEl.innerText = '';
+    return;
+  }
+
+  cart.forEach((it, index) => {
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    const left = document.createElement('div');
+    left.className = 'left';
+    left.innerHTML = `<strong>${it.name}</strong><div style="font-size:13px;color:#666">Precio: $ ${fmtPrice(it.price)} · Nota: ${it.sheetKey}</div>`;
+
+    const right = document.createElement('div');
+    right.className = 'right';
+    // controles: - qty +  y eliminar
+    const controls = document.createElement('div');
+    controls.style.display = 'flex';
+    controls.style.flexDirection = 'column';
+    controls.style.alignItems = 'flex-end';
+    controls.innerHTML = `
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="small-btn cart-minus" data-idx="${index}">-</button>
+        <span class="cart-qty" data-idx="${index}">${it.qty}</span>
+        <button class="small-btn cart-plus" data-idx="${index}">+</button>
+      </div>
+      <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
+        <div style="font-weight:700">$ ${fmtPrice(Number(it.price) * Number(it.qty))}</div>
+        <button class="small-btn cart-remove" data-idx="${index}">Eliminar</button>
+      </div>
+    `;
+    right.appendChild(controls);
+    div.appendChild(left); div.appendChild(right);
+    cartItemsContainer.appendChild(div);
+  });
+
+  const total = cart.reduce((s,i)=>s + (Number(i.price||0)*Number(i.qty||0)),0);
+  cartTotalEl.innerText = 'Total: $ ' + fmtPrice(total);
+
+  // listeners para los controles
+  Array.from(cartItemsContainer.querySelectorAll('.cart-minus')).forEach(btn=>{
+    btn.onclick = (e)=>{
+      const idx = Number(btn.dataset.idx);
+      if(isNaN(idx)) return;
+      if(cart[idx].qty > 1){
+        cart[idx].qty = cart[idx].qty - 1;
+        // actualizar visual
+        refreshCardStockDisplay(cart[idx].sheetKey, cart[idx].row);
+        saveCart(); updateCartUI(); renderCartModal();
+      } else {
+        // si qty == 1, quitar item
+        cart.splice(idx,1);
+        saveCart(); updateCartUI(); renderCartModal();
+      }
+    };
+  });
+  Array.from(cartItemsContainer.querySelectorAll('.cart-plus')).forEach(btn=>{
+    btn.onclick = (e)=>{
+      const idx = Number(btn.dataset.idx);
+      if(isNaN(idx)) return;
+      const it = cart[idx];
+      const orig = getOriginalStock(it.sheetKey, it.row);
+      if(Number(it.qty) < orig){
+        it.qty = Number(it.qty) + 1;
+        refreshCardStockDisplay(it.sheetKey, it.row);
+        saveCart(); updateCartUI(); renderCartModal();
+      } else {
+        alert('No hay más stock disponible para aumentar la cantidad.');
+      }
+    };
+  });
+  Array.from(cartItemsContainer.querySelectorAll('.cart-remove')).forEach(btn=>{
+    btn.onclick = (e)=>{
+      const idx = Number(btn.dataset.idx);
+      if(isNaN(idx)) return;
+      const it = cart[idx];
+      // eliminar y refrescar
+      cart.splice(idx,1);
+      refreshCardStockDisplay(it.sheetKey, it.row);
+      saveCart(); updateCartUI(); renderCartModal();
+    };
+  });
+}
+
+/* Abre modal con items */
+function openCartModal(){
+  if(cart.length === 0){
+    alert('El carrito está vacío');
+    return;
+  }
+  renderCartModal();
+  cartOverlay.style.display = 'flex';
+}
+
+/* Cerrar modal */
+function closeCartModal(){ cartOverlay.style.display = 'none'; }
+
+/* Enviar pedido: decrement en servidor y abrir WhatsApp (igual que antes) */
 async function sendOrderAndWhatsapp(){
   if(cart.length === 0) return alert('Carrito vacío');
   cartConfirmBtn.disabled = true;
   cartConfirmBtn.innerText = 'Procesando...';
 
   try{
-    // Mandar decrement para cada item (se puede optimizar en lote si el API lo admite)
     const promises = cart.map(it => {
       const form = new URLSearchParams();
       form.append('action','decrement');
@@ -340,15 +458,11 @@ async function sendOrderAndWhatsapp(){
     });
 
     const results = await Promise.all(promises);
-    // Si llegamos aquí, todos ok
-    // Actualizar stock en los cards visibles
+
+    // Actualizar stock en cards (según newStock devuelto)
     results.forEach(r => {
       const it = r.item;
-      // buscar card con matching dataset
-      const selector = `.card[data-row="${it.row}"][data-sheet-key="${it.sheetKey}"], .card[data-row="${it.row}"][data-sheetkey="${it.sheetKey}"]`;
-      // nota: algunas implementaciones usan dataset con mayúsculas; buscaremos por atributo dataset
       const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
-        // comparar sin importar mayúsculas
         const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
         const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
         return sk === it.sheetKey && rrow === it.row.toString();
@@ -356,12 +470,15 @@ async function sendOrderAndWhatsapp(){
       cards.forEach(card => {
         const stockSpan = card.querySelector('.stockval');
         if(stockSpan && typeof r.newStock !== 'undefined'){
+          // además actualizamos el data-orig-stock para que futuras reservas funcionen correctamente
+          card.dataset.origStock = Number(r.newStock);
           stockSpan.innerText = Number(r.newStock);
           const orderBtn = card.querySelector('.order');
           if(Number(r.newStock) <= 0){
             card.classList.add('out');
             if(orderBtn) orderBtn.disabled = true;
           } else {
+            card.classList.remove('out');
             if(orderBtn) orderBtn.disabled = false;
           }
         }
@@ -375,9 +492,7 @@ async function sendOrderAndWhatsapp(){
     });
     msg += '%0Amuchas gracias';
 
-    // Abrir WhatsApp
     if(!WHATSAPP_NUMBER || WHATSAPP_NUMBER.includes('WHATSAPP_NUMBER_HERE')){
-      // El usuario no reemplazó número
       alert('Por favor reemplaza WHATSAPP_NUMBER_HERE por el número de destino en el script.');
     } else {
       const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
@@ -406,7 +521,7 @@ if(cartBtn) cartBtn.onclick = openCartModal;
 /* Mostrar carrito incluso si vacío (badge 0) */
 updateCartUI();
 
-/* ----------------- Cargar categorías (tu código original) -----------------*/
+/* ----------------- Cargar categorías y renderProductos (con soporte de reservas) -----------------*/
 async function loadCategories(){
   try {
     const r = await fetch(API_URL, {cache:'no-store'});
@@ -421,7 +536,6 @@ async function loadCategories(){
 function renderTabs(sheets){
   tabsEl.innerHTML = '';
 
-  // Botón especial "Todos"
   const allBtn = document.createElement('button');
   allBtn.className = 'tab active';
   allBtn.innerText = "Todos";
@@ -432,7 +546,6 @@ function renderTabs(sheets){
   };
   tabsEl.appendChild(allBtn);
 
-  // Resto de categorías
   sheets.forEach((s, i)=>{
     const btn = document.createElement('button');
     btn.className = 'tab';
@@ -446,7 +559,6 @@ function renderTabs(sheets){
     tabsEl.appendChild(btn);
   });
 
-  // 🚀 Cargar "Todos" automáticamente al inicio
   loadProductsAll();
 }
 
@@ -495,10 +607,16 @@ function renderProducts(products, sheetKey){
 
     const card = document.createElement('div');
     card.className='card'+(stock<=0?' out':'');
+    // guardar stock original para cálculos de reserva
+    card.dataset.origStock = stock;
 
     // Si no hay sheetKey explícito (caso "todos"), usamos la categoría
     card.dataset.row = p.row; 
     card.dataset.sheetKey = (sheetKey === "ALL") ? cat : sheetKey;
+
+    // calcular stock disponible restando lo reservado en cart
+    const reserved = getReservedQty(card.dataset.sheetKey, card.dataset.row);
+    const available = Math.max(0, stock - reserved);
 
     card.innerHTML=`
       <div style="display:flex;gap:10px;align-items:center">
@@ -510,13 +628,13 @@ function renderProducts(products, sheetKey){
       </div>
       <div class="meta">
         <div class="price">$ ${fmtPrice(price)}</div>
-        <div class="stock">Stock: <span class="stockval">${stock}</span></div>
+        <div class="stock">Stock: <span class="stockval">${available}</span></div>
       </div>
       <div class="actions">
         <button class="small minus">-</button>
         <span class="qty">1</span>
         <button class="small plus">+</button>
-        <button class="btn order" ${stock<=0?'disabled':''}>Pedir</button>
+        <button class="btn order" ${available<=0?'disabled':''}>Pedir</button>
       </div>`;
 
     const qtyEl = card.querySelector('.qty');
@@ -527,13 +645,15 @@ function renderProducts(products, sheetKey){
 
     let qty = 1;
     minusBtn.onclick = ()=>{ if(qty>1){ qty--; qtyEl.innerText=qty; } };
-    plusBtn.onclick = ()=>{ if(qty < stock){ qty++; qtyEl.innerText=qty; } };
-    // <-- Cambiado: ahora añadimos al carrito en vez de decrementar inmediatamente
+    plusBtn.onclick = ()=>{ if(qty < available){ qty++; qtyEl.innerText=qty; } };
     orderBtn.onclick = ()=> {
       addToCart(card, qty);
       // reset qty visual a 1
       qty = 1; qtyEl.innerText = qty;
     };
+
+    // marcar visual si no disponible
+    if(available <= 0) card.classList.add('out');
 
     grid.appendChild(card);
   });
@@ -541,9 +661,6 @@ function renderProducts(products, sheetKey){
   contentEl.innerHTML=''; 
   contentEl.appendChild(grid);
 }
-
-/* ======= Init ======= */
-loadCategories();
 
 /* ======= Init ======= */
 loadCategories();

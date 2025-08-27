@@ -138,29 +138,8 @@
       0%,100%{transform:translateY(0) rotate(0deg)}
       50%{transform:translateY(-20px) rotate(180deg)}
     }
-  </style>
-</head>
-<body>
-  <div class="floating-shapes">
-    <div class="shape">💄</div>
-    <div class="shape">✨</div>
-    <div class="shape">💋</div>
-  </div>
 
-  <div class="header">
-    <h1>💄 Marrie</h1>
-    <p>Belleza que inspira, calidad que perdura</p>
-  </div>
-
-  <div id="app">
-    <div id="tabs">Cargando categorías...</div>
-    <div id="content">Cargando productos...</div>
-    <div id="debug">Debug: —</div>
-  </div>
-
-  <!-- Añade estos estilos (puedes ponerlos en tu CSS) -->
-<style>
-/* Carrito (esquina inferior derecha) */
+    /* Carrito (esquina inferior derecha) */
 #cart-btn {
   position: fixed;
   right: 18px;
@@ -188,9 +167,28 @@
 .small-btn { padding:8px 10px; border-radius:8px; border:1px solid #ddd; background:#f7f7f7; cursor:pointer; }
 .confirm-btn { background:#0b84ff; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
 .empty-msg { text-align:center; color:#666; padding:18px 0; }
-</style>
+    
+  </style>
+</head>
+<body>
+  <div class="floating-shapes">
+    <div class="shape">💄</div>
+    <div class="shape">✨</div>
+    <div class="shape">💋</div>
+  </div>
 
-<!-- Añade esto en tu HTML (por ejemplo al final del body) -->
+  <div class="header">
+    <h1>💄 Marrie</h1>
+    <p>Belleza que inspira, calidad que perdura</p>
+  </div>
+
+  <div id="app">
+    <div id="tabs">Cargando categorías...</div>
+    <div id="content">Cargando productos...</div>
+    <div id="debug">Debug: —</div>
+  </div>
+
+  <!-- Añade esto en tu HTML (por ejemplo al final del body) -->
 <button id="cart-btn" title="Abrir carrito" style="display:none">
   <span id="cart-icon">🛒</span>
   <span id="cart-summary">Carrito</span>
@@ -208,7 +206,7 @@
     </div>
   </div>
 </div>
-  
+</body>
 <script>
 const API_URL = "https://d.thepersonmrt.workers.dev/"; 
 const tabsEl = document.getElementById('tabs');
@@ -388,6 +386,7 @@ async function handleOrder(card, qty){
     btn.innerText='Pedir';
   }catch(err){ dbg(err); alert('Error pedido'); btn.disabled=false; btn.innerText='Pedir'; }
 }
+  
 
 /* ======= Init ======= */
 loadCategories();

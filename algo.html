@@ -228,18 +228,20 @@ function firstKeyValue(obj, keys){
   return undefined;
 }
 
-/* ---------- Mostrar precio exactamente (texto) ---------- */
+/* ---------- Mostrar precio: formatea números con puntos de miles ---------- */
 function fmtPrice(v){
   if (v===undefined || v===null) return '-';
   const s = String(v).trim();
-  return s === '' ? '-' : s; // mostramos exactamente lo que había en la celda
+  if (s === '') return '-';
+  const n = parsePriceNumber(s);
+  // Si el original contiene sólo dígitos, puntos o comas lo tratamos como número
+  if (/^[\d\.\,]+$/.test(s)) {
+    return Number(n).toLocaleString('de-DE'); // e.g. 8000 -> "8.000"
+  }
+  // Si no es solo número (texto libre), devolvemos exactamente lo escrito
+  return s;
 }
 
-/* ---------- Parseo simple: puntos = miles ---------- */
-/* - Elimina todos los puntos (.) asumiéndolos como separador de miles.
-   - Reemplaza comas por punto para manejar decimales si se usan.
-   - Quita cualquier caracter no numérico salvo '.' y '-'.
-*/
 function parsePriceNumber(v){
   if (v === undefined || v === null) return 0;
   if (typeof v === 'number' && !isNaN(v)) return v;
@@ -328,14 +330,13 @@ function refreshCardStockDisplay(sheetKey, row){
   });
 }
 
-/* Actualizar UI del carrito (contador + título) */
 function updateCartUI(){
   const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
   const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
   cartCountEl.innerText = count;
   cartSummaryEl.innerText = `Carrito ${count>0? '• ' + count + ' items':''}`;
   if(cartBtn) cartBtn.style.display = 'flex';
-  if(cartBtn) cartBtn.title = count ? `${count} item(s) en carrito — Total $ ${Number(total).toLocaleString()}` : 'Carrito vacío';
+  if(cartBtn) cartBtn.title = count ? `${count} item(s) en carrito — Total $ ${Number(total).toLocaleString('de-DE')}` : 'Carrito vacío';
   saveCart();
 }
 
@@ -399,7 +400,7 @@ function renderCartModal(){
         <button class="small-btn cart-plus" data-idx="${index}">+</button>
       </div>
       <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
-        <div style="font-weight:700">$ ${Number(parsePriceNumber(it._priceNum !== undefined ? it._priceNum : it.price) * Number(it.qty)).toLocaleString()}</div>
+        <div style="font-weight:700">$ ${Number(parsePriceNumber(it._priceNum !== undefined ? it._priceNum : it.price) * Number(it.qty)).toLocaleString('de-DE')}</div>
         <button class="small-btn cart-remove" data-idx="${index}">Eliminar</button>
       </div>
     `;
@@ -413,19 +414,22 @@ function renderCartModal(){
 
   // listeners para los controles
   Array.from(cartItemsContainer.querySelectorAll('.cart-minus')).forEach(btn=>{
-    btn.onclick = (e)=>{
-      const idx = Number(btn.dataset.idx);
-      if(isNaN(idx)) return;
-      if(cart[idx].qty > 1){
-        cart[idx].qty = cart[idx].qty - 1;
-        refreshCardStockDisplay(cart[idx].sheetKey, cart[idx].row);
-        saveCart(); updateCartUI(); renderCartModal();
-      } else {
-        cart.splice(idx,1);
-        saveCart(); updateCartUI(); renderCartModal();
-      }
-    };
-  });
+  btn.onclick = (e)=>{
+    const idx = Number(btn.dataset.idx);
+    if(isNaN(idx)) return;
+    if(cart[idx].qty > 1){
+      cart[idx].qty = cart[idx].qty - 1;
+      refreshCardStockDisplay(cart[idx].sheetKey, cart[idx].row);
+      saveCart(); updateCartUI(); renderCartModal();
+    } else {
+      const it = cart[idx];             // guardo el item ANTES de eliminar
+      cart.splice(idx,1);
+      refreshCardStockDisplay(it.sheetKey, it.row); // actualizo la tarjeta
+      saveCart(); updateCartUI(); renderCartModal();
+    }
+  };
+});
+
   Array.from(cartItemsContainer.querySelectorAll('.cart-plus')).forEach(btn=>{
     btn.onclick = (e)=>{
       const idx = Number(btn.dataset.idx);

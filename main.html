@@ -239,137 +239,27 @@
     </div>
     
     <script>
-        const products = [
-            {name: "MARCADOR DELINEADOR DE LABIOS", price: 9600, stock: 1, category: "labios", icon: "💋"},
-            {name: "PESTAÑINA TRANSPARENTE ACIDO HIALURONICO", price: 14400, stock: 2, category: "ojos", icon: "👁"},
-            {name: "PESTAÑINA TRANSPARENTE", price: 7200, stock: 1, category: "ojos", icon: "👁"},
-            {name: "PESTAÑINA CON DELINEADOR", price: 11500, stock: 1, category: "ojos", icon: "👁"},
-            {name: "MASCARA KARITE", price: 11500, stock: 1, category: "cuidado", icon: "🌿"},
-            {name: "LABIAL EN BARRA COREANO RETRACTIL", price: 13000, stock: 2, category: "labios", icon: "💄"},
-            {name: "LABIAL COREANO EN BARRA PRESENTACION DE LUJO", price: 29000, stock: 2, category: "labios", icon: "💄"},
-            {name: "LABIAL LIQUIDO + DELINEADOR DE LABIOS", price: 29000, stock: 2, category: "labios", icon: "💋"},
-            {name: "BRILLO RETRACTIL CON COLOR", price: 7200, stock: 1, category: "labios", icon: "✨"},
-            {name: "GLOSS RETRACTIL CON COLOR SATINADO", price: 8500, stock: 1, category: "labios", icon: "✨"},
-            {name: "GLOSS CON COLOR FAT OIL", price: 8500, stock: 1, category: "labios", icon: "✨"},
-            {name: "GLOSS CON COLOR EFECTO HUMEDO", price: 11500, stock: 1, category: "labios", icon: "✨"},
-            {name: "AIRPODS HELLO KITTY", price: 23000, stock: 2, category: "accesorios", icon: "🎀"},
-            {name: "GLOSS BABY BLOOMSHELL", price: 38500, stock: 2, category: "labios", icon: "🌸"},
-            {name: "LIP OIL BLOOM SEDUCTION", price: 23000, stock: 1, category: "labios", icon: "🌹"},
-            {name: "GLOSS MAGICO LLAVERITO MARIPOSA", price: 21500, stock: 1, category: "labios", icon: "🦋"},
-            {name: "EXFOLIANTE DE LABIOS BLOOMSHELL", price: 11500, stock: 1, category: "cuidado", icon: "🌿"},
-            {name: "HIDRATANTE EN BARRA HELLO KITTY", price: 10000, stock: 1, category: "cuidado", icon: "🐱"},
-            {name: "LIP TINT FRUIT", price: 7200, stock: 1, category: "labios", icon: "🍓"},
-            {name: "TINTA CON DESTELLOS ENGOL", price: 17500, stock: 1, category: "labios", icon: "✨"},
-            {name: "BRILLO MAGICO HELLO KITTY", price: 20000, stock: 2, category: "labios", icon: "🐱"},
-            {name: "RUBOR OSITO", price: 20000, stock: 2, category: "rostro", icon: "🐻"},
-            {name: "RUBOR EN GEL SANRIO", price: 8500, stock: 1, category: "rostro", icon: "🌸"},
-            {name: "RUBOR MAGICO CON BORLITA APLICADORA", price: 8500, stock: 1, category: "rostro", icon: "✨"},
-            {name: "RUBOR EN CREMA HUELLITA BLOOMSHELL", price: 29000, stock: 1, category: "rostro", icon: "🐾"},
-            {name: "ILUMINADOR BAKING POWDER", price: 15500, stock: 2, category: "rostro", icon: "✨"},
-            {name: "POLVOS SUELTOS TRANSLUCIDOS", price: 14500, stock: 1, category: "rostro", icon: "✨"},
-            {name: "POLVOS COMPACTOS TRANSLUCIDOS Y BANANA", price: 31500, stock: 2, category: "rostro", icon: "🍌"},
-            {name: "POLVO DE HADAS CORA HELLO KITTY", price: 11500, stock: 1, category: "rostro", icon: "🧚‍♀"},
-            {name: "BONNIE CARRITO DE PERFUMES CON FEROMONAS", price: 36000, stock: 1, category: "cuidado", icon: "🛒"},
-            {name: "BONNIE PERFUMES CON FEROMONAS (MORADO Y VERDE)", price: 29000, stock: 2, category: "cuidado", icon: "🌺"},
-            {name: "BONNIE CASITA DE PRODUCTOS CAPILARES (VERDE)", price: 62500, stock: 1, category: "cuidado", icon: "🏠"},
-            {name: "BONNIE SHINE BOX (AZUL)", price: 48000, stock: 1, category: "kits", icon: "📦"},
-            {name: "BONNIE MANTEQUILLAS", price: 43000, stock: 2, category: "cuidado", icon: "🧈"},
-            {name: "BONNIE TOALLITAS CAPILARES", price: 17500, stock: 1, category: "cuidado", icon: "🧽"},
-            {name: "BONNIE JABONES ARTESANALES", price: 14500, stock: 1, category: "cuidado", icon: "🧼"},
-            {name: "VELO FACIAL ANIMALITOS", price: 4500, stock: 1, category: "cuidado", icon: "🐰"},
-            {name: "BROCHA DOBLE PARA CEJAS GLITTER", price: 8500, stock: 2, category: "ojos", icon: "🖌"},
-            {name: "DELINEADOR EN PLUMON", price: 20000, stock: 2, category: "ojos", icon: "🖊"},
-            {name: "ILUMINADOR BAKING POWDER", price: 11500, stock: 1, category: "rostro", icon: "✨"},
-            {name: "RUBOR ENGOL CON BORLITA", price: 43000, stock: 2, category: "rostro", icon: "🌹"},
-            {name: "GLOSS MAGICO CON FLOR", price: 43000, stock: 3, category: "labios", icon: "🌺"},
-            {name: "RUBOR EN BARRA", price: 29000, stock: 2, category: "rostro", icon: "💄"},
-            {name: "KIT DE LABIOS", price: 43000, stock: 2, category: "kits", icon: "💋"},
-            {name: "KIT DE ROSAS", price: 22500, stock: 1, category: "kits", icon: "🌹"},
-            {name: "KIT DE ACIDO HIALURONICO SERUM 100 ML", price: 53500, stock: 1, category: "cuidado", icon: "💧"},
-            {name: "BONNIE CAJITA DE PERFUMES CAPILARES CON DESTELLOS", price: 44500, stock: 1, category: "cuidado", icon: "📦"},
-            {name: "PAÑITOS HUMEDOS CAPY BARA", price: 11500, stock: 2, category: "cuidado", icon: "🧽"},
-            {name: "RUBOR STITCH", price: 11500, stock: 1, category: "rostro", icon: "👽"},
-            {name: "ILUMINADOR STITCH", price: 11500, stock: 1, category: "rostro", icon: "👽"},
-            {name: "TERMO DOBLE LABUBU", price: 80500, stock: 2, category: "accesorios", icon: "🥤"},
-            {name: "PALETA 24 LOFCHE", price: 29000, stock: 1, category: "rostro", icon: "🎨"},
-            {name: "COMBO HELLO KITTY", price: 48000, stock: 1, category: "kits", icon: "🐱"},
-            {name: "COMBO JABONES + CEPILLO", price: 36000, stock: 1, category: "kits", icon: "🧼"},
-            {name: "COMBO ARROZ", price: 60000, stock: 1, category: "kits", icon: "🍚"}
-        ];
-        
-function renderProducts(productsToRender = products) {
-  const container = document.getElementById('catalogContainer');
-  container.innerHTML = '';
+       // Prueba rápida: crea una imagen y la añade al body para ver si el navegador la muestra.
+(function(){
+  const url = "TU_URL_AQUI"; // pega tu URL aquí
+  console.log('Test image URL:', url);
+  const testImg = new Image();
+  testImg.referrerPolicy = 'no-referrer';
+  testImg.crossOrigin = 'anonymous';
+  testImg.style.width = '200px';
+  testImg.style.height = 'auto';
+  testImg.style.border = '4px solid orange';
+  testImg.alt = 'TEST IMG';
+  testImg.onload = () => console.log('TEST onload — naturalWidth:', testImg.naturalWidth, 'naturalHeight:', testImg.naturalHeight, 'currentSrc:', testImg.currentSrc);
+  testImg.onerror = (e) => console.log('TEST onerror', e);
+  testImg.src = url;
+  document.body.appendChild(testImg);
+})();
 
-  const fragment = document.createDocumentFragment();
-
-  productsToRender.forEach(product => {
-    // sanitizar categoría para usar en clase
-    const rawCat = product.category || 'uncategorized';
-    const safeCat = String(rawCat).replace(/[^a-z0-9-_]/gi, '').toLowerCase();
-
-    const card = document.createElement('div');
-    card.className = `product-card category-${safeCat}`;
-    card.setAttribute('role', 'article');
-    card.setAttribute('aria-label', `${product.name || 'Producto'} - ${product.price ? '$' + Number(product.price).toLocaleString() : 'precio no disponible'}`);
-
-    const icon = document.createElement('div');
-    icon.className = 'product-icon';
-    icon.textContent = product.icon || '💄';
-
-    const name = document.createElement('div');
-    name.className = 'product-name';
-    name.textContent = product.name || 'Sin nombre';
-
-    const details = document.createElement('div');
-    details.className = 'product-details';
-
-    const price = document.createElement('div');
-    price.className = 'price';
-    if (typeof product.price === 'number' && !Number.isNaN(product.price)) {
-      price.textContent = `$${product.price.toLocaleString()}`;
-    } else {
-      price.textContent = '—';
-    }
-
-    const stock = document.createElement('div');
-    stock.className = 'stock';
-    const stockNum = Number.isInteger(product.stock) ? product.stock : 0;
-    stock.textContent = `${stockNum} en stock`;
-    stock.setAttribute('aria-live', 'polite');
-
-    details.appendChild(price);
-    details.appendChild(stock);
-
-    card.appendChild(icon);
-    card.appendChild(name);
-    card.appendChild(details);
-
-    fragment.appendChild(card);
-  });
-
-  container.appendChild(fragment);
-}
-
-        
-        function filterProducts(category) {
-            // Update active button
-             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-  if (ev && ev.currentTarget) ev.currentTarget.classList.add('active');
-  else if (ev && ev.target) ev.target.classList.add('active');
-
-  if (category === 'all') {
-    renderProducts();
-  } else {
-    renderProducts(products.filter(p => p.category === category));
-  }
-        }
-        
-        // Initialize
-        renderProducts();
     </script>
 </body>
 </html>
+
 
 
 

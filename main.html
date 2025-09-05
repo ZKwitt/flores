@@ -13,7 +13,7 @@
       --accent2: #cfe7ff;
       --accent3: #e9f7ef;
       --muted: #7a7a85;
-      --soft-shadow: 0 14px 40px rgba(34,34,60,0.06);
+      --soft-shadow: 0 18px 50px rgba(34,34,60,0.07);
     }
     body{
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
@@ -48,106 +48,112 @@
     /* Tabs */
     #tabs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:16px 0 22px;z-index:1;position:relative}
     .tab{
-      background:rgba(255,255,255,0.9);
-      padding:8px 14px;border-radius:999px;border:1px solid rgba(0,0,0,0.04);
+      background:rgba(255,255,255,0.95);
+      padding:10px 16px;border-radius:999px;border:1px solid rgba(0,0,0,0.04);
       font-weight:700;cursor:pointer;color:#444;transition:all .25s;
-      box-shadow:0 6px 18px rgba(26,22,66,0.03);
+      box-shadow:0 8px 22px rgba(26,22,66,0.03);
     }
     .tab:hover{transform:translateY(-3px)}
-    .tab.active{background:linear-gradient(90deg,#ffd1e8,#cfe7ff); color:#222; box-shadow:0 12px 30px rgba(102,126,234,0.08)}
+    .tab.active{background:linear-gradient(90deg,#ffd1e8,#cfe7ff); color:#222; box-shadow:0 12px 34px rgba(102,126,234,0.08)}
 
     /* Grid */
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;z-index:1;position:relative}
 
-    /* Card container (handles fade) */
-    .card { position:relative; perspective:800px; }
+    /* Card container (handles overlay) */
+    .card { position:relative; perspective:800px; min-height:380px; }
 
     .flip-inner {
       position:relative;
       width:100%;
-      min-height:380px;
-      border-radius:18px;
+      height:380px; /* card "gordita" */
+      border-radius:20px;
       overflow:visible;
       transition: none;
     }
 
     .face {
-      position:relative;
-      border-radius:18px;
-      min-height:340px;
+      position:absolute;
+      inset:0;
+      border-radius:20px;
       overflow:hidden;
       box-shadow: var(--soft-shadow);
-      transition: opacity .32s ease, transform .32s ease, visibility .32s;
+      transition: opacity .28s ease;
       background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.96));
-      border:1px solid rgba(0,0,0,0.035);
+      border:1px solid rgba(0,0,0,0.03);
       display:flex;flex-direction:column;justify-content:space-between;
+      padding:0;
+      will-change:opacity;
     }
 
-    .card .face.front{ opacity:1; transform: translateY(0) scale(1); visibility:visible; z-index:2; }
-    .card .face.back{ opacity:0; transform: translateY(6px) scale(.995); visibility:hidden; z-index:1; }
+    /* front/back visibility controlled only by opacity & visibility */
+    .card .face.front{ opacity:1; visibility:visible; z-index:2; pointer-events:auto; }
+    .card .face.back{ opacity:0; visibility:hidden; z-index:1; pointer-events:none; }
 
-    .flip-inner.flipped .face.front{ opacity:0; transform: translateY(-6px) scale(.995); visibility:hidden; z-index:1; }
-    .flip-inner.flipped .face.back{ opacity:1; transform: translateY(0) scale(1); visibility:visible; z-index:2; }
+    .flip-inner.flipped .face.front{ opacity:0; visibility:hidden; pointer-events:none; z-index:1; }
+    .flip-inner.flipped .face.back{ opacity:1; visibility:visible; pointer-events:auto; z-index:2; }
 
     /* Eye toggle */
     .eye-toggle {
       position:absolute; left:12px; top:12px;
-      width:44px;height:44px;border-radius:12px;
+      width:44px;height:44px;border-radius:11px;
       display:flex;align-items:center;justify-content:center;
-      background:rgba(255,255,255,0.95);
+      background:rgba(255,255,255,0.9);
       border:1px solid rgba(0,0,0,0.06);
       cursor:pointer; z-index:10;
       transition: transform .12s ease, background .18s;
-      box-shadow:0 8px 22px rgba(34,34,60,0.06);
+      box-shadow:0 10px 26px rgba(34,34,60,0.06);
     }
     .eye-toggle:active{ transform:scale(.96) }
 
-    /* front small image (now icon circle) */
+    /* front small image */
     .front-image {
-      width:110px;height:110px;border-radius:50%;overflow:hidden;margin:22px auto 12px;
-      box-shadow:0 14px 36px rgba(34,34,60,0.06);
-      border:8px solid rgba(255,255,255,0.95);
+      width:100px;height:100px;border-radius:50%;overflow:hidden;margin:20px auto 12px;
+      box-shadow:0 12px 36px rgba(34,34,60,0.06);
+      border:8px solid rgba(255,255,255,0.9);
       background:linear-gradient(135deg,#fff,#fff);
       display:flex;align-items:center;justify-content:center;
-      font-size:40px;
     }
     .product-img{ width:100%; height:100%; object-fit:cover; display:block }
 
-    .name { font-weight:900; text-align:center; margin-top:6px; font-size:1.05rem; color:#222 }
-    .meta { padding:12px 18px 0; display:flex;flex-direction:column; gap:8px; align-items:center }
+    .name { font-weight:800; text-align:center; margin-top:8px; font-size:1.05rem; color:#222 }
+    /* category removed from front by requirement */
 
-    .price { font-size:1.35rem; font-weight:900; text-align:center; color:#333 }
-    .stock { font-size:.85rem; padding:7px 14px; border-radius:20px; color:#fff; font-weight:800; background: linear-gradient(90deg,#9ad1ff,#b9ffd4) }
+    .meta { padding:14px 20px 0; display:flex;flex-direction:column; gap:8px; align-items:center }
 
-    .actions{display:flex;gap:10px;align-items:center;justify-content:center;padding:14px 18px 18px}
-    .small{padding:8px 10px;border-radius:12px;border:1px solid rgba(0,0,0,0.06);background:#fff;cursor:pointer}
-    .qty{min-width:26px;text-align:center;font-weight:800}
+    .price { font-size:1.38rem; font-weight:800; text-align:center; color:#333 }
+    .stock { font-size:.85rem; padding:6px 12px; border-radius:18px; color:#fff; font-weight:700; background: linear-gradient(90deg,#9ad1ff,#b9ffd4) }
+
+    .actions{display:flex;gap:8px;align-items:center;justify-content:center;padding:14px 18px 18px}
+    .small{padding:8px 10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);background:#fff;cursor:pointer}
+    .qty{min-width:26px;text-align:center;font-weight:700}
     .btn.order { background:#111;color:#fff;padding:10px 14px;border-radius:14px;border:0;cursor:pointer; font-weight:900 }
     .btn.order[disabled]{opacity:.5;cursor:not-allowed}
 
-    /* back face specifics */
-    .back-image-wrap { width:100%; height:220px; border-radius:12px; overflow:hidden; display:flex;align-items:center;justify-content:center; background: linear-gradient(180deg,#fff,#fbfbff) }
+    /* back face specifics (absolute, overlay) */
+    .back-image-wrap { width:calc(100% - 28px); height:220px; margin:10px 14px 0; border-radius:14px; overflow:hidden; display:flex;align-items:center;justify-content:center; background: linear-gradient(180deg,#fff,#fbfbff) }
     .back-image { width:100%; height:100%; object-fit:cover; display:block }
-    .desc-box { width:100%; max-height:120px; overflow:auto; padding:12px; border-radius:12px; background: linear-gradient(180deg,#fff,#fff); border:1px solid rgba(0,0,0,0.04); font-size:0.95rem; color:#333 }
+    .desc-box { width:calc(100% - 28px); max-height:120px; margin:12px 14px; overflow:auto; padding:14px; border-radius:12px; background: linear-gradient(180deg,#fff,#fff); border:1px solid rgba(0,0,0,0.04); font-size:0.97rem; color:#333 }
 
-    .card:hover .face{ transform: translateY(-6px); transition: transform .28s ease, opacity .28s; }
+    /* keep overlay from pushing content below by absolute faces */
+    .card{ overflow:visible }
+
+    /* center loading text */
+    #tabs, #content { text-align:center; display:flex; align-items:center; justify-content:center; min-height:40px; }
 
     @media (max-width:520px){
       .grid{gap:14px}
       .back-image-wrap{height:160px}
-      .front-image{width:92px;height:92px;font-size:34px;border-width:6px}
+      .flip-inner{height:320px}
+      .front-image{width:86px;height:86px}
     }
 
-    /* cart */
+    /* cart (kept simple) */
     #cart-btn { position: fixed; right: 18px; bottom: 18px; background: linear-gradient(90deg,#9ad1ff,#ffd1e8); color: #111; border: none; padding: 12px 14px; border-radius: 14px; box-shadow: 0 12px 30px rgba(34,34,60,0.12); cursor: pointer; display:flex; gap:10px; align-items:center; z-index:9999; }
     #cart-btn .badge { background:#111; color:#fff; padding:4px 8px; border-radius:999px; font-weight:700; font-size:.9rem }
     #cart-popup-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.36); display:none; align-items:center; justify-content:center; z-index:10000 }
     #cart-popup { background:white; width:92%; max-width:620px; border-radius:12px; padding:18px; box-shadow:0 14px 44px rgba(34,34,60,0.18); max-height:80vh; overflow:auto }
     .cart-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #f0f0f0; }
     .empty-msg { text-align:center; color:#666; padding:18px 0; }
-
-    /* center loading text */
-    #content { min-height:160px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:700; }
   </style>
 </head>
 <body>
@@ -323,7 +329,7 @@
       updateCartUI();
     }
 
-    /* Cart modal functions */
+    /* Cart modal functions (same as before) */
     function renderCartModal(){
       cartItemsContainer.innerHTML = '';
       if(cart.length === 0){
@@ -592,7 +598,7 @@
       return img;
     }
 
-    /* Render products — now: Icono (emoji/text) -> front circle; Img (url) -> back image */
+    /* Render products — DESCRIPTION appears only in back face (on click) */
     function renderProducts(products, sheetKey){
       if (!products || !products.length){
         if(contentEl) contentEl.innerHTML = 'No hay productos';
@@ -606,11 +612,8 @@
         const name = firstKeyValue(d, ['name','nombre','producto','Nombre']) || 'Sin nombre';
         const price = firstKeyValue(d, ['price','precio','Precio']) || '';
         const stock = Number(firstKeyValue(d, ['stock','cantidad','Stock']) || 0);
-
-        // NUEVO: Icono = emoji/text; Img = URL de imagen grande
-        const iconText = firstKeyValue(d, ['Icono','icono','icon','emoji']) || '🛍️';
-        const imgUrl   = firstKeyValue(d, ['Img','img','imagen','image','foto']) || '';
-
+        const rawIcon = firstKeyValue(d, ['icon','emoji','image','img','icono','imagen','foto','url','Icono']) || '🛍️';
+        const cat  = firstKeyValue(d, ['descripcion','Descripcion','category','categoria']) || '';
         const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota']) || '';
 
         const productSheetKey = p.sheetKey || d.sheetKey || d.SheetKey || (sheetKey === "ALL" ? (d.Descripcion || d.descripcion || d.Categoria || d.categoria || d.category || 'UNKNOWN') : sheetKey);
@@ -674,6 +677,7 @@
             <div class="desc-box">${escapeHtml(description || 'Sin descripción')}</div>
           </div>
 
+          <!-- NOTE: no order button on back (user requested) -->
           <div style="height:12px"></div>
         `;
 
@@ -682,34 +686,23 @@
         cardWrap.appendChild(inner);
         grid.appendChild(cardWrap);
 
-        // populate front circle with iconText (emoji or short text)
+        // populate images
         const frontImageWrap = front.querySelector('.front-image');
-        // prefer showing the iconText as-is (emoji/text). If iconText unexpectedly is a URL and imgUrl is empty, fall back to trying to show that as image.
-        if (typeof iconText === 'string' && iconText.trim() !== '' && !/^(https?:)?\/\//i.test(iconText)) {
-          const span = document.createElement('div');
-          span.style.fontSize = '40px';
-          span.style.lineHeight = '1';
-          span.style.textAlign = 'center';
-          span.style.userSelect = 'none';
-          span.innerText = iconText;
-          frontImageWrap.appendChild(span);
-        } else if (imgUrl) {
-          // If iconText is a URL or empty but we have an imgUrl, show a small image in the circle
-          const imgSmall = makeImgEl(imgUrl, name, 'product-img');
-          imgSmall.style.width = '100%';
-          imgSmall.style.height = '100%';
+        if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
+          const imgSmall = makeImgEl(rawIcon, name, 'product-img');
+          imgSmall.style.width = '100px';
+          imgSmall.style.height = '100px';
           frontImageWrap.appendChild(imgSmall);
         } else {
           const span = document.createElement('div');
           span.style.fontSize = '34px';
-          span.innerText = '🛍️';
+          span.innerText = rawIcon;
           frontImageWrap.appendChild(span);
         }
 
-        // populate back with big image from imgUrl (Img field)
         const backImageWrap = back.querySelector('.back-image-wrap');
-        if (imgUrl && typeof imgUrl === 'string' && /^(https?:)?\/\//i.test(imgUrl)) {
-          const imgLarge = makeImgEl(imgUrl, name, 'back-image');
+        if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
+          const imgLarge = makeImgEl(rawIcon, name, 'back-image');
           backImageWrap.appendChild(imgLarge);
         } else {
           backImageWrap.innerHTML = `<div style="padding:20px;color:#999">Imagen no disponible</div>`;
@@ -783,8 +776,5 @@
 
     loadCategories();
   </script>
-</body>
-</html>
-
 </body>
 </html>

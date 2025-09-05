@@ -3,180 +3,141 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Catálogo Bonnie Makeup</title>
+  <title>Catálogo Bonnie Makeup — Con Flip & Descripción</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{
       font-family:'Inter',system-ui,Arial;
-      background:linear-gradient(135deg,#ff9a9e 0%,#fecfef 50%,#fecfef 100%);
+      background:linear-gradient(135deg,#ffecf1 0%,#fff6fb 50%,#fff 100%);
       min-height:100vh;
-      padding:20px;
-      overflow-x:hidden;
+      padding:28px;
       color:#111;
     }
 
     /* Header */
-    .header{text-align:center;margin-bottom:30px;position:relative}
-    .header::before{
-      content:'';position:absolute;top:-20px;left:50%;
-      transform:translateX(-50%);
-      width:100px;height:4px;
-      background:linear-gradient(45deg,#ff6b6b,#4ecdc4,#45b7d1);
-      border-radius:2px;
-    }
+    .header{text-align:center;margin-bottom:28px;position:relative}
     .header h1{
-      font-size:3rem;
-      background:linear-gradient(45deg,#667eea,#764ba2,#ff6b6b);
+      font-size:2.6rem;
+      background:linear-gradient(45deg,#ff6b6b,#ff9a9e);
       -webkit-background-clip:text;
       -webkit-text-fill-color:transparent;
-      text-shadow:0 4px 20px rgba(0,0,0,0.1);
-      margin-bottom:8px;
+      margin-bottom:6px;
     }
-    .header p{font-size:1.1rem;color:#555;font-style:italic}
+    .header p{font-size:1rem;color:#666}
 
-    /* Tabs (categorías) */
-    #tabs{
-      display:flex;flex-wrap:wrap;gap:12px;justify-content:center;
-      margin-bottom:24px;
-    }
+    /* Tabs */
+    #tabs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:20px}
     .tab{
-      background:rgba(255,255,255,0.9);
-      padding:10px 20px;
-      border-radius:25px;
-      border:2px solid transparent;
-      font-weight:600;
-      cursor:pointer;
-      transition:.3s;
-      color:#666;
-    }
-    .tab:hover,.tab.active{
-      background:linear-gradient(45deg,#667eea,#764ba2);
-      color:#fff;
-      transform:translateY(-2px);
-      box-shadow:0 6px 20px rgba(102,126,234,.3);
-    }
-
-    /* Productos grid */
-    #content{min-height:160px}
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-      gap:20px;
-    }
-
-    .card{
       background:rgba(255,255,255,0.95);
-      backdrop-filter:blur(15px);
-      border-radius:20px;
-      padding:20px;
-      border:1px solid rgba(255,255,255,0.2);
-      box-shadow:0 12px 30px rgba(0,0,0,0.08);
-      transition:.35s cubic-bezier(0.175,0.885,0.32,1.275);
-      display:flex;flex-direction:column;gap:10px;
-      position:relative;overflow:hidden;
+      padding:8px 16px;border-radius:999px;border:1px solid rgba(0,0,0,0.04);
+      font-weight:700;cursor:pointer;color:#444;transition:.25s
     }
-    .card::before{
-      content:'';position:absolute;top:0;left:-100%;
-      width:100%;height:100%;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);
-      transition:.5s;
-    }
-    .card:hover{transform:translateY(-6px) scale(1.02)}
-    .card:hover::before{left:100%}
-    .card.out{opacity:.5}
+    .tab:hover,.tab.active{transform:translateY(-3px);box-shadow:0 8px 22px rgba(102,126,234,0.12);background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
 
-    .icon{
-      width:60px;height:60px;
-      border-radius:50%;
-      display:flex;align-items:center;justify-content:center;
-      font-size:26px;
-      background:linear-gradient(45deg,#667eea,#764ba2);
-      margin:0 auto 12px;
-      color:#fff;
-      box-shadow:0 6px 18px rgba(102,126,234,0.3);
-    }
-    .name{font-weight:700;font-size:1.05rem;text-align:center;min-height:40px}
-    .cat{font-size:12px;color:#888;text-align:center}
-    .price{
-      font-size:1.6rem;font-weight:700;
-      background:linear-gradient(45deg,#ff6b6b,#4ecdc4);
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
-      text-align:center;
-    }
-    .stock{
-      background:linear-gradient(45deg,#667eea,#764ba2);
-      color:#fff;font-size:.9rem;font-weight:600;
-      padding:6px 14px;border-radius:20px;
-      margin:0 auto;
-      box-shadow:0 4px 12px rgba(102,126,234,0.25);
+    /* Grid */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+
+    /* Card base */
+    .card {
+      perspective: 1000px;
+      position:relative;
     }
 
-    .actions{display:flex;gap:8px;margin-top:8px;align-items:center;justify-content:center}
-    button.btn{padding:8px 10px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
-    button.order{background:#111;color:#fff}
-    button.order[disabled]{opacity:.5;cursor:not-allowed}
-    button.small{padding:6px 8px;border:1px solid #ddd;background:#fff}
-    .qty{min-width:20px;text-align:center;font-weight:600}
-
-    /* Debug */
-    #debug{
-      margin-top:20px;background:#fff;
-      padding:12px;border-radius:10px;
-      border:1px solid #eee;
-      white-space:pre-wrap;font-size:13px;color:#222;
-      max-width:1100px;margin-left:auto;margin-right:auto;
+    .flip-inner {
+      position:relative;
+      width:100%;
+      transform-style:preserve-3d;
+      transition: transform .7s cubic-bezier(.2,.9,.2,1);
     }
+    .flip-inner.flipped { transform: rotateY(180deg); }
 
-    /* Floating emojis */
-    .floating-shapes{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1}
-    .shape{position:absolute;opacity:.08;animation:float 6s ease-in-out infinite;font-size:2rem}
-    .shape:nth-child(1){top:20%;left:10%;animation-delay:0s}
-    .shape:nth-child(2){top:60%;left:80%;animation-delay:2s}
-    .shape:nth-child(3){top:30%;left:60%;animation-delay:4s}
-    @keyframes float{
-      0%,100%{transform:translateY(0) rotate(0deg)}
-      50%{transform:translateY(-20px) rotate(180deg)}
-    }
-
-    /* Carrito (esquina inferior derecha) */
-    #cart-btn {
-      position: fixed;
-      right: 18px;
-      bottom: 18px;
-      background: #0b84ff;
-      color: white;
-      border: none;
-      padding: 12px 14px;
-      border-radius: 12px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-      cursor: pointer;
+    .flip-face {
+      backface-visibility: hidden;
+      transform-style: preserve-3d;
+      border-radius:18px;
+      overflow:hidden;
+      min-height:320px;
       display:flex;
-      gap:10px;
-      align-items:center;
-      z-index:9999;
+      flex-direction:column;
+      justify-content:space-between;
+      box-shadow: 0 18px 40px rgba(34,34,60,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95));
+      border:1px solid rgba(0,0,0,0.04);
     }
-    #cart-btn .badge { background:#ff4757; padding:4px 7px; border-radius:999px; font-weight:700; }
-    #cart-popup-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center; z-index:10000; }
-    #cart-popup { background:white; width:90%; max-width:560px; border-radius:10px; padding:18px; box-shadow:0 8px 28px rgba(0,0,0,0.2); max-height:80vh; overflow:auto; }
-    #cart-popup h3 { margin-top:0; }
-    .cart-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #eee; }
-    .cart-item .left { flex:1; }
-    .cart-item .right { text-align:right; min-width:110px; }
-    #cart-popup .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
-    .small-btn { padding:8px 10px; border-radius:8px; border:1px solid #ddd; background:#f7f7f7; cursor:pointer; }
-    .confirm-btn { background:#0b84ff; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
-    .empty-msg { text-align:center; color:#666; padding:18px 0; }
-    .product-img{ width:60px; height:60px; object-fit:cover; border-radius:50%; display:block; }
+
+    /* Front/Back faces */
+    .card-front { padding:18px; }
+    .card-back { 
+      padding:12px 14px; 
+      position: absolute; inset:0; transform: rotateY(180deg);
+      display:flex;flex-direction:column;gap:12px; align-items:center; justify-content:flex-start;
+    }
+
+    /* Decorative header accent */
+    .card-accent {
+      position:absolute;left:0;top:0;height:64px;width:100%;
+      background: linear-gradient(90deg, rgba(255,111,111,0.08), rgba(102,126,234,0.06));
+      pointer-events:none;
+    }
+
+    /* Eye toggle */
+    .eye-toggle {
+      position:absolute; left:12px; top:12px;
+      width:40px;height:40px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(255,255,255,0.8);backdrop-filter: blur(4px);
+      border:1px solid rgba(0,0,0,0.06); cursor:pointer; z-index:5;
+      transition:transform .18s, background .18s;
+      box-shadow:0 6px 14px rgba(0,0,0,0.06);
+    }
+    .eye-toggle:active{ transform:scale(.96) }
+
+    /* small image circle on front */
+    .front-image {
+      width:84px;height:84px;border-radius:50%;overflow:hidden;margin:8px auto 12px;
+      box-shadow:0 8px 20px rgba(0,0,0,0.08);
+      border:6px solid rgba(255,255,255,0.9);
+      background:linear-gradient(135deg,#fff,#fff);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .product-img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+    .name { font-weight:800; text-align:center; margin-top:6px; font-size:1rem; color:#222 }
+    .cat { font-size:12px; color:#888; text-align:center; margin-top:4px }
+    .meta { padding:12px 18px 6px; display:flex;flex-direction:column; gap:8px; align-items:center }
+
+    .price { font-size:1.3rem; font-weight:800; text-align:center; color: #333; }
+    .stock { font-size:0.85rem; padding:6px 12px; border-radius:20px; background:linear-gradient(90deg,#667eea,#764ba2); color:#fff; font-weight:700 }
+
+    .actions{display:flex;gap:8px;align-items:center;justify-content:center;padding:10px 0}
+    .small{padding:6px 8px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);background:#fff;cursor:pointer}
+    .qty{min-width:22px;text-align:center;font-weight:700}
+    .btn.order { background:#111;color:#fff;padding:8px 12px;border-radius:12px;border:0;cursor:pointer; font-weight:800 }
+    .btn.order[disabled]{opacity:.5;cursor:not-allowed}
+
+    /* Back: larger image and description box */
+    .back-image-wrap { width:100%; height:180px; border-radius:12px; overflow:hidden; display:flex;align-items:center;justify-content:center; background:linear-gradient(180deg,#fafafa,#fff) }
+    .back-image { width:100%; height:100%; object-fit:cover; display:block }
+    .desc-box { width:100%; max-height:120px; overflow:auto; padding:12px; border-radius:12px; background:linear-gradient(180deg,#fff,#fbfbff); border:1px solid rgba(0,0,0,0.04); font-size:0.95rem; color:#333 }
+
+    /* small decorative corner badge */
+    .ribbon {
+      position:absolute; right:10px; top:10px; padding:6px 10px;
+      background:linear-gradient(45deg,#ff6b6b,#ff9a9e);
+      color:#fff; font-weight:800; border-radius:12px; font-size:12px; box-shadow:0 8px 18px rgba(255,107,107,0.14)
+    }
+
+    /* subtle hover */
+    .card:hover .flip-face { transform: translateY(-4px); transition: .3s; }
+
+    /* responsive tweaks */
+    @media (max-width:520px){
+      .back-image-wrap{height:150px}
+      .grid{gap:14px}
+    }
   </style>
 </head>
 <body>
-  <div class="floating-shapes">
-    <div class="shape">💄</div>
-    <div class="shape">✨</div>
-    <div class="shape">💋</div>
-  </div>
-
   <div class="header">
     <h1>💄 Marrie</h1>
     <p>Belleza que inspira, calidad que perdura</p>
@@ -185,16 +146,16 @@
   <div id="app">
     <div id="tabs">Cargando categorías...</div>
     <div id="content">Cargando productos...</div>
-    <div id="debug" style="display:none">Debug: —</div>
   </div>
 
+  <!-- Carrito UI (misma estructura que tenías) -->
   <button id="cart-btn" title="Abrir carrito" style="display:none">
     <span id="cart-icon">🛒</span>
     <span id="cart-summary">Carrito</span>
     <span class="badge" id="cart-count">0</span>
   </button>
 
-  <div id="cart-popup-overlay">
+  <div id="cart-popup-overlay" style="display:none">
     <div id="cart-popup" role="dialog" aria-modal="true">
       <h3>Confirmar pedido</h3>
       <div id="cart-items-container"></div>
@@ -248,13 +209,7 @@
       return isNaN(n) ? 0 : n;
     }
 
-    function parsePriceFromCardText(txt){
-      if (!txt) return 0;
-      let s = String(txt).replace(/\$/g, '').trim();
-      return parsePriceNumber(s);
-    }
-
-    /* Carrito */
+    /* ---------- Carrito (sin cambios funcionales importantes) ---------- */
     const WHATSAPP_NUMBER = '573207378992';
     let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
 
@@ -352,7 +307,7 @@
       updateCartUI();
     }
 
-    /* Modal carrito */
+    /* Modal Carrito (igual lógica que tenías) */
     function renderCartModal(){
       cartItemsContainer.innerHTML = '';
       if(cart.length === 0){
@@ -445,7 +400,6 @@
       renderCartModal();
       if(cartOverlay) cartOverlay.style.display = 'flex';
     }
-
     function closeCartModal(){ if(cartOverlay) cartOverlay.style.display = 'none'; }
 
     async function sendOrderAndWhatsapp(){
@@ -525,7 +479,7 @@
 
     updateCartUI();
 
-    /* Cargar categorías y renderProductos */
+    /* ----------------- Cargar categorías y renderProductos (sin cambiar worker) -----------------*/
     async function loadCategories(){
       try {
         const r = await fetch(API_URL, {cache:'no-store'});
@@ -534,9 +488,9 @@
         renderTabs(data.sheets);
       } catch(err){
         if(tabsEl) tabsEl.innerHTML = 'Error cargando categorías';
+        console.error(err);
       }
     }
-
     function renderTabs(sheets){
       if(!tabsEl) return;
       tabsEl.innerHTML = '';
@@ -577,7 +531,7 @@
         const products = data.products || [];
         lastProductsCache = products;
         renderProducts(products, sheetKey);
-      } catch(err){ if(contentEl) contentEl.innerHTML='Error cargando productos'; }
+      } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='Error cargando productos'; }
     }
 
     async function loadProductsAll(){
@@ -590,7 +544,7 @@
         const products = data.products || [];
         lastProductsCache = products;
         renderProducts(products, "ALL");
-      } catch(err){ if(contentEl) contentEl.innerHTML='Error cargando productos'; }
+      } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='Error cargando productos'; }
     }
 
     function escapeHtml(str){
@@ -603,57 +557,29 @@
         .replace(/'/g,'&#39;');
     }
 
-    /* helper: crear icono usando el image-proxy del worker */
-    function createIconElementUsingProxy(rawIcon, name, fallbackEmoji = '🛍️') {
-      const wrapper = document.createElement('div');
-      wrapper.style.display = 'inline-block';
-      wrapper.style.verticalAlign = 'middle';
-      wrapper.style.width = '60px';
-      wrapper.style.height = '60px';
-      wrapper.style.flex = '0 0 60px';
-      wrapper.style.marginBottom = '8px';
-
-      const fallback = document.createElement('div');
-      fallback.className = 'icon-fallback';
-      fallback.style.width = '60px';
-      fallback.style.height = '60px';
-      fallback.style.lineHeight = '60px';
-      fallback.style.textAlign = 'center';
-      fallback.style.borderRadius = '50%';
-      fallback.style.display = 'flex';
-      fallback.style.alignItems = 'center';
-      fallback.style.justifyContent = 'center';
-      fallback.style.fontSize = '26px';
-      fallback.innerText = (rawIcon && !/^(https?:)?\/\//i.test(rawIcon)) ? rawIcon : fallbackEmoji;
-      wrapper.appendChild(fallback);
-
-      if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
-        const prox = API_URL + 'image-proxy?url=' + encodeURIComponent(rawIcon);
-        const img = new Image();
-        img.className = 'product-img';
-        img.alt = name || 'imagen';
-        img.style.width = '60px';
-        img.style.height = '60px';
-        img.style.objectFit = 'cover';
-        img.style.display = 'block';
-        img.style.borderRadius = '50%';
-        img.referrerPolicy = 'no-referrer';
-
-        img.onload = () => {
-          wrapper.insertBefore(img, fallback);
-          fallback.style.display = 'none';
-        };
-        img.onerror = () => {
-          img.remove();
-        };
-
-        img.src = prox;
-      }
-
-      return wrapper;
+    /* Helper: proxied URL (usa tu worker /image-proxy) */
+    function proxiedUrl(raw){
+      if(!raw || typeof raw !== 'string') return '';
+      return API_URL + 'image-proxy?url=' + encodeURIComponent(raw);
     }
 
-    /* renderProducts (usa sheetKey real del producto) */
+    /* Helper: crea un <img> con fallback sencillo */
+    function makeImgEl(raw, alt, className){
+      const img = document.createElement('img');
+      img.alt = alt || '';
+      img.className = className || '';
+      try {
+        img.src = proxiedUrl(raw);
+      } catch(e){
+        img.src = '';
+      }
+      img.onerror = () => {
+        img.remove();
+      };
+      return img;
+    }
+
+    /* Render products: ahora usamos sheetKey real del producto (p.sheetKey) para la lógica de filtrado */
     function renderProducts(products, sheetKey){
       if (!products || !products.length){
         if(contentEl) contentEl.innerHTML = 'No hay productos';
@@ -664,64 +590,191 @@
 
       products.forEach(p=>{
         const d = p.data || {};
-        const name = firstKeyValue(d, ['name','nombre','producto']) || 'Sin nombre';
-        const price = firstKeyValue(d, ['price','precio']) || '';
-        const stock = Number(firstKeyValue(d, ['stock','cantidad']) || 0);
-        const rawIcon = firstKeyValue(d, ['icon','emoji','image','img','icono','imagen','foto','url']) || '🛍️';
+        const name = firstKeyValue(d, ['name','nombre','producto']) || firstKeyValue(d, ['Nombre']) || 'Sin nombre';
+        const price = firstKeyValue(d, ['price','precio','Precio']) || '';
+        const stock = Number(firstKeyValue(d, ['stock','cantidad','Stock']) || 0);
+        const rawIcon = firstKeyValue(d, ['icon','emoji','image','img','icono','imagen','foto','url','Icono']) || '🛍️';
         const cat  = firstKeyValue(d, ['descripcion','category','categoria']) || '';
+        // description field (look for descripcion or aliases)
+        const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota','nota_descripcion']) || '';
 
-        // Determinar sheetKey del producto (prioridad: p.sheetKey | p.data.sheetKey | sheetKey arg | fallback descripcion/categoria)
+        // Determinar sheetKey del producto:
         const productSheetKey = p.sheetKey || d.sheetKey || d.SheetKey || (sheetKey === "ALL" ? (d.Descripcion || d.descripcion || d.Categoria || d.categoria || d.category || 'UNKNOWN') : sheetKey);
 
-        const card = document.createElement('div');
-        card.className='card'+(stock<=0?' out':'');
-        card.dataset.origStock = stock;
-        card.dataset.price = price;
-        card.dataset.row = p.row;
-        card.dataset.sheetKey = productSheetKey;
+        const cardWrap = document.createElement('div');
+        cardWrap.className = 'card';
+        cardWrap.dataset.origStock = stock;
+        cardWrap.dataset.price = price;
+        cardWrap.dataset.row = p.row;
+        cardWrap.dataset.sheetKey = productSheetKey;
 
-        const reserved = getReservedQty(card.dataset.sheetKey, card.dataset.row);
-        const available = Math.max(0, stock - reserved);
+        // inner flip container
+        const inner = document.createElement('div');
+        inner.className = 'flip-inner';
 
-        card.innerHTML=`
-          <div style="display:flex;gap:10px;align-items:center;flex-direction:column">
-            <div class="icon-placeholder"></div>
-            <div style="flex:1;width:100%">
-              <div class="name">${escapeHtml(name)}</div>
-              <div class="cat">${escapeHtml(cat)}</div>
+        // FRONT face
+        const front = document.createElement('div');
+        front.className = 'flip-face card-front';
+
+        front.innerHTML = `
+          <div class="card-accent" aria-hidden="true"></div>
+          <div class="ribbon">Bonnie</div>
+          <div style="position:relative">
+            <button class="eye-toggle" aria-pressed="false" title="Ver descripción" type="button" aria-label="Ver descripción">
+              <!-- open eye icon (SVG) -->
+              <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="#333" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="3" stroke="#333" stroke-width="1.2"/>
+              </svg>
+              <svg class="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:none">
+                <path d="M3 3l18 18" stroke="#333" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12s4-7 10-7 10 7 10 7" stroke="#333" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div style="height:8px"></div>
+            <div class="front-image"></div>
+          </div>
+
+          <div class="meta">
+            <div class="name">${escapeHtml(name)}</div>
+            <div class="cat">${escapeHtml(cat)}</div>
+            <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:8px">
+              <div class="price">$ ${fmtPrice(price)}</div>
+              <div class="stock">Stock: <span class="stockval">${Math.max(0, stock - getReservedQty(productSheetKey, p.row))}</span></div>
             </div>
           </div>
-          <div class="meta">
-            <div class="price">$ ${fmtPrice(price)}</div>
-            <div class="stock">Stock: <span class="stockval">${available}</span></div>
+
+          <div style="padding:0 14px 14px">
+            <div class="actions">
+              <button class="small minus">-</button>
+              <span class="qty">1</span>
+              <button class="small plus">+</button>
+              <button class="btn order" ${stock<=0?'disabled':''}>Pedir</button>
+            </div>
           </div>
-          <div class="actions">
-            <button class="small minus">-</button>
-            <span class="qty">1</span>
-            <button class="small plus">+</button>
-            <button class="btn order" ${available<=0?'disabled':''}>Pedir</button>
-          </div>`;
+        `;
 
-        const placeholder = card.querySelector('.icon-placeholder');
-        const iconEl = createIconElementUsingProxy(rawIcon, name, '🛍️');
-        if (placeholder) placeholder.replaceWith(iconEl);
+        // BACK face
+        const back = document.createElement('div');
+        back.className = 'flip-face card-back';
+        back.innerHTML = `
+          <div class="card-accent" aria-hidden="true"></div>
+          <div style="width:100%;display:flex;justify-content:center;position:relative">
+            <button class="eye-toggle" aria-pressed="true" title="Ocultar descripción" type="button" aria-label="Ocultar descripción" style="left:10px;top:10px;position:absolute;">
+              <!-- closed eye SVG -->
+              <svg class="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3l18 18" stroke="#333" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12s4-7 10-7 10 7 10 7" stroke="#333" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="back-image-wrap"></div>
+          <div class="desc-box">${escapeHtml(description || 'Sin descripción')}</div>
+          <div style="width:100%;display:flex;justify-content:center;padding-bottom:10px">
+            <div class="actions">
+              <button class="small minus">-</button>
+              <span class="qty">1</span>
+              <button class="small plus">+</button>
+              <button class="btn order" ${stock<=0?'disabled':''}>Pedir</button>
+            </div>
+          </div>
+        `;
 
-        const qtyEl = card.querySelector('.qty');
-        const minusBtn = card.querySelector('.minus');
-        const plusBtn = card.querySelector('.plus');
-        const orderBtn = card.querySelector('.order');
+        inner.appendChild(front);
+        inner.appendChild(back);
+        cardWrap.appendChild(inner);
 
-        let qty = 1;
-        minusBtn.onclick = ()=>{ if(qty>1){ qty--; qtyEl.innerText=qty; } };
-        plusBtn.onclick = ()=>{ if(qty < available){ qty++; qtyEl.innerText=qty; } };
-        orderBtn.onclick = ()=> {
-          addToCart(card, qty);
-          qty = 1; qtyEl.innerText = qty;
-        };
+        // attach to grid
+        grid.appendChild(cardWrap);
 
-        if(available <= 0) card.classList.add('out');
+        // ---- After DOM nodes exist, wire up images, eye toggle and controls ----
+        // front small image
+        const frontImageWrap = front.querySelector('.front-image');
+        if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
+          const imgSmall = makeImgEl(rawIcon, name, 'product-img');
+          imgSmall.style.width = '84px';
+          imgSmall.style.height = '84px';
+          imgSmall.className = 'product-img';
+          frontImageWrap.appendChild(imgSmall);
+        } else {
+          // show rawIcon text/emoji inside circle
+          const span = document.createElement('div');
+          span.style.fontSize = '30px';
+          span.innerText = rawIcon;
+          frontImageWrap.appendChild(span);
+        }
 
-        grid.appendChild(card);
+        // back large image
+        const backImageWrap = back.querySelector('.back-image-wrap');
+        if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
+          const imgLarge = makeImgEl(rawIcon, name, 'back-image');
+          imgLarge.className = 'back-image';
+          backImageWrap.appendChild(imgLarge);
+        } else {
+          backImageWrap.innerHTML = `<div style="padding:20px;color:#999">Imagen no disponible</div>`;
+        }
+
+        // Eye toggles (front and back) - synchronize flip state
+        const eyeFront = front.querySelector('.eye-toggle');
+        const eyeBack = back.querySelector('.eye-toggle');
+
+        function setFlipState(flip){
+          if(flip){
+            inner.classList.add('flipped');
+            eyeFront.setAttribute('aria-pressed','true');
+            eyeBack.setAttribute('aria-pressed','true');
+            // swap visuals: hide open-eye on front, show closed; but simpler: toggle svg visibility
+            const frontOpen = eyeFront.querySelector('.eye-open');
+            const frontClosed = eyeFront.querySelector('.eye-closed');
+            if(frontOpen) frontOpen.style.display = 'none';
+            if(frontClosed) frontClosed.style.display = 'inline';
+          } else {
+            inner.classList.remove('flipped');
+            eyeFront.setAttribute('aria-pressed','false');
+            eyeBack.setAttribute('aria-pressed','false');
+            const frontOpen = eyeFront.querySelector('.eye-open');
+            const frontClosed = eyeFront.querySelector('.eye-closed');
+            if(frontOpen) frontOpen.style.display = 'inline';
+            if(frontClosed) frontClosed.style.display = 'none';
+          }
+        }
+
+        eyeFront.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          setFlipState(true);
+        });
+        eyeBack.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          setFlipState(false);
+        });
+
+        // quantity controls (front and back) must keep qty in sync within the same card
+        const minusBtns = cardWrap.querySelectorAll('.minus');
+        const plusBtns = cardWrap.querySelectorAll('.plus');
+        const qtySpans = cardWrap.querySelectorAll('.qty');
+        minusBtns.forEach(btn => btn.addEventListener('click', ()=>{
+          const current = Number(qtySpans[0].innerText || '1');
+          if(current > 1){
+            qtySpans.forEach(s=>s.innerText = current - 1);
+          }
+        }));
+        plusBtns.forEach(btn => btn.addEventListener('click', ()=>{
+          const orig = getOriginalStock(cardWrap.dataset.sheetKey, cardWrap.dataset.row);
+          const current = Number(qtySpans[0].innerText || '1');
+          if(current < Math.max(0, orig - getReservedQty(cardWrap.dataset.sheetKey, cardWrap.dataset.row))){
+            qtySpans.forEach(s=>s.innerText = current + 1);
+          }
+        }));
+
+        // Order buttons (both faces) use same logic - add to cart with current qty
+        const orderBtns = cardWrap.querySelectorAll('.order');
+        orderBtns.forEach(btn => btn.addEventListener('click', ()=>{
+          const qty = Number(cardWrap.querySelector('.qty').innerText || '1');
+          addToCart(cardWrap, qty);
+        }));
+
+        // initial visual state
+        setFlipState(false);
       });
 
       if(contentEl){ contentEl.innerHTML=''; contentEl.appendChild(grid); }

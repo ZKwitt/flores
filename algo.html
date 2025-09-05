@@ -714,7 +714,17 @@ function createIconElementUsingProxy(rawIcon, name, fallbackEmoji = '🛍️') {
         const name = firstKeyValue(d, ['name','nombre','producto']) || 'Sin nombre';
         const price = firstKeyValue(d, ['price','precio']) || '';
         const stock = Number(firstKeyValue(d, ['stock','cantidad']) || 0);
-        const rawIcon = firstKeyValue(d, ['icon','emoji','image','img']) || '🛍️';
+        // Buscar claves comunes (incluyendo español)
+const rawIcon = firstKeyValue(d, ['icon','emoji','image','img','icono','imagen','foto','url']) || '🛍️';
+
+// DEBUG: si no es una URL, imprime el objeto d para inspección rápida
+if (!(typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon))) {
+  console.log('ICON DEBUG: rawIcon no es URL ->', rawIcon);
+  console.log('ICON DEBUG: producto.data ->', d);
+} else {
+  console.log('ICON DEBUG: rawIcon es URL ->', rawIcon);
+}
+
         const cat  = firstKeyValue(d, ['category','categoria']) || '';
 
         const card = document.createElement('div');

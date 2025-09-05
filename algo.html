@@ -630,57 +630,75 @@
         .replace(/'/g,'&#39;');
     }
 
-    /* --- NEW helper: crear icono usando el image-proxy del worker --- */
-    function createIconElementUsingProxy(rawIcon, name, fallbackEmoji = '🛍️') {
-      const wrapper = document.createElement('div');
-      wrapper.style.display = 'inline-block';
-      wrapper.style.verticalAlign = 'middle';
-      wrapper.style.width = '60px';
-      wrapper.style.height = '60px';
-      wrapper.style.flex = '0 0 60px';
+    /* DEBUG helper: reemplaza createIconElementUsingProxy por esto para ver logs */
+function createIconElementUsingProxy(rawIcon, name, fallbackEmoji = '🛍️') {
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'inline-block';
+  wrapper.style.verticalAlign = 'middle';
+  wrapper.style.width = '60px';
+  wrapper.style.height = '60px';
+  wrapper.style.flex = '0 0 60px';
 
-      const fallback = document.createElement('div');
-      fallback.className = 'icon-fallback';
-      fallback.style.width = '60px';
-      fallback.style.height = '60px';
-      fallback.style.lineHeight = '60px';
-      fallback.style.textAlign = 'center';
-      fallback.style.borderRadius = '50%';
-      fallback.style.display = 'flex';
-      fallback.style.alignItems = 'center';
-      fallback.style.justifyContent = 'center';
-      fallback.style.fontSize = '26px';
-      fallback.innerText = (rawIcon && !/^(https?:)?\/\//i.test(rawIcon)) ? rawIcon : fallbackEmoji;
-      wrapper.appendChild(fallback);
+  const fallback = document.createElement('div');
+  fallback.className = 'icon-fallback';
+  fallback.style.width = '60px';
+  fallback.style.height = '60px';
+  fallback.style.lineHeight = '60px';
+  fallback.style.textAlign = 'center';
+  fallback.style.borderRadius = '50%';
+  fallback.style.display = 'flex';
+  fallback.style.alignItems = 'center';
+  fallback.style.justifyContent = 'center';
+  fallback.style.fontSize = '26px';
+  fallback.innerText = (rawIcon && !/^(https?:)?\/\//i.test(rawIcon)) ? rawIcon : fallbackEmoji;
+  wrapper.appendChild(fallback);
 
-      if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
-        const prox = API_URL + 'image-proxy?url=' + encodeURIComponent(rawIcon);
-        const img = new Image();
-        img.className = 'product-img';
-        img.alt = name || 'imagen';
-        img.style.width = '60px';
-        img.style.height = '60px';
-        img.style.objectFit = 'cover';
-        img.style.display = 'block';
-        img.style.borderRadius = '50%';
-        img.referrerPolicy = 'no-referrer';
+  console.log('ICON DEBUG: rawIcon ->', rawIcon);
 
-        img.onload = () => {
-          wrapper.insertBefore(img, fallback);
-          fallback.style.display = 'none';
-        };
-        img.onerror = (e) => {
-          console.warn('Proxy image failed:', prox, e);
-          img.remove();
-          // fallback sigue visible
-        };
+  if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
+    const prox = API_URL + 'image-proxy?url=' + encodeURIComponent(rawIcon);
+    console.log('ICON DEBUG: prox URL ->', prox);
 
-        // empezar la carga usando el proxy del worker
-        img.src = prox;
+    // Intento HEAD rápido para saber status + content-type (no obligatorio; puede fallar si el servidor no responde a HEAD)
+    (async () => {
+      try {
+        const headResp = await fetch(prox, { method: 'HEAD' });
+        console.log('ICON DEBUG: HEAD ->', headResp.status, headResp.headers.get('content-type'));
+      } catch (err) {
+        console.warn('ICON DEBUG: HEAD failed (will still try image):', err);
       }
+    })();
 
-      return wrapper;
-    }
+    const img = new Image();
+    img.className = 'product-img';
+    img.alt = name || 'imagen';
+    img.style.width = '60px';
+    img.style.height = '60px';
+    img.style.objectFit = 'cover';
+    img.style.display = 'block';
+    img.style.borderRadius = '50%';
+    img.referrerPolicy = 'no-referrer';
+
+    img.onload = () => {
+      console.log('ICON DEBUG: img.onload ->', { prox, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight, currentSrc: img.currentSrc });
+      wrapper.insertBefore(img, fallback);
+      fallback.style.display = 'none';
+    };
+
+    img.onerror = (e) => {
+      console.warn('ICON DEBUG: img.onerror ->', prox, e);
+      // opcional: insertar marcador visual de error
+      wrapper.style.outline = '2px solid #f00';
+      img.remove();
+    };
+
+    // comenzar carga usando el proxy
+    console.log('ICON DEBUG: asignando img.src = prox');
+    img.src = prox;
+  }
+
+  return wrapper;
+}
 
     /* ====== Reemplazamos renderProducts por esta versión que usa createIconElementUsingProxy ----- */
     function renderProducts(products, sheetKey){

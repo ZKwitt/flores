@@ -35,7 +35,8 @@
       position: relative;
       overflow-x: hidden;
     }
-    /* (resto del CSS exactamente igual que en tu archivo — lo mantuve intacto) */
+
+    /* (CSS mantengo igual que en tu diseño original — aquí resumido por brevedad, se conserva idéntico) */
     /* animated gradient orbs */
     body::before, body::after {
       content: '';
@@ -48,7 +49,7 @@
     }
     body::before { width: 600px; height: 600px; background: linear-gradient(135deg, #667eea, #ff6b9d); top: -200px; left: -200px; }
     body::after { width: 500px; height: 500px; background: linear-gradient(135deg, #66d9ef, #f093fb); bottom: -150px; right: -150px; animation-delay: -10s; }
-    @keyframes float { 0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(30px,-30px) scale(1.05)}50%{transform:translate(-20px,20px) scale(0.95)}75%{transform:translate(-30px,-10px) scale(1.02)} }
+    @keyframes float { 0%, 100% { transform: translate(0, 0) scale(1); } 25% { transform: translate(30px, -30px) scale(1.05); } 50% { transform: translate(-20px, 20px) scale(0.95); } 75% { transform: translate(-30px, -10px) scale(1.02); } }
     .header{ text-align:center; margin-bottom:30px; position:relative; z-index:1; animation: fadeInDown 0.8s ease; }
     .header h1{ font-size:2.8rem; font-weight:900; background: var(--gradient2); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:8px; letter-spacing:-0.02em; filter: drop-shadow(2px 2px 20px rgba(255,107,157,0.3)); }
     .header p{ color:var(--muted); font-size:1.1rem; font-weight:500; letter-spacing:0.5px; }
@@ -101,7 +102,7 @@
     .desc-box::-webkit-scrollbar-thumb { background: rgba(255,107,157,0.3); border-radius: 10px; }
     .desc-box::-webkit-scrollbar-thumb:hover { background: rgba(255,107,157,0.5); }
     #cart-btn { position: fixed; bottom: 30px; right: 30px; background: var(--gradient2); color: #fff; padding: 16px 24px; border-radius: 999px; border: none; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; box-shadow: 0 10px 30px rgba(255,107,157,0.3); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; animation: cartBounce 2s ease infinite; }
-    @keyframes cartBounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)} }
+    @keyframes cartBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
     #cart-btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 15px 40px rgba(255,107,157,0.4); }
     #cart-icon { font-size: 1.3rem; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1)); }
     #cart-count { background: #fff; color: var(--primary); padding: 4px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: 800; min-width: 24px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -176,13 +177,19 @@
   </div>
 
   <script>
+    /*************************************************************************
+     * Config
+     **************************************************************************/
     const API_URL = "https://d.thepersonmrt.workers.dev/"; // tu worker
     const tabsEl = document.getElementById('tabs');
     const contentEl = document.getElementById('content');
-    let lastProductsCache = []; // almacenará productos (cada objeto incluye .sheetKey y .row)
+    let lastProductsCache = []; // array de { row, sheetKey, data }
     let lastLoadedSheetKey = null;
-    let availableSheetKeys = []; // keys válidas devueltas por GET /
+    let availableSheetKeys = [];
 
+    /*************************************************************************
+     * Utilidades: safe extractores, escape, parse numeric
+     **************************************************************************/
     function firstKeyValue(obj, keys){
       if (!obj) return undefined;
       const map = {};
@@ -193,18 +200,10 @@
       }
       return undefined;
     }
-
-    function fmtPrice(v){
-      if (v===undefined || v===null) return '-';
-      const s = String(v).trim();
-      if (s === '') return '-';
-      const n = parsePriceNumber(s);
-      if (/^[\d\.\,]+$/.test(s)) {
-        return Number(n).toLocaleString('de-DE');
-      }
-      return s;
+    function escapeHtml(str){
+      if(str === undefined || str === null) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
-
     function parsePriceNumber(v){
       if (v === undefined || v === null) return 0;
       if (typeof v === 'number' && !isNaN(v)) return v;
@@ -217,8 +216,77 @@
       const n = Number(s);
       return isNaN(n) ? 0 : n;
     }
+    function fmtPrice(v){
+      if (v===undefined || v===null) return '-';
+      const s = String(v).trim();
+      if (s === '') return '-';
+      const n = parsePriceNumber(s);
+      if (/^[\d\.\,]+$/.test(s)) {
+        return Number(n).toLocaleString('de-DE');
+      }
+      return s;
+    }
 
-    /* Carrito */
+    /*************************************************************************
+     * Simple cache (localStorage) with TTL para respuestas API (all y sheetKey)
+     **************************************************************************/
+    function cacheSet(key, value, ttlSec = 60){
+      try {
+        const obj = { ts: Date.now(), ttl: ttlSec*1000, value };
+        localStorage.setItem('cache:'+key, JSON.stringify(obj));
+      } catch(e){ /* noop */ }
+    }
+    function cacheGet(key){
+      try {
+        const raw = localStorage.getItem('cache:'+key);
+        if(!raw) return null;
+        const obj = JSON.parse(raw);
+        if(Date.now() - obj.ts > obj.ttl){ localStorage.removeItem('cache:'+key); return null; }
+        return obj.value;
+      } catch(e){ return null; }
+    }
+
+    /*************************************************************************
+     * Lazy image loader: usamos IntersectionObserver para cargar imágenes
+     **************************************************************************/
+    const lazyObserver = new IntersectionObserver((entries)=>{
+      entries.forEach(entry => {
+        if(!entry.isIntersecting) return;
+        const img = entry.target;
+        const src = img.dataset && img.dataset.src;
+        if(src){
+          img.src = src;
+          delete img.dataset.src;
+        }
+        lazyObserver.unobserve(img);
+      });
+    }, { rootMargin: '300px' });
+
+    function proxiedUrl(raw){
+      if(!raw || typeof raw !== 'string') return '';
+      return API_URL + 'image-proxy?url=' + encodeURIComponent(raw);
+    }
+
+    function makeImgEl(raw, alt, className){
+      const img = document.createElement('img');
+      img.alt = alt || '';
+      img.className = className || '';
+      img.decoding = 'async';
+      // lazy load via data-src + observer (so we can use placeholders)
+      try {
+        img.dataset.src = proxiedUrl(raw);
+        img.loading = 'lazy';
+        lazyObserver.observe(img);
+      } catch(e){
+        img.src = '';
+      }
+      img.onerror = () => { img.remove(); };
+      return img;
+    }
+
+    /*************************************************************************
+     * Carrito
+     **************************************************************************/
     const WHATSAPP_NUMBER = '573207378992';
     let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
 
@@ -234,23 +302,34 @@
     function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
     function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
 
-    // Buscar en lastProductsCache por row + sheetKey (evita ambigüedades en "ALL")
+    function mapToAvailableSheetKey(input){
+      if(!input) return null;
+      const s = String(input).trim();
+      if(availableSheetKeys && availableSheetKeys.length){
+        const found = availableSheetKeys.find(k => String(k).toLowerCase() === s.toLowerCase());
+        if(found) return found;
+      }
+      return s || null;
+    }
+
+    /*************************************************************************
+     * Cache-aware find product in cache: usa sheetKey+row para evitar colisiones
+     **************************************************************************/
     function findProductInCache(sheetKey, row){
       if(!Array.isArray(lastProductsCache)) return null;
-      // normalizar sheetKey
-      const targetSk = (sheetKey || '').toString().trim();
+      const targetSk = (sheetKey || '').toString().trim().toLowerCase();
       return lastProductsCache.find(pp => {
-        const sk = (pp.sheetKey || (pp.data && (pp.data.Categoria || pp.data.Categoria || pp.data.categoria)) || '').toString().trim();
-        return String(pp.row) === String(row) && sk.toString().trim().toLowerCase() === targetSk.toLowerCase();
+        const sk = (pp.sheetKey || (pp.data && (pp.data.Categoria || pp.data.categoria)) || '').toString().trim().toLowerCase();
+        return String(pp.row) === String(row) && sk === targetSk;
       }) || null;
     }
 
     function getOriginalStock(sheetKey, row){
-      // primero intentar desde el DOM (dataset), luego desde lastProductsCache con match sheetKey+row
+      // prioridad: dataset en DOM -> cache por sheetKey+row -> fallback row-only
       const card = Array.from(document.querySelectorAll('.card')).find(c => {
-        const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
-        const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
-        return sk.toString().trim().toLowerCase() === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
+        const sk = (c.dataset.sheetKey || '').toString().trim().toLowerCase();
+        const rrow = (c.dataset.row || '').toString();
+        return sk === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
       });
       if (card && card.dataset.origStock !== undefined) return Number(card.dataset.origStock || 0);
 
@@ -261,7 +340,7 @@
         return Number(stock || 0);
       }
 
-      // fallback: search by row only (legacy)
+      // fallback: search by row only
       const p2 = (Array.isArray(lastProductsCache) && lastProductsCache.find(pp=>String(pp.row)===String(row))) || null;
       if(p2){
         const d = p2.data || {};
@@ -276,10 +355,11 @@
     }
 
     function refreshCardStockDisplay(sheetKey, row){
+      const skNorm = (sheetKey||'').toString().trim().toLowerCase();
       const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
-        const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString().trim().toLowerCase();
-        const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
-        return sk === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
+        const sk = (c.dataset.sheetKey || '').toString().trim().toLowerCase();
+        const rrow = (c.dataset.row || '').toString();
+        return sk === skNorm && rrow === (row||'').toString();
       });
       const origStock = getOriginalStock(sheetKey, row);
       const reserved = getReservedQty(sheetKey, row);
@@ -308,21 +388,19 @@
       saveCart();
     }
 
-    /**
-     * updateStockOnServer_decrement
-     * - Usa action: "decrement" (AppsScript hace newStock = current - 1).
-     * - Llama tantas veces como qty (serial) para decrementar exactamente la cantidad.
-     * - Confirma la respuesta y actualiza dataset.origStock si el server devuelve ok.
-     */
+    /*************************************************************************
+     * Actualización de stock en servidor
+     * - decrement: usa action 'decrement' (tu AppsScript lo soporta)
+     * - set: usa action 'set' para establecer una nueva cantidad
+     **************************************************************************/
     async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
       if(!qty || qty <= 0) return;
-      // Mapear sheetKeyRaw a uno válido (case-insensitive) si tenemos availableSheetKeys
       const mappedKey = mapToAvailableSheetKey(sheetKeyRaw);
       if(!mappedKey){
-        console.warn('updateStockOnServer_decrement: sheetKey no reconocido, no se enviará petición:', sheetKeyRaw);
+        console.warn('updateStockOnServer_decrement: sheetKey no reconocido:', sheetKeyRaw);
         return;
       }
-
+      // Ejecutamos en serie para evitar race conditions en hoja (AppsScript simple)
       for(let i=0;i<qty;i++){
         try {
           const resp = await fetch(API_URL, {
@@ -333,12 +411,9 @@
           const text = await resp.text().catch(()=>null);
           let json = null;
           try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
-
           if(resp.ok && json && !json.error){
-            // AppsScript responde {status:'ok', oldStock, newStock}
             const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : undefined;
             if(confirmedStock !== undefined){
-              // actualizar todas las tarjetas que coincidan
               document.querySelectorAll('.card').forEach(card=>{
                 const csk = (card.dataset.sheetKey||'').toString().trim();
                 const rw = card.dataset.row;
@@ -348,10 +423,10 @@
               });
               refreshCardStockDisplay(mappedKey, row);
             }
-            // continuar al siguiente decremento
+            // continue
           } else {
             console.warn('Decrement fallo o respuesta inesperada:', resp.status, text);
-            break; // romper el loop si el servidor falló
+            break;
           }
         } catch (err){
           console.warn('Decrement petición falló:', err);
@@ -360,17 +435,38 @@
       }
     }
 
-    function mapToAvailableSheetKey(input){
-      if(!input) return null;
-      const s = String(input).trim();
-      if(availableSheetKeys && availableSheetKeys.length){
-        const found = availableSheetKeys.find(k => String(k).toLowerCase() === s.toLowerCase());
-        if(found) return found;
+    async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
+      const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
+      try {
+        const resp = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'set', sheetKey: mappedKey, row: String(row), value: String(newStock) })
+        });
+        const text = await resp.text().catch(()=>null);
+        let json = null;
+        try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
+        if(resp.ok && json && !json.error){
+          const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : Number(newStock);
+          document.querySelectorAll('.card').forEach(card=>{
+            const csk = (card.dataset.sheetKey||'').toString().trim();
+            const rw = card.dataset.row;
+            if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
+              card.dataset.origStock = String(confirmedStock);
+            }
+          });
+          refreshCardStockDisplay(mappedKey, row);
+        } else {
+          console.warn('updateStockOnServer_set: respuesta no OK', resp.status, text);
+        }
+      } catch (err) {
+        console.warn('updateStockOnServer_set fallo:', err);
       }
-      // fallback: devolver input si parece válido (no ideal)
-      return s || null;
     }
 
+    /*************************************************************************
+     * Añadir al carrito (optimistic UI) -> decrement remoto (serial)
+     **************************************************************************/
     async function addToCart(card, qty){
       const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
       const row = card.dataset.row;
@@ -398,20 +494,19 @@
       refreshCardStockDisplay(sheetKey,row);
       updateCartUI();
 
-      // intentar decrementar en servidor (usar decrement repetido)
-      // no bloqueante para la experiencia, pero se ejecuta en background (awaited)
+      // intentar decrementar en servidor (no bloqueante para UX)
       updateStockOnServer_decrement(sheetKey, row, qty).catch(e=>console.warn('updateStockOnServer_decrement error', e));
 
-      // Animación
+      // animación carrito
       if(cartBtn){
         cartBtn.style.animation = 'none';
-        setTimeout(() => {
-          cartBtn.style.animation = 'cartBounce 0.5s ease';
-        }, 10);
+        setTimeout(() => { cartBtn.style.animation = 'cartBounce 0.5s ease'; }, 10);
       }
     }
 
-    /* Cart popup functions */
+    /*************************************************************************
+     * Popup carrito / eliminar items (cuando se elimina, aumentamos stock con 'set')
+     **************************************************************************/
     function openCartPopup(){
       let html = '';
       if(cart.length === 0){
@@ -445,73 +540,36 @@
 
     function closeCartPopup(){ cartOverlay.style.display = 'none'; document.body.style.overflow = ''; }
 
-async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
-  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
-  try {
-    const resp = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'set', sheetKey: mappedKey, row: String(row), value: String(newStock) })
-    });
-
-    const text = await resp.text().catch(()=>null);
-    let json = null;
-    try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
-
-    if(resp.ok && json && !json.error){
-      // Si AppsScript devuelve newStock lo usamos; si no, usamos el valor enviado
-      const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : Number(newStock);
-
-      // actualizar dataset.origStock en las tarjetas relevantes
-      document.querySelectorAll('.card').forEach(card=>{
-        const csk = (card.dataset.sheetKey||'').toString().trim();
-        const rw = card.dataset.row;
-        if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
-          card.dataset.origStock = String(confirmedStock);
-        }
-      });
-
-      // refrescar UI
-      refreshCardStockDisplay(mappedKey, row);
-    } else {
-      console.warn('updateStockOnServer_set: respuesta no OK', resp.status, text);
-    }
-  } catch (err) {
-    console.warn('updateStockOnServer_set fallo:', err);
-  }
-}
-    
+    // Reemplaza removeFromCart por esta versión que además aumenta stock en el servidor
     function removeFromCart(idx){
-  if(idx >= 0 && idx < cart.length){
-    const item = cart[idx];
+      if(idx >= 0 && idx < cart.length){
+        const item = cart[idx];
 
-    // Calculamos el nuevo stock sumando la cantidad removida al stock "original" conocido
-    // (getOriginalStock obtiene el valor desde dataset.origStock o desde el cache)
-    const currentOrig = Number(getOriginalStock(item.sheetKey, item.row) || 0);
-    const removedQty = Number(item.qty || 0);
-    const newStock = Math.max(0, currentOrig + removedQty);
+        // obtener stock "conocido" y calcular nuevo valor
+        const currentOrig = Number(getOriginalStock(item.sheetKey, item.row) || 0);
+        const removedQty = Number(item.qty || 0);
+        const newStock = Math.max(0, currentOrig + removedQty);
 
-    // eliminar del carrito
-    cart.splice(idx, 1);
+        // eliminar del carrito
+        cart.splice(idx, 1);
 
-    // actualizar UI local
-    refreshCardStockDisplay(item.sheetKey, item.row);
-    updateCartUI();
-    openCartPopup(); // refresca popup (mostrará carrito vacío cuando corresponda)
+        // actualizar UI local
+        refreshCardStockDisplay(item.sheetKey, item.row);
+        updateCartUI();
+        openCartPopup();
 
-    updateStockOnServer_set(item.sheetKey, item.row, newStock);
-  }
-}
+        // actualizar servidor (usamos 'set' para establecer el nuevo stock)
+        updateStockOnServer_set(item.sheetKey, item.row, newStock);
+      }
+    }
 
     function sendToWhatsApp(){
       if(cart.length === 0){
         alert('El carrito está vacío');
         return;
       }
-
       let message = '✨ *Nuevo Pedido - Marrie* ✨\n\n';
       let total = 0;
-
       cart.forEach(item => {
         const itemTotal = parsePriceNumber(item._priceNum !== undefined ? item._priceNum : item.price) * Number(item.qty||0);
         total += itemTotal;
@@ -519,29 +577,25 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
         message += `   Cantidad: ${item.qty}\n`;
         message += `   Precio: ${Number(itemTotal).toLocaleString('de-DE')}\n\n`;
       });
-
       message += `💰 *TOTAL: ${Number(total).toLocaleString('de-DE')}*\n\n`;
       message += '📍 Por favor, confirma tu dirección de envío.';
-
       const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
-
       // Clear cart after sending
       cart = [];
       updateCartUI();
       closeCartPopup();
     }
 
-    // Cart event listeners
     cartBtn.addEventListener('click', openCartPopup);
     cartCloseBtn.addEventListener('click', closeCartPopup);
     cartConfirmBtn.addEventListener('click', sendToWhatsApp);
     cartOverlay.addEventListener('click', (e) => { if(e.target === cartOverlay) closeCartPopup(); });
-
-    // Make removeFromCart global
     window.removeFromCart = removeFromCart;
 
-    /* Modal image handlers */
+    /*************************************************************************
+     * Image modal
+     **************************************************************************/
     const imgModalOverlay = document.getElementById('img-modal-overlay');
     const imgModalImg = document.getElementById('img-modal-img');
     const imgModalClose = document.getElementById('img-modal-close');
@@ -557,25 +611,100 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
     imgModalClose.addEventListener('click', closeImageModal);
     imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
 
-    /* utilities */
-    function escapeHtml(str){
-      if(str === undefined || str === null) return '';
-      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    }
-    function proxiedUrl(raw){
-      if(!raw || typeof raw !== 'string') return '';
-      return API_URL + 'image-proxy?url=' + encodeURIComponent(raw);
-    }
-    function makeImgEl(raw, alt, className){
-      const img = document.createElement('img');
-      img.alt = alt || '';
-      img.className = className || '';
-      try { img.src = proxiedUrl(raw); } catch(e){ img.src = ''; }
-      img.onerror = () => { img.remove(); };
-      return img;
+    /*************************************************************************
+     * Detalle on-demand: cuando el usuario abre la tarjeta (flip) pedimos
+     * la hoja correspondiente si falta descripción / img / icono.
+     * Esto acelera carga inicial y arregla el problema de "Todos".
+     **************************************************************************/
+    async function fetchSheetProductsCached(sheetKey){
+      const mapped = mapToAvailableSheetKey(sheetKey) || sheetKey;
+      const cacheKey = `sheet:${mapped}`;
+      const cached = cacheGet(cacheKey);
+      if(cached) return cached;
+      try {
+        const res = await fetch(API_URL + '?sheetKey=' + encodeURIComponent(mapped), { cache: 'no-store' });
+        const json = await res.json();
+        if(json && json.products){
+          cacheSet(cacheKey, json.products, 60); // TTL 60s (ajustable)
+          return json.products;
+        }
+      } catch(e){ console.warn('fetchSheetProductsCached error', e); }
+      return [];
     }
 
-    /* Render products — maneja distintos nombres de campos (Nombre/Precio/Stock/Icono/Img/descripcion) */
+    // ensureDetailFor: si la tarjeta no tiene descripcion/Img/Icono, intenta cargar detalle desde la sheet
+    async function ensureDetailFor(sheetKey, row, cardElement){
+      try {
+        const cachedP = findProductInCache(sheetKey, row);
+        if(cachedP && (cachedP.data && (cachedP.data.descripcion || cachedP.data.Descripcion || cachedP.data.description || cachedP.data.Img || cachedP.data.Icono))) {
+          // ya tiene detalles
+          return cachedP;
+        }
+        // pedir productos de la hoja
+        const sheetProducts = await fetchSheetProductsCached(sheetKey);
+        const found = (sheetProducts || []).find(pp => String(pp.row) === String(row));
+        if(found){
+          // actualizar lastProductsCache (merge o push)
+          const idx = lastProductsCache.findIndex(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === (sheetKey||'').toString().trim().toLowerCase());
+          const dataObj = found.data || found;
+          if(idx >= 0){
+            lastProductsCache[idx].data = Object.assign({}, lastProductsCache[idx].data || {}, dataObj);
+          } else {
+            lastProductsCache.push({ row: found.row, sheetKey: sheetKey, data: dataObj });
+          }
+          // actualizar DOM: description, back image, front icon, origStock
+          if(cardElement){
+            // desc-box
+            const descBox = cardElement.querySelector('.desc-box');
+            const descText = firstKeyValue(dataObj, ['descripcion','Descripcion','description','desc','nota','Nota']) || dataObj.descripcion || dataObj.Descripcion || '';
+            if(descBox) descBox.innerHTML = escapeHtml(descText || 'Sin descripción disponible');
+            // back image
+            const backWrap = cardElement.querySelector('.back-image-wrap');
+            const imgUrl = firstKeyValue(dataObj, ['img','Img','imagen','image','url','Imagen']) || dataObj.Img || '';
+            if(backWrap){
+              backWrap.innerHTML = '';
+              if(imgUrl && /^(https?:)?\/\//i.test(imgUrl)){
+                const imgLarge = makeImgEl(imgUrl, dataObj.Nombre || dataObj.name || '', 'back-image');
+                imgLarge.addEventListener('click', (e)=>{ e.stopPropagation(); openImageModal(imgUrl, dataObj.Nombre || dataObj.name || ''); });
+                backWrap.appendChild(imgLarge);
+              } else {
+                backWrap.innerHTML = `<div style="padding:30px;color:#bbb;font-size:3rem">🖼️</div>`;
+              }
+            }
+            // front icon if missing
+            const frontImgWrap = cardElement.querySelector('.front-image');
+            const iconRaw = firstKeyValue(dataObj, ['icono','Icono','icon','emoji']) || dataObj.Icono || '';
+            if(frontImgWrap && iconRaw){
+              // clear any existing
+              frontImgWrap.innerHTML = '';
+              if(typeof iconRaw === 'string' && !/^(https?:)?\/\//i.test(iconRaw)){
+                const span = document.createElement('div');
+                span.style.fontSize = '52px';
+                span.style.lineHeight = '1';
+                span.innerText = iconRaw;
+                frontImgWrap.appendChild(span);
+              } else if (typeof iconRaw === 'string'){
+                const smallImg = makeImgEl(iconRaw, dataObj.Nombre || '', 'product-img');
+                frontImgWrap.appendChild(smallImg);
+              }
+            }
+            // update origStock dataset
+            const stockVal = Number(firstKeyValue(dataObj, ['stock','cantidad','Stock']) || dataObj.Stock || 0);
+            if(cardElement.dataset) cardElement.dataset.origStock = String(stockVal);
+            refreshCardStockDisplay(sheetKey, row);
+          }
+          return found;
+        }
+      } catch(e){
+        console.warn('ensureDetailFor error', e);
+      }
+      return null;
+    }
+
+    /*************************************************************************
+     * Render products (fast): usamos DocumentFragment para menor reflow.
+     * Ahora renderProducts asume que cada producto puede no tener descripcion/Img.
+     **************************************************************************/
     function renderProducts(products, sheetKey){
       if (!products || !products.length){
         if(contentEl) contentEl.innerHTML = '<div class="loading">No hay productos</div>';
@@ -583,6 +712,7 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
       }
       const grid = document.createElement('div');
       grid.className='grid';
+      const frag = document.createDocumentFragment();
 
       products.forEach((p, index)=>{
         const d = p.data || {};
@@ -595,6 +725,13 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
 
         const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota','Nota']) || d.descripcion || d.Descripcion || '';
         const productSheetKey = (p.sheetKey || d.Categoria || sheetKey || 'UNKNOWN').toString();
+
+        // normalize cache entry
+        const cacheEntry = { row: p.row, sheetKey: productSheetKey, data: d };
+        // ensure lastProductsCache has this (replace same sheetKey+row)
+        const existingIndex = lastProductsCache.findIndex(pp => String(pp.row) === String(p.row) && (pp.sheetKey||'').toString().trim().toLowerCase() === productSheetKey.toString().trim().toLowerCase());
+        if(existingIndex >= 0) lastProductsCache[existingIndex] = cacheEntry;
+        else lastProductsCache.push(cacheEntry);
 
         const cardWrap = document.createElement('div');
         cardWrap.className = 'card';
@@ -662,7 +799,7 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
         inner.appendChild(front);
         inner.appendChild(back);
         cardWrap.appendChild(inner);
-        grid.appendChild(cardWrap);
+        frag.appendChild(cardWrap);
 
         // populate front circle with emojiIcon (if it's not a URL)
         const frontImageWrap = front.querySelector('.front-image');
@@ -677,7 +814,7 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
           frontImageWrap.appendChild(smallImg);
         }
 
-        // back image: only from imgUrl
+        // back image: only from imgUrl (lazy)
         const backImageWrap = back.querySelector('.back-image-wrap');
         if (imgUrl && typeof imgUrl === 'string' && /^(https?:)?\/\//i.test(imgUrl)) {
           const imgLarge = makeImgEl(imgUrl, name, 'back-image');
@@ -687,17 +824,22 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
           backImageWrap.innerHTML = `<div style="padding:30px;color:#bbb;font-size:3rem">🖼️</div>`;
         }
 
-        // toggles (only click)
+        // toggles
         const eyeFront = front.querySelector('.eye-toggle');
         const eyeBack = back.querySelector('.eye-toggle');
 
-        function showBack(){ inner.classList.add('flipped'); }
+        // async showBack: ensure detail loaded before showing back content
+        async function showBack(){
+          // try to fetch detail only if description/img/icon missing
+          await ensureDetailFor(productSheetKey, p.row, cardWrap);
+          inner.classList.add('flipped');
+        }
         function showFront(){ inner.classList.remove('flipped'); }
 
         eyeFront.addEventListener('click', (e)=>{ e.stopPropagation(); showBack(); });
         eyeBack.addEventListener('click', (e)=>{ e.stopPropagation(); showFront(); });
 
-        // close back if click outside content area inside the card
+        // close back if click outside content area inside the card (keeps layout stable)
         cardWrap.addEventListener('click', (ev) => {
           if (inner.classList.contains('flipped')) {
             const targetIsInsideBack = back.contains(ev.target);
@@ -731,19 +873,26 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
           addToCart(cardWrap, qty);
         }));
 
-        showFront();
       });
 
+      grid.appendChild(frag);
       if(contentEl){ contentEl.innerHTML=''; contentEl.appendChild(grid); }
     }
 
-    /* load categories / tabs (usa worker tal cual) */
+    /*************************************************************************
+     * Cargar categorías y pestañas
+     **************************************************************************/
     async function loadCategories(){
       try {
-        const r = await fetch(API_URL, {cache:'no-store'});
-        const data = await r.json();
+        // cache simple para root (lista de sheets)
+        const cacheKey = 'root_sheets';
+        let data = cacheGet(cacheKey);
+        if(!data){
+          const r = await fetch(API_URL, {cache:'no-store'});
+          data = await r.json();
+          cacheSet(cacheKey, data, 60);
+        }
         if (!data.sheets) throw new Error("Respuesta inválida");
-        // data.sheets = [{ key, sheetName }]
         availableSheetKeys = (data.sheets || []).map(s => s.key).filter(Boolean);
         renderTabs(data.sheets);
       } catch(err){
@@ -755,7 +904,6 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
     function renderTabs(sheets){
       if(!tabsEl) return;
       tabsEl.innerHTML = '';
-
       const allBtn = document.createElement('button');
       allBtn.className = 'tab active';
       allBtn.innerText = "✨ Todos";
@@ -782,96 +930,61 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
       loadProductsAll();
     }
 
+    /*************************************************************************
+     * Cargar productos por sheetKey (detalle completo) - usa cache TTL
+     **************************************************************************/
     async function loadProductsFor(sheetKey){
       lastLoadedSheetKey = sheetKey;
       if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando productos</div>';
       try {
-        const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
-        const data = await r.json();
+        const cacheKey = `sheet:${sheetKey}`;
+        let data = cacheGet(cacheKey);
+        if(!data){
+          const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
+          data = await r.json();
+          cacheSet(cacheKey, data, 60);
+        }
         if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
         const products = (data.products || []).map(p=> {
           if(!p.sheetKey) p.sheetKey = sheetKey;
           return p;
         });
-        lastProductsCache = products;
+        // normalize cache entries
+        lastProductsCache = products.map(p => ({ row: p.row, sheetKey: p.sheetKey || sheetKey, data: p.data || {} }));
         renderProducts(products, sheetKey);
       } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='<div class="loading">Error cargando productos</div>'; }
     }
 
-    /**
-     * loadProductsAll:
-     * - pide all=1
-     * - detecta categorías (Categoria) de cada producto y hace peticiones por categoría para obtener filas completas
-     * - mergea por clave composta: `${categoria}::${row}` — evita colisiones de row entre hojas
-     */
+    /*************************************************************************
+     * loadProductsAll: fetch rápido (all=1), render rápido sin pedir detalle.
+     * Las descripciones/imagenes faltantes se pedirán en ensureDetailFor al flip.
+     **************************************************************************/
     async function loadProductsAll(){
       lastLoadedSheetKey = "ALL";
       if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando todos los productos</div>';
       try {
-        const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
-        const data = await r.json();
+        const cacheKey = 'all_products';
+        let data = cacheGet(cacheKey);
+        if(!data){
+          const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
+          data = await r.json();
+          cacheSet(cacheKey, data, 30); // TTL corto
+        }
         if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
         let products = data.products || [];
 
-        // Asegurar que cada product tenga data.Categoria consistente
-        products.forEach(p=>{
-          p.data = p.data || {};
-          if(!p.data.Categoria) p.data.Categoria = p.data.Categoria || p.data.categoria || p.data.Categoria || 'UNKNOWN';
-        });
-
-        // detectar categorías presentes en "all"
-        const cats = [...new Set(products.map(p => (p.data && (p.data.Categoria || p.data.categoria)) ).filter(Boolean))];
-
-        // pedir detalle por categoría (sheetKey) para obtener filas completas
-        const detailsPromises = cats.map(cat => fetch(API_URL+'?sheetKey='+encodeURIComponent(cat), {cache:'no-store'})
-          .then(res=>res.json().catch(()=>({products:[]})))
-          .then(json => ({ cat, products: json.products || [] }))
-          .catch(()=>({cat, products:[]}))
-        );
-
-        const details = await Promise.all(detailsPromises);
-
-        // construir mapa por clave compuesta cat::row para lookup preciso
-        const detailMap = {}; // key: `${cat}::${row}` -> data
-        details.forEach(obj=>{
-          const cat = obj.cat;
-          (obj.products || []).forEach(pp=>{
-            const key = `${cat}::${String(pp.row)}`;
-            detailMap[key] = pp.data || pp;
-            // también aseguramos que pp.sheetKey esté presente
-            if(!pp.sheetKey) pp.sheetKey = cat;
-          });
-        });
-
-        // Merge: por cada producto en "all", buscamos detalle por categoria+row y mezclamos sin sobreescribir
+        // ensure each product has a sensible sheetKey
         products = products.map(p=>{
-          const d = p.data || {};
-          const cat = d.Categoria || d.categoria || 'UNKNOWN';
-          const key = `${cat}::${String(p.row)}`;
-          const det = detailMap[key];
-          if(det){
-            // mezclar campos útiles si faltan
-            if(!d.descripcion && (det.descripcion || det.Descripcion || det.description)) d.descripcion = firstKeyValue(det, ['descripcion','Descripcion','description','desc','nota','Nota']);
-            if(!d.Icono && (det.Icono || det.icono || det.icon)) d.Icono = det.Icono || det.icono || det.icon;
-            if(!d.Img && (det.Img || det.img || det.imagen || det.image)) d.Img = det.Img || det.img || det.imagen || det.image;
-            if(!d.Categoria && det.Categoria) d.Categoria = det.Categoria;
-          }
-          // asegurar sheetKey explícito para evitar ambigüedad
-          p.sheetKey = p.sheetKey || d.Categoria || cat;
-          p.data = d;
+          p.data = p.data || {};
+          if(!p.data.Categoria) p.data.Categoria = p.data.Categoria || p.data.categoria || 'UNKNOWN';
+          p.sheetKey = p.sheetKey || p.data.Categoria || p.data.Categoria || 'UNKNOWN';
           return p;
         });
 
-        // Guardar cache con sheetKey claro (clave compuesta)
-        lastProductsCache = products.map(p => {
-          return {
-            row: p.row,
-            sheetKey: (p.sheetKey || (p.data && (p.data.Categoria || p.data.categoria)) || 'UNKNOWN').toString(),
-            data: p.data || {}
-          };
-        });
+        // populate lastProductsCache minimal
+        lastProductsCache = products.map(p => ({ row: p.row, sheetKey: p.sheetKey, data: p.data || {} }));
 
-        // Renderizar (cada card tendrá dataset.sheetKey con la categoria/hoja)
+        // Render quickly (descripciones se cargarán on-demand)
         renderProducts(lastProductsCache.map(p=>({ row: p.row, data: p.data, sheetKey: p.sheetKey })), "ALL");
       } catch(err){
         console.error(err);
@@ -879,7 +992,9 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
       }
     }
 
-    // init
+    /*************************************************************************
+     * Init
+     **************************************************************************/
     loadCategories();
     updateCartUI();
   </script>

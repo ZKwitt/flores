@@ -229,7 +229,7 @@
     </div>
   </div>
 
-  <script>
+ <script>
     const API_URL = "https://d.thepersonmrt.workers.dev/"; 
     const tabsEl = document.getElementById('tabs');
     const contentEl = document.getElementById('content');
@@ -630,59 +630,59 @@
         .replace(/'/g,'&#39;');
     }
 
-    /* --- Nuevo helper: crear icono probando a cargar la URL (acepta URLs sin extensión) --- */
-    function createIconElementTryLoad(rawIcon, name, fallbackEmoji = '🛍️') {
+    /* --- NEW helper: crear icono usando el image-proxy del worker --- */
+    function createIconElementUsingProxy(rawIcon, name, fallbackEmoji = '🛍️') {
       const wrapper = document.createElement('div');
       wrapper.style.display = 'inline-block';
       wrapper.style.verticalAlign = 'middle';
+      wrapper.style.width = '60px';
+      wrapper.style.height = '60px';
+      wrapper.style.flex = '0 0 60px';
 
       const fallback = document.createElement('div');
       fallback.className = 'icon-fallback';
+      fallback.style.width = '60px';
+      fallback.style.height = '60px';
+      fallback.style.lineHeight = '60px';
+      fallback.style.textAlign = 'center';
+      fallback.style.borderRadius = '50%';
+      fallback.style.display = 'flex';
+      fallback.style.alignItems = 'center';
+      fallback.style.justifyContent = 'center';
+      fallback.style.fontSize = '26px';
       fallback.innerText = (rawIcon && !/^(https?:)?\/\//i.test(rawIcon)) ? rawIcon : fallbackEmoji;
       wrapper.appendChild(fallback);
 
       if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
+        const prox = API_URL + 'image-proxy?url=' + encodeURIComponent(rawIcon);
         const img = new Image();
         img.className = 'product-img';
         img.alt = name || 'imagen';
+        img.style.width = '60px';
+        img.style.height = '60px';
+        img.style.objectFit = 'cover';
+        img.style.display = 'block';
+        img.style.borderRadius = '50%';
         img.referrerPolicy = 'no-referrer';
 
-        let aborted = false;
-        const to = setTimeout(() => {
-          aborted = true;
-          try { img.src = ''; } catch(e){}
-        }, 5000);
-
         img.onload = () => {
-          if (aborted) return;
-          clearTimeout(to);
-          const okSize = (img.naturalWidth && img.naturalWidth > 8) || (img.width && img.width > 8);
-          if (okSize) {
-            wrapper.insertBefore(img, fallback);
-            fallback.style.display = 'none';
-          } else {
-            img.remove();
-          }
+          wrapper.insertBefore(img, fallback);
+          fallback.style.display = 'none';
         };
-
-        img.onerror = () => {
-          clearTimeout(to);
-          console.warn('No se pudo cargar imagen:', rawIcon);
+        img.onerror = (e) => {
+          console.warn('Proxy image failed:', prox, e);
           img.remove();
+          // fallback sigue visible
         };
 
-        try {
-          img.src = rawIcon;
-        } catch(e){
-          clearTimeout(to);
-          console.warn('Error asignando src a imagen:', e);
-        }
+        // empezar la carga usando el proxy del worker
+        img.src = prox;
       }
 
       return wrapper;
     }
 
-    /* ====== Reemplazamos renderProducts por esta versión que usa createIconElementTryLoad ----- */
+    /* ====== Reemplazamos renderProducts por esta versión que usa createIconElementUsingProxy ----- */
     function renderProducts(products, sheetKey){
       if (!products || !products.length){
         if(contentEl) contentEl.innerHTML = 'No hay productos';
@@ -729,9 +729,9 @@
             <button class="btn order" ${available<=0?'disabled':''}>Pedir</button>
           </div>`;
 
-        // reemplazar placeholder por el elemento que intenta cargar la imagen
+        // reemplazar placeholder por el elemento que carga la imagen via proxy
         const placeholder = card.querySelector('.icon-placeholder');
-        const iconEl = createIconElementTryLoad(rawIcon, name, '🛍️');
+        const iconEl = createIconElementUsingProxy(rawIcon, name, '🛍️');
         if (placeholder) placeholder.replaceWith(iconEl);
 
         const qtyEl = card.querySelector('.qty');

@@ -445,17 +445,63 @@
 
     function closeCartPopup(){ cartOverlay.style.display = 'none'; document.body.style.overflow = ''; }
 
-    function removeFromCart(idx){
-      if(idx >= 0 && idx < cart.length){
-        const item = cart[idx];
-        cart.splice(idx, 1);
+async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
+  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
+  try {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set', sheetKey: mappedKey, row: String(row), value: String(newStock) })
+    });
 
-        // Actualizamos UI/stock local (NO revertimos los decrementos remotos aquí)
-        refreshCardStockDisplay(item.sheetKey, item.row);
-        updateCartUI();
-        openCartPopup(); // refresca popup (ahora mostrará carrito vacío sin alert)
-      }
+    const text = await resp.text().catch(()=>null);
+    let json = null;
+    try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
+
+    if(resp.ok && json && !json.error){
+      // Si AppsScript devuelve newStock lo usamos; si no, usamos el valor enviado
+      const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : Number(newStock);
+
+      // actualizar dataset.origStock en las tarjetas relevantes
+      document.querySelectorAll('.card').forEach(card=>{
+        const csk = (card.dataset.sheetKey||'').toString().trim();
+        const rw = card.dataset.row;
+        if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
+          card.dataset.origStock = String(confirmedStock);
+        }
+      });
+
+      // refrescar UI
+      refreshCardStockDisplay(mappedKey, row);
+    } else {
+      console.warn('updateStockOnServer_set: respuesta no OK', resp.status, text);
     }
+  } catch (err) {
+    console.warn('updateStockOnServer_set fallo:', err);
+  }
+}
+    
+    function removeFromCart(idx){
+  if(idx >= 0 && idx < cart.length){
+    const item = cart[idx];
+
+    // Calculamos el nuevo stock sumando la cantidad removida al stock "original" conocido
+    // (getOriginalStock obtiene el valor desde dataset.origStock o desde el cache)
+    const currentOrig = Number(getOriginalStock(item.sheetKey, item.row) || 0);
+    const removedQty = Number(item.qty || 0);
+    const newStock = Math.max(0, currentOrig + removedQty);
+
+    // eliminar del carrito
+    cart.splice(idx, 1);
+
+    // actualizar UI local
+    refreshCardStockDisplay(item.sheetKey, item.row);
+    updateCartUI();
+    openCartPopup(); // refresca popup (mostrará carrito vacío cuando corresponda)
+
+    updateStockOnServer_set(item.sheetKey, item.row, newStock);
+  }
+}
 
     function sendToWhatsApp(){
       if(cart.length === 0){

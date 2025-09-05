@@ -230,523 +230,527 @@
   </div>
 
 <script>
-    const API_URL = "https://d.thepersonmrt.workers.dev/"; 
-    const tabsEl = document.getElementById('tabs');
-    const contentEl = document.getElementById('content');
-    let lastProductsCache = [];
-    let lastLoadedSheetKey = null;
+const API_URL = "https://d.thepersonmrt.workers.dev/"; 
+const tabsEl = document.getElementById('tabs');
+const contentEl = document.getElementById('content');
+let lastProductsCache = [];
+let lastLoadedSheetKey = null;
 
-    function firstKeyValue(obj, keys){
-      if (!obj) return undefined;
-      const map = {};
-      Object.keys(obj).forEach(k => map[k.toLowerCase()] = obj[k]);
-      for (let key of keys){
-        const v = map[key.toLowerCase()];
-        if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+function firstKeyValue(obj, keys){
+  if (!obj) return undefined;
+  const map = {};
+  Object.keys(obj).forEach(k => map[k.toLowerCase()] = obj[k]);
+  for (let key of keys){
+    const v = map[key.toLowerCase()];
+    if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+  }
+  return undefined;
+}
+
+/* ---------- Mostrar precio: formatea números con puntos de miles ---------- */
+function fmtPrice(v){
+  if (v===undefined || v===null) return '-';
+  const s = String(v).trim();
+  if (s === '') return '-';
+  const n = parsePriceNumber(s);
+  if (/^[\d\.\,]+$/.test(s)) {
+    return Number(n).toLocaleString('de-DE');
+  }
+  return s;
+}
+
+function parsePriceNumber(v){
+  if (v === undefined || v === null) return 0;
+  if (typeof v === 'number' && !isNaN(v)) return v;
+  let s = String(v).trim();
+  if (s === '') return 0;
+  s = s.replace(/\s+/g, '');
+  s = s.replace(/\./g, '');
+  s = s.replace(/,/g, '.');
+  s = s.replace(/[^0-9.\-]/g, '');
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function parsePriceFromCardText(txt){
+  if (!txt) return 0;
+  let s = String(txt).replace(/\$/g, '').trim();
+  return parsePriceNumber(s);
+}
+
+/* ----------------- Carrito (editar/eliminar y reserva visual de stock) ----------------- */
+const WHATSAPP_NUMBER = '573207378992';
+let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
+
+const cartBtn = document.getElementById('cart-btn');
+const cartCountEl = document.getElementById('cart-count');
+const cartSummaryEl = document.getElementById('cart-summary');
+const cartOverlay = document.getElementById('cart-popup-overlay');
+const cartItemsContainer = document.getElementById('cart-items-container');
+const cartTotalEl = document.getElementById('cart-total');
+const cartCloseBtn = document.getElementById('cart-close');
+const cartConfirmBtn = document.getElementById('cart-confirm');
+
+function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
+function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
+
+function getOriginalStock(sheetKey, row){
+  const card = Array.from(document.querySelectorAll('.card')).find(c => {
+    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
+    const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
+    return sk === (sheetKey||'') && rrow === (row||'').toString();
+  });
+  if(card && card.dataset.origStock !== undefined) return Number(card.dataset.origStock || 0);
+  if(window.lastProductsCache && Array.isArray(window.lastProductsCache)){
+    const p = window.lastProductsCache.find(pp => String(pp.row) === String(row));
+    if(p){
+      const d = p.data || {};
+      const stock = firstKeyValue(d, ['stock','cantidad']) || 0;
+      return Number(stock || 0);
+    }
+  }
+  return 0;
+}
+
+function getReservedQty(sheetKey, row){
+  return cart.filter(i => i.sheetKey === sheetKey && String(i.row) === String(row)).reduce((s,i)=>s+Number(i.qty||0), 0);
+}
+
+function refreshCardStockDisplay(sheetKey, row){
+  const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
+    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
+    const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
+    return sk === (sheetKey||'') && rrow === (row||'').toString();
+  });
+  const origStock = getOriginalStock(sheetKey, row);
+  const reserved = getReservedQty(sheetKey, row);
+  const avail = Math.max(0, origStock - reserved);
+  cards.forEach(card => {
+    const stockSpan = card.querySelector('.stockval');
+    if(stockSpan) stockSpan.innerText = avail;
+    const orderBtn = card.querySelector('.order');
+    if(avail <= 0){
+      card.classList.add('out');
+      if(orderBtn) orderBtn.disabled = true;
+    } else {
+      card.classList.remove('out');
+      if(orderBtn) orderBtn.disabled = false;
+    }
+  });
+}
+
+function updateCartUI(){
+  const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
+  const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
+  cartCountEl.innerText = count;
+  cartSummaryEl.innerText = `Carrito ${count>0? '• ' + count + ' items':''}`;
+  if(cartBtn) cartBtn.style.display = 'flex';
+  if(cartBtn) cartBtn.title = count ? `${count} item(s) en carrito — Total $ ${Number(total).toLocaleString('de-DE')}` : 'Carrito vacío';
+  saveCart();
+}
+
+function addToCart(card, qty){
+  const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
+  const row = card.dataset.row;
+  const name = card.querySelector('.name')?.innerText || 'Sin nombre';
+  const priceRaw = card.dataset.price !== undefined ? card.dataset.price : (card.querySelector('.price')?.innerText || '');
+  const priceNum = parsePriceNumber(priceRaw);
+  const origStock = getOriginalStock(sheetKey, row);
+  const reserved = getReservedQty(sheetKey,row);
+  const available = Math.max(0, origStock - reserved);
+
+  if(qty > available){
+    alert('No hay suficiente stock disponible.');
+    return;
+  }
+
+  const key = `${sheetKey}::${row}`;
+  const existing = cart.find(i=>cartItemKey(i) === key);
+  if(existing){
+    existing.qty = Math.min(origStock, existing.qty + qty);
+  } else {
+    cart.push({ sheetKey, row, name, price: priceRaw, _priceNum: priceNum, qty });
+  }
+
+  refreshCardStockDisplay(sheetKey,row);
+  updateCartUI();
+}
+
+function renderCartModal(){
+  cartItemsContainer.innerHTML = '';
+  if(cart.length === 0){
+    cartItemsContainer.innerHTML = `<div class="empty-msg">El carrito está vacío</div>`;
+    cartTotalEl.innerText = '';
+    return;
+  }
+
+  cart.forEach((it, index) => {
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    const left = document.createElement('div');
+    left.className = 'left';
+    left.innerHTML = `<strong>${it.name}</strong><div style="font-size:13px;color:#666">Precio: $ ${fmtPrice(it.price)} · Nota: ${it.sheetKey}</div>`;
+
+    const right = document.createElement('div');
+    right.className = 'right';
+    const controls = document.createElement('div');
+    controls.style.display = 'flex';
+    controls.style.flexDirection = 'column';
+    controls.style.alignItems = 'flex-end';
+    controls.innerHTML = `
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="small-btn cart-minus" data-idx="${index}">-</button>
+        <span class="cart-qty" data-idx="${index}">${it.qty}</span>
+        <button class="small-btn cart-plus" data-idx="${index}">+</button>
+      </div>
+      <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
+        <div style="font-weight:700">$ ${Number(parsePriceNumber(it._priceNum !== undefined ? it._priceNum : it.price) * Number(it.qty)).toLocaleString('de-DE')}</div>
+        <button class="small-btn cart-remove" data-idx="${index}">Eliminar</button>
+      </div>
+    `;
+    right.appendChild(controls);
+    div.appendChild(left); div.appendChild(right);
+    cartItemsContainer.appendChild(div);
+  });
+
+  const total = cart.reduce((s,i)=>s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)),0);
+  cartTotalEl.innerText = 'Total: $ ' + Number(total).toLocaleString();
+
+  Array.from(cartItemsContainer.querySelectorAll('.cart-minus')).forEach(btn=>{
+    btn.onclick = (e)=>{
+      const idx = Number(btn.dataset.idx);
+      if(isNaN(idx)) return;
+      if(cart[idx].qty > 1){
+        cart[idx].qty = cart[idx].qty - 1;
+        refreshCardStockDisplay(cart[idx].sheetKey, cart[idx].row);
+        saveCart(); updateCartUI(); renderCartModal();
+      } else {
+        const it = cart[idx];
+        cart.splice(idx,1);
+        refreshCardStockDisplay(it.sheetKey, it.row);
+        saveCart(); updateCartUI(); renderCartModal();
       }
-      return undefined;
-    }
+    };
+  });
 
-    /* ---------- Mostrar precio: formatea números con puntos de miles ---------- */
-    function fmtPrice(v){
-      if (v===undefined || v===null) return '-';
-      const s = String(v).trim();
-      if (s === '') return '-';
-      const n = parsePriceNumber(s);
-      if (/^[\d\.\,]+$/.test(s)) {
-        return Number(n).toLocaleString('de-DE');
+  Array.from(cartItemsContainer.querySelectorAll('.cart-plus')).forEach(btn=>{
+    btn.onclick = (e)=>{
+      const idx = Number(btn.dataset.idx);
+      if(isNaN(idx)) return;
+      const it = cart[idx];
+      const orig = getOriginalStock(it.sheetKey, it.row);
+      if(Number(it.qty) < orig){
+        it.qty = Number(it.qty) + 1;
+        refreshCardStockDisplay(it.sheetKey, it.row);
+        saveCart(); updateCartUI(); renderCartModal();
+      } else {
+        alert('No hay más stock disponible para aumentar la cantidad.');
       }
-      return s;
-    }
+    };
+  });
+  Array.from(cartItemsContainer.querySelectorAll('.cart-remove')).forEach(btn=>{
+    btn.onclick = (e)=>{
+      const idx = Number(btn.dataset.idx);
+      if(isNaN(idx)) return;
+      const it = cart[idx];
+      cart.splice(idx,1);
+      refreshCardStockDisplay(it.sheetKey, it.row);
+      saveCart(); updateCartUI(); renderCartModal();
+    };
+  });
+}
 
-    function parsePriceNumber(v){
-      if (v === undefined || v === null) return 0;
-      if (typeof v === 'number' && !isNaN(v)) return v;
-      let s = String(v).trim();
-      if (s === '') return 0;
-      s = s.replace(/\s+/g, '');
-      s = s.replace(/\./g, '');
-      s = s.replace(/,/g, '.');
-      s = s.replace(/[^0-9.\-]/g, '');
-      const n = Number(s);
-      return isNaN(n) ? 0 : n;
-    }
+function openCartModal(){
+  if(cart.length === 0){
+    alert('El carrito está vacío');
+    return;
+  }
+  renderCartModal();
+  if(cartOverlay) cartOverlay.style.display = 'flex';
+}
 
-    function parsePriceFromCardText(txt){
-      if (!txt) return 0;
-      let s = String(txt).replace(/\$/g, '').trim();
-      return parsePriceNumber(s);
-    }
+function closeCartModal(){ if(cartOverlay) cartOverlay.style.display = 'none'; }
 
-    /* ----------------- Carrito (editar/eliminar y reserva visual de stock) ----------------- */
-    const WHATSAPP_NUMBER = '573207378992';
-    let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
+async function sendOrderAndWhatsapp(){
+  if(cart.length === 0) return alert('Carrito vacío');
+  cartConfirmBtn.disabled = true;
+  cartConfirmBtn.innerText = 'Procesando...';
 
-    const cartBtn = document.getElementById('cart-btn');
-    const cartCountEl = document.getElementById('cart-count');
-    const cartSummaryEl = document.getElementById('cart-summary');
-    const cartOverlay = document.getElementById('cart-popup-overlay');
-    const cartItemsContainer = document.getElementById('cart-items-container');
-    const cartTotalEl = document.getElementById('cart-total');
-    const cartCloseBtn = document.getElementById('cart-close');
-    const cartConfirmBtn = document.getElementById('cart-confirm');
+  try{
+    const promises = cart.map(it => {
+      const form = new URLSearchParams();
+      form.append('action','decrement');
+      form.append('sheetKey', it.sheetKey);
+      form.append('row', it.row);
+      form.append('amount', it.qty);
+      return fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:form })
+        .then(r=>r.json())
+        .then(res => {
+          if(res.error) throw new Error(res.message || 'Error API');
+          return { ok:true, ...res, item: it };
+        });
+    });
 
-    function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
-    function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
+    const results = await Promise.all(promises);
 
-    function getOriginalStock(sheetKey, row){
-      const card = Array.from(document.querySelectorAll('.card')).find(c => {
-        const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
-        const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
-        return sk === (sheetKey||'') && rrow === (row||'').toString();
-      });
-      if(card && card.dataset.origStock !== undefined) return Number(card.dataset.origStock || 0);
-      if(window.lastProductsCache && Array.isArray(window.lastProductsCache)){
-        const p = window.lastProductsCache.find(pp => String(pp.row) === String(row));
-        if(p){
-          const d = p.data || {};
-          const stock = firstKeyValue(d, ['stock','cantidad']) || 0;
-          return Number(stock || 0);
-        }
-      }
-      return 0;
-    }
-
-    function getReservedQty(sheetKey, row){
-      return cart.filter(i => i.sheetKey === sheetKey && String(i.row) === String(row)).reduce((s,i)=>s+Number(i.qty||0), 0);
-    }
-
-    function refreshCardStockDisplay(sheetKey, row){
+    results.forEach(r => {
+      const it = r.item;
       const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
         const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
         const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
-        return sk === (sheetKey||'') && rrow === (row||'').toString();
+        return sk === it.sheetKey && rrow === it.row.toString();
       });
-      const origStock = getOriginalStock(sheetKey, row);
-      const reserved = getReservedQty(sheetKey, row);
-      const avail = Math.max(0, origStock - reserved);
       cards.forEach(card => {
         const stockSpan = card.querySelector('.stockval');
-        if(stockSpan) stockSpan.innerText = avail;
-        const orderBtn = card.querySelector('.order');
-        if(avail <= 0){
-          card.classList.add('out');
-          if(orderBtn) orderBtn.disabled = true;
-        } else {
-          card.classList.remove('out');
-          if(orderBtn) orderBtn.disabled = false;
+        if(stockSpan && typeof r.newStock !== 'undefined'){
+          card.dataset.origStock = Number(r.newStock);
+          stockSpan.innerText = Number(r.newStock);
+          const orderBtn = card.querySelector('.order');
+          if(Number(r.newStock) <= 0){
+            card.classList.add('out');
+            if(orderBtn) orderBtn.disabled = true;
+          } else {
+            card.classList.remove('out');
+            if(orderBtn) orderBtn.disabled = false;
+          }
         }
       });
-    }
-
-    function updateCartUI(){
-      const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
-      const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
-      cartCountEl.innerText = count;
-      cartSummaryEl.innerText = `Carrito ${count>0? '• ' + count + ' items':''}`;
-      if(cartBtn) cartBtn.style.display = 'flex';
-      if(cartBtn) cartBtn.title = count ? `${count} item(s) en carrito — Total $ ${Number(total).toLocaleString('de-DE')}` : 'Carrito vacío';
-      saveCart();
-    }
-
-    function addToCart(card, qty){
-      const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
-      const row = card.dataset.row;
-      const name = card.querySelector('.name')?.innerText || 'Sin nombre';
-      const priceRaw = card.dataset.price !== undefined ? card.dataset.price : (card.querySelector('.price')?.innerText || '');
-      const priceNum = parsePriceNumber(priceRaw);
-      const origStock = getOriginalStock(sheetKey, row);
-      const reserved = getReservedQty(sheetKey,row);
-      const available = Math.max(0, origStock - reserved);
-
-      if(qty > available){
-        alert('No hay suficiente stock disponible.');
-        return;
-      }
-
-      const key = `${sheetKey}::${row}`;
-      const existing = cart.find(i=>cartItemKey(i) === key);
-      if(existing){
-        existing.qty = Math.min(origStock, existing.qty + qty);
-      } else {
-        cart.push({ sheetKey, row, name, price: priceRaw, _priceNum: priceNum, qty });
-      }
-
-      refreshCardStockDisplay(sheetKey,row);
-      updateCartUI();
-    }
-
-    function renderCartModal(){
-      cartItemsContainer.innerHTML = '';
-      if(cart.length === 0){
-        cartItemsContainer.innerHTML = `<div class="empty-msg">El carrito está vacío</div>`;
-        cartTotalEl.innerText = '';
-        return;
-      }
-
-      cart.forEach((it, index) => {
-        const div = document.createElement('div');
-        div.className = 'cart-item';
-        const left = document.createElement('div');
-        left.className = 'left';
-        left.innerHTML = `<strong>${it.name}</strong><div style="font-size:13px;color:#666">Precio: $ ${fmtPrice(it.price)} · Nota: ${it.sheetKey}</div>`;
-
-        const right = document.createElement('div');
-        right.className = 'right';
-        const controls = document.createElement('div');
-        controls.style.display = 'flex';
-        controls.style.flexDirection = 'column';
-        controls.style.alignItems = 'flex-end';
-        controls.innerHTML = `
-          <div style="display:flex;gap:6px;align-items:center">
-            <button class="small-btn cart-minus" data-idx="${index}">-</button>
-            <span class="cart-qty" data-idx="${index}">${it.qty}</span>
-            <button class="small-btn cart-plus" data-idx="${index}">+</button>
-          </div>
-          <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
-            <div style="font-weight:700">$ ${Number(parsePriceNumber(it._priceNum !== undefined ? it._priceNum : it.price) * Number(it.qty)).toLocaleString('de-DE')}</div>
-            <button class="small-btn cart-remove" data-idx="${index}">Eliminar</button>
-          </div>
-        `;
-        right.appendChild(controls);
-        div.appendChild(left); div.appendChild(right);
-        cartItemsContainer.appendChild(div);
-      });
-
-      const total = cart.reduce((s,i)=>s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)),0);
-      cartTotalEl.innerText = 'Total: $ ' + Number(total).toLocaleString();
-
-      Array.from(cartItemsContainer.querySelectorAll('.cart-minus')).forEach(btn=>{
-      btn.onclick = (e)=>{
-        const idx = Number(btn.dataset.idx);
-        if(isNaN(idx)) return;
-        if(cart[idx].qty > 1){
-          cart[idx].qty = cart[idx].qty - 1;
-          refreshCardStockDisplay(cart[idx].sheetKey, cart[idx].row);
-          saveCart(); updateCartUI(); renderCartModal();
-        } else {
-          const it = cart[idx];
-          cart.splice(idx,1);
-          refreshCardStockDisplay(it.sheetKey, it.row);
-          saveCart(); updateCartUI(); renderCartModal();
-        }
-      };
     });
 
-      Array.from(cartItemsContainer.querySelectorAll('.cart-plus')).forEach(btn=>{
-        btn.onclick = (e)=>{
-          const idx = Number(btn.dataset.idx);
-          if(isNaN(idx)) return;
-          const it = cart[idx];
-          const orig = getOriginalStock(it.sheetKey, it.row);
-          if(Number(it.qty) < orig){
-            it.qty = Number(it.qty) + 1;
-            refreshCardStockDisplay(it.sheetKey, it.row);
-            saveCart(); updateCartUI(); renderCartModal();
-          } else {
-            alert('No hay más stock disponible para aumentar la cantidad.');
-          }
-        };
-      });
-      Array.from(cartItemsContainer.querySelectorAll('.cart-remove')).forEach(btn=>{
-        btn.onclick = (e)=>{
-          const idx = Number(btn.dataset.idx);
-          if(isNaN(idx)) return;
-          const it = cart[idx];
-          cart.splice(idx,1);
-          refreshCardStockDisplay(it.sheetKey, it.row);
-          saveCart(); updateCartUI(); renderCartModal();
-        };
-      });
+    let msg = 'buenas noches, me interesaria comprar:%0A';
+    cart.forEach(it => {
+      msg += `- ${it.name}, precio: $ ${fmtPrice(it.price)}, cantidad: ${it.qty}%0A`;
+    });
+    msg += '%0Amuchas gracias';
+
+    if(!WHATSAPP_NUMBER || WHATSAPP_NUMBER.includes('WHATSAPP_NUMBER_HERE')){
+      alert('Por favor reemplaza WHATSAPP_NUMBER_HERE por el número de destino en el script.');
+    } else {
+      const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
+      window.open(waUrl, '_blank');
     }
 
-    function openCartModal(){
-      if(cart.length === 0){
-        alert('El carrito está vacío');
-        return;
-      }
-      renderCartModal();
-      if(cartOverlay) cartOverlay.style.display = 'flex';
-    }
-
-    function closeCartModal(){ if(cartOverlay) cartOverlay.style.display = 'none'; }
-
-    async function sendOrderAndWhatsapp(){
-      if(cart.length === 0) return alert('Carrito vacío');
-      cartConfirmBtn.disabled = true;
-      cartConfirmBtn.innerText = 'Procesando...';
-
-      try{
-        const promises = cart.map(it => {
-          const form = new URLSearchParams();
-          form.append('action','decrement');
-          form.append('sheetKey', it.sheetKey);
-          form.append('row', it.row);
-          form.append('amount', it.qty);
-          return fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:form })
-            .then(r=>r.json())
-            .then(res => {
-              if(res.error) throw new Error(res.message || 'Error API');
-              return { ok:true, ...res, item: it };
-            });
-        });
-
-        const results = await Promise.all(promises);
-
-        results.forEach(r => {
-          const it = r.item;
-          const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
-            const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
-            const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
-            return sk === it.sheetKey && rrow === it.row.toString();
-          });
-          cards.forEach(card => {
-            const stockSpan = card.querySelector('.stockval');
-            if(stockSpan && typeof r.newStock !== 'undefined'){
-              card.dataset.origStock = Number(r.newStock);
-              stockSpan.innerText = Number(r.newStock);
-              const orderBtn = card.querySelector('.order');
-              if(Number(r.newStock) <= 0){
-                card.classList.add('out');
-                if(orderBtn) orderBtn.disabled = true;
-              } else {
-                card.classList.remove('out');
-                if(orderBtn) orderBtn.disabled = false;
-              }
-            }
-          });
-        });
-
-        let msg = 'buenas noches, me interesaria comprar:%0A';
-        cart.forEach(it => {
-          msg += `- ${it.name}, precio: $ ${fmtPrice(it.price)}, cantidad: ${it.qty}%0A`;
-        });
-        msg += '%0Amuchas gracias';
-
-        if(!WHATSAPP_NUMBER || WHATSAPP_NUMBER.includes('WHATSAPP_NUMBER_HERE')){
-          alert('Por favor reemplaza WHATSAPP_NUMBER_HERE por el número de destino en el script.');
-        } else {
-          const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
-          window.open(waUrl, '_blank');
-        }
-
-        cart = [];
-        saveCart();
-        updateCartUI();
-        closeCartModal();
-      }catch(err){
-        alert('Error al procesar el pedido: ' + (err.message || err));
-      }finally{
-        cartConfirmBtn.disabled = false;
-        cartConfirmBtn.innerText = 'Confirmar y enviar por WhatsApp';
-      }
-    }
-
-    if(cartCloseBtn) cartCloseBtn.onclick = closeCartModal;
-    if(cartConfirmBtn) cartConfirmBtn.onclick = sendOrderAndWhatsapp;
-    if(cartBtn) cartBtn.onclick = openCartModal;
-
+    cart = [];
+    saveCart();
     updateCartUI();
+    closeCartModal();
+  }catch(err){
+    alert('Error al procesar el pedido: ' + (err.message || err));
+  }finally{
+    cartConfirmBtn.disabled = false;
+    cartConfirmBtn.innerText = 'Confirmar y enviar por WhatsApp';
+  }
+}
 
-    /* ----------------- Cargar categorías y renderProductos (con soporte de reservas) -----------------*/
-    async function loadCategories(){
-      try {
-        const r = await fetch(API_URL, {cache:'no-store'});
-        const data = await r.json();
-        if (!data.sheets) throw new Error("Respuesta inválida");
-        renderTabs(data.sheets);
-      } catch(err){
-        if(tabsEl) tabsEl.innerHTML = 'Error cargando categorías';
-      }
-    }
-    function renderTabs(sheets){
-      if(!tabsEl) return;
-      tabsEl.innerHTML = '';
+if(cartCloseBtn) cartCloseBtn.onclick = closeCartModal;
+if(cartConfirmBtn) cartConfirmBtn.onclick = sendOrderAndWhatsapp;
+if(cartBtn) cartBtn.onclick = openCartModal;
 
-      const allBtn = document.createElement('button');
-      allBtn.className = 'tab active';
-      allBtn.innerText = "Todos";
-      allBtn.onclick = () => {
-        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-        allBtn.classList.add('active');
-        loadProductsAll();
-      };
-      tabsEl.appendChild(allBtn);
+updateCartUI();
 
-      sheets.forEach((s, i)=>{
-        const btn = document.createElement('button');
-        btn.className = 'tab';
-        btn.innerText = s.key;
-        btn.dataset.key = s.key;
-        btn.onclick = ()=> {
-          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-          btn.classList.add('active');
-          loadProductsFor(s.key);
-        };
-        tabsEl.appendChild(btn);
-      });
+/* ----------------- Cargar categorías y renderProductos (con soporte de reservas) -----------------*/
+async function loadCategories(){
+  try {
+    const r = await fetch(API_URL, {cache:'no-store'});
+    const data = await r.json();
+    if (!data.sheets) throw new Error("Respuesta inválida");
+    renderTabs(data.sheets);
+  } catch(err){
+    if(tabsEl) tabsEl.innerHTML = 'Error cargando categorías';
+  }
+}
+function renderTabs(sheets){
+  if(!tabsEl) return;
+  tabsEl.innerHTML = '';
 
-      loadProductsAll();
-    }
+  const allBtn = document.createElement('button');
+  allBtn.className = 'tab active';
+  allBtn.innerText = "Todos";
+  allBtn.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    allBtn.classList.add('active');
+    loadProductsAll();
+  };
+  tabsEl.appendChild(allBtn);
 
-    async function loadProductsFor(sheetKey){
-      lastLoadedSheetKey = sheetKey;
-      if(contentEl) contentEl.innerHTML = 'Cargando...';
-      try {
-        const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
-        const data = await r.json();
-        if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
-        const products = data.products || [];
-        lastProductsCache = products;
-        renderProducts(products, sheetKey);
-      } catch(err){ if(contentEl) contentEl.innerHTML='Error cargando productos'; }
-    }
+  sheets.forEach((s, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'tab';
+    btn.innerText = s.key;
+    btn.dataset.key = s.key;
+    btn.onclick = ()=> {
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      btn.classList.add('active');
+      loadProductsFor(s.key);
+    };
+    tabsEl.appendChild(btn);
+  });
 
-    async function loadProductsAll(){
-      lastLoadedSheetKey = "ALL";
-      if(contentEl) contentEl.innerHTML = 'Cargando todos los productos... (puede tardar)';
-      try {
-        const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
-        const data = await r.json();
-        if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
-        const products = data.products || [];
-        lastProductsCache = products;
-        renderProducts(products, "ALL");
-      } catch(err){ if(contentEl) contentEl.innerHTML='Error cargando productos'; }
-    }
+  loadProductsAll();
+}
 
-    function escapeHtml(str){
-      if(str === undefined || str === null) return '';
-      return String(str)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;')
-        .replace(/'/g,'&#39;');
-    }
+async function loadProductsFor(sheetKey){
+  lastLoadedSheetKey = sheetKey;
+  if(contentEl) contentEl.innerHTML = 'Cargando...';
+  try {
+    const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
+    const data = await r.json();
+    if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
+    const products = data.products || [];
+    lastProductsCache = products;
+    renderProducts(products, sheetKey);
+  } catch(err){ if(contentEl) contentEl.innerHTML='Error cargando productos'; }
+}
 
-    /* helper: crear icono usando el image-proxy del worker (limpio, sin logs) */
-    function createIconElementUsingProxy(rawIcon, name, fallbackEmoji = '🛍️') {
-      const wrapper = document.createElement('div');
-      wrapper.style.display = 'inline-block';
-      wrapper.style.verticalAlign = 'middle';
-      wrapper.style.width = '60px';
-      wrapper.style.height = '60px';
-      wrapper.style.flex = '0 0 60px';
+async function loadProductsAll(){
+  lastLoadedSheetKey = "ALL";
+  if(contentEl) contentEl.innerHTML = 'Cargando todos los productos... (puede tardar)';
+  try {
+    const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
+    const data = await r.json();
+    if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
+    const products = data.products || [];
+    lastProductsCache = products;
+    renderProducts(products, "ALL");
+  } catch(err){ if(contentEl) contentEl.innerHTML='Error cargando productos'; }
+}
 
-      const fallback = document.createElement('div');
-      fallback.className = 'icon-fallback';
-      fallback.style.width = '60px';
-      fallback.style.height = '60px';
-      fallback.style.lineHeight = '60px';
-      fallback.style.textAlign = 'center';
-      fallback.style.borderRadius = '50%';
-      fallback.style.display = 'flex';
-      fallback.style.alignItems = 'center';
-      fallback.style.justifyContent = 'center';
-      fallback.style.fontSize = '26px';
-      fallback.innerText = (rawIcon && !/^(https?:)?\/\//i.test(rawIcon)) ? rawIcon : fallbackEmoji;
-      wrapper.appendChild(fallback);
+function escapeHtml(str){
+  if(str === undefined || str === null) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 
-      if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
-        const prox = API_URL + 'image-proxy?url=' + encodeURIComponent(rawIcon);
-        const img = new Image();
-        img.className = 'product-img';
-        img.alt = name || 'imagen';
-        img.style.width = '60px';
-        img.style.height = '60px';
-        img.style.objectFit = 'cover';
-        img.style.display = 'block';
-        img.style.borderRadius = '50%';
-        img.referrerPolicy = 'no-referrer';
+/* helper: crear icono usando el image-proxy del worker (limpio, sin logs) */
+function createIconElementUsingProxy(rawIcon, name, fallbackEmoji = '🛍️') {
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'inline-block';
+  wrapper.style.verticalAlign = 'middle';
+  wrapper.style.width = '60px';
+  wrapper.style.height = '60px';
+  wrapper.style.flex = '0 0 60px';
 
-        img.onload = () => {
-          wrapper.insertBefore(img, fallback);
-          fallback.style.display = 'none';
-        };
-        img.onerror = () => {
-          img.remove();
-        };
+  const fallback = document.createElement('div');
+  fallback.className = 'icon-fallback';
+  fallback.style.width = '60px';
+  fallback.style.height = '60px';
+  fallback.style.lineHeight = '60px';
+  fallback.style.textAlign = 'center';
+  fallback.style.borderRadius = '50%';
+  fallback.style.display = 'flex';
+  fallback.style.alignItems = 'center';
+  fallback.style.justifyContent = 'center';
+  fallback.style.fontSize = '26px';
+  fallback.innerText = (rawIcon && !/^(https?:)?\/\//i.test(rawIcon)) ? rawIcon : fallbackEmoji;
+  wrapper.appendChild(fallback);
 
-        img.src = prox;
-      }
+  if (rawIcon && typeof rawIcon === 'string' && /^(https?:)?\/\//i.test(rawIcon)) {
+    const prox = API_URL + 'image-proxy?url=' + encodeURIComponent(rawIcon);
+    const img = new Image();
+    img.className = 'product-img';
+    img.alt = name || 'imagen';
+    img.style.width = '60px';
+    img.style.height = '60px';
+    img.style.objectFit = 'cover';
+    img.style.display = 'block';
+    img.style.borderRadius = '50%';
+    img.referrerPolicy = 'no-referrer';
 
-      return wrapper;
-    }
+    img.onload = () => {
+      wrapper.insertBefore(img, fallback);
+      fallback.style.display = 'none';
+    };
+    img.onerror = () => {
+      img.remove();
+    };
 
-    /* renderProducts (versión limpia) */
-    function renderProducts(products, sheetKey){
-      if (!products || !products.length){
-        if(contentEl) contentEl.innerHTML = 'No hay productos';
-        return;
-      }
-      const grid = document.createElement('div'); 
-      grid.className='grid';
+    img.src = prox;
+  }
 
-      products.forEach(p=>{
-        const d = p.data || {};
-        const name = firstKeyValue(d, ['name','nombre','producto']) || 'Sin nombre';
-        const price = firstKeyValue(d, ['price','precio']) || '';
-        const stock = Number(firstKeyValue(d, ['stock','cantidad']) || 0);
-        const rawIcon = firstKeyValue(d, ['icon','emoji','image','img','icono','imagen','foto','url']) || '🛍️';
-        const cat  = firstKeyValue(d, ['category','categoria']) || '';
+  return wrapper;
+}
 
-        const card = document.createElement('div');
-        card.className='card'+(stock<=0?' out':'');
-        card.dataset.origStock = stock;
-        card.dataset.price = price;
-        card.dataset.row = p.row;
-        card.dataset.sheetKey = (sheetKey === "ALL") ? cat : sheetKey;
+/* renderProducts (ahora usa la sheetKey real del producto cuando esté disponible) */
+function renderProducts(products, sheetKey){
+  if (!products || !products.length){
+    if(contentEl) contentEl.innerHTML = 'No hay productos';
+    return;
+  }
+  const grid = document.createElement('div'); 
+  grid.className='grid';
 
-        const reserved = getReservedQty(card.dataset.sheetKey, card.dataset.row);
-        const available = Math.max(0, stock - reserved);
+  products.forEach(p=>{
+    const d = p.data || {};
+    const name = firstKeyValue(d, ['name','nombre','producto']) || 'Sin nombre';
+    const price = firstKeyValue(d, ['price','precio']) || '';
+    const stock = Number(firstKeyValue(d, ['stock','cantidad']) || 0);
+    const rawIcon = firstKeyValue(d, ['icon','emoji','image','img','icono','imagen','foto','url']) || '🛍️';
+    const cat  = firstKeyValue(d, ['category','categoria']) || '';
 
-        card.innerHTML=`
-          <div style="display:flex;gap:10px;align-items:center;flex-direction:column">
-            <div class="icon-placeholder"></div>
-            <div style="flex:1;width:100%">
-              <div class="name">${escapeHtml(name)}</div>
-              <div class="cat">${escapeHtml(cat)}</div>
-            </div>
-          </div>
-          <div class="meta">
-            <div class="price">$ ${fmtPrice(price)}</div>
-            <div class="stock">Stock: <span class="stockval">${available}</span></div>
-          </div>
-          <div class="actions">
-            <button class="small minus">-</button>
-            <span class="qty">1</span>
-            <button class="small plus">+</button>
-            <button class="btn order" ${available<=0?'disabled':''}>Pedir</button>
-          </div>`;
+    // Determinar sheetKey del producto (prioridad: p.sheetKey | p.data.sheetKey | sheetKey arg | fallback categoria)
+    const productSheetKey = p.sheetKey || d.sheetKey || d.SheetKey || (sheetKey === "ALL" ? (d.Categoria || d.categoria || d.category || 'UNKNOWN') : sheetKey);
 
-        const placeholder = card.querySelector('.icon-placeholder');
-        const iconEl = createIconElementUsingProxy(rawIcon, name, '🛍️');
-        if (placeholder) placeholder.replaceWith(iconEl);
+    const card = document.createElement('div');
+    card.className='card'+(stock<=0?' out':'');
+    card.dataset.origStock = stock;
+    card.dataset.price = price;
+    card.dataset.row = p.row;
+    card.dataset.sheetKey = productSheetKey;
 
-        const qtyEl = card.querySelector('.qty');
-        const minusBtn = card.querySelector('.minus');
-        const plusBtn = card.querySelector('.plus');
-        const orderBtn = card.querySelector('.order');
+    const reserved = getReservedQty(card.dataset.sheetKey, card.dataset.row);
+    const available = Math.max(0, stock - reserved);
 
-        let qty = 1;
-        minusBtn.onclick = ()=>{ if(qty>1){ qty--; qtyEl.innerText=qty; } };
-        plusBtn.onclick = ()=>{ if(qty < available){ qty++; qtyEl.innerText=qty; } };
-        orderBtn.onclick = ()=> {
-          addToCart(card, qty);
-          qty = 1; qtyEl.innerText = qty;
-        };
+    card.innerHTML=`
+      <div style="display:flex;gap:10px;align-items:center;flex-direction:column">
+        <div class="icon-placeholder"></div>
+        <div style="flex:1;width:100%">
+          <div class="name">${escapeHtml(name)}</div>
+          <div class="cat">${escapeHtml(cat)}</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div class="price">$ ${fmtPrice(price)}</div>
+        <div class="stock">Stock: <span class="stockval">${available}</span></div>
+      </div>
+      <div class="actions">
+        <button class="small minus">-</button>
+        <span class="qty">1</span>
+        <button class="small plus">+</button>
+        <button class="btn order" ${available<=0?'disabled':''}>Pedir</button>
+      </div>`;
 
-        if(available <= 0) card.classList.add('out');
+    const placeholder = card.querySelector('.icon-placeholder');
+    const iconEl = createIconElementUsingProxy(rawIcon, name, '🛍️');
+    if (placeholder) placeholder.replaceWith(iconEl);
 
-        grid.appendChild(card);
-      });
+    const qtyEl = card.querySelector('.qty');
+    const minusBtn = card.querySelector('.minus');
+    const plusBtn = card.querySelector('.plus');
+    const orderBtn = card.querySelector('.order');
 
-      if(contentEl){ contentEl.innerHTML=''; contentEl.appendChild(grid); }
-    }
+    let qty = 1;
+    minusBtn.onclick = ()=>{ if(qty>1){ qty--; qtyEl.innerText=qty; } };
+    plusBtn.onclick = ()=>{ if(qty < available){ qty++; qtyEl.innerText=qty; } };
+    orderBtn.onclick = ()=> {
+      addToCart(card, qty);
+      qty = 1; qtyEl.innerText = qty;
+    };
 
-    loadCategories();
-  </script>
+    if(available <= 0) card.classList.add('out');
+
+    grid.appendChild(card);
+  });
+
+  if(contentEl){ contentEl.innerHTML=''; contentEl.appendChild(grid); }
+}
+
+loadCategories();
+</script>
+
 </body>
 </html>
 

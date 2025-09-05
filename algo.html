@@ -7,151 +7,137 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     :root{
-      --bg1: #fff5fb;
-      --bg2: #fef7f0;
-      --accent1: #f7c6d6;
-      --accent2: #cfe7ff;
-      --accent3: #e9f7ef;
+      --bg1: #fff6f8;
+      --bg2: #fffaf7;
       --muted: #7a7a85;
-      --soft-shadow: 0 14px 40px rgba(34,34,60,0.06);
+      --soft-shadow: 0 18px 48px rgba(34,34,60,0.06);
     }
     body{
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      background: radial-gradient(1200px 600px at 10% 10%, rgba(255,230,240,0.7), transparent 10%),
-                  radial-gradient(800px 400px at 90% 80%, rgba(230,245,255,0.6), transparent 10%),
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(255,230,240,0.6), transparent 10%),
+                  radial-gradient(800px 400px at 90% 80%, rgba(230,245,255,0.45), transparent 10%),
                   linear-gradient(180deg,var(--bg1),var(--bg2));
       min-height:100vh;
-      padding:32px;
+      padding:36px;
       color:#111;
     }
 
-    /* subtle animated background blobs */
-    .bg-blob{
-      position:fixed;pointer-events:none;z-index:0;
-      filter: blur(40px); opacity:.14;
-      animation: floatBlob 10s ease-in-out infinite;
-    }
+    /* background blobs */
+    .bg-blob{ position:fixed; pointer-events:none; z-index:0; filter: blur(40px); opacity:.14; animation: floatBlob 10s ease-in-out infinite; }
     .bg-blob.b1{ width:420px;height:420px;background:linear-gradient(135deg,#ffd1e8,#ffd6b3); left:-80px; top:-60px; transform:rotate(20deg); }
     .bg-blob.b2{ width:360px;height:360px;background:linear-gradient(135deg,#cfe7ff,#c9ffd9); right:-90px; bottom:-80px; animation-delay:3s; transform:rotate(-10deg) }
     @keyframes floatBlob{ 0% {transform: translateY(0) scale(1)} 50% {transform: translateY(-18px) scale(1.02)} 100% {transform: translateY(0) scale(1)} }
 
-    /* Header */
-    .header{text-align:center;margin-bottom:28px;position:relative;z-index:1}
+    .header{text-align:center;margin-bottom:22px;position:relative;z-index:1}
     .header h1{
-      font-size:2.4rem;
+      font-size:2.2rem;
       background:linear-gradient(90deg,#ff9ab3,#9ad1ff);
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;
       margin-bottom:6px;
     }
-    .header p{color:var(--muted);font-size:1rem;margin-bottom:2px}
+    .header p{color:var(--muted);font-size:1rem}
 
     /* Tabs */
-    #tabs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:16px 0 22px;z-index:1;position:relative}
+    #tabs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:12px 0 20px;z-index:1;position:relative}
     .tab{
-      background:rgba(255,255,255,0.9);
+      background:rgba(255,255,255,0.95);
       padding:8px 14px;border-radius:999px;border:1px solid rgba(0,0,0,0.04);
       font-weight:700;cursor:pointer;color:#444;transition:all .25s;
-      box-shadow:0 6px 18px rgba(26,22,66,0.03);
+      box-shadow:0 8px 22px rgba(26,22,66,0.03);
     }
     .tab:hover{transform:translateY(-3px)}
-    .tab.active{background:linear-gradient(90deg,#ffd1e8,#cfe7ff); color:#222; box-shadow:0 12px 30px rgba(102,126,234,0.08)}
+    .tab.active{background:linear-gradient(90deg,#ffd1e8,#cfe7ff); color:#222; box-shadow:0 14px 34px rgba(102,126,234,0.07)}
 
-    /* Grid */
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;z-index:1;position:relative}
+    /* content container centered and responsive grid */
+    #content { max-width:1200px; margin: 0 auto; min-height:160px; text-align:center; z-index:1; }
+    .loading { text-align:center; padding:40px 0; color:var(--muted); font-weight:700; }
 
-    /* Card container (handles fade) */
-    .card { position:relative; perspective:800px; }
+    .grid{display:grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap:22px; align-items:start; }
 
+    /* Card */
+    .card { position:relative; perspective:900px; }
     .flip-inner {
       position:relative;
       width:100%;
-      min-height:380px;
-      border-radius:18px;
+      min-height:420px; /* fixed height to avoid reflow when switching */
+      border-radius:20px;
       overflow:visible;
       transition: none;
     }
-
     .face {
-      position:relative;
-      border-radius:18px;
-      min-height:340px;
+      position:absolute;
+      inset:0;
+      border-radius:20px;
       overflow:hidden;
       box-shadow: var(--soft-shadow);
       transition: opacity .32s ease, transform .32s ease, visibility .32s;
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.96));
+      background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(255,255,255,0.97));
       border:1px solid rgba(0,0,0,0.035);
       display:flex;flex-direction:column;justify-content:space-between;
+      padding-bottom:16px;
+      backface-visibility:hidden;
     }
+    .face.front{ opacity:1; transform: translateY(0); visibility:visible; z-index:2; position:relative; }
+    .face.back{ opacity:0; transform: translateY(6px); visibility:hidden; z-index:1; }
 
-    .card .face.front{ opacity:1; transform: translateY(0) scale(1); visibility:visible; z-index:2; }
-    .card .face.back{ opacity:0; transform: translateY(6px) scale(.995); visibility:hidden; z-index:1; }
+    .flip-inner.flipped .face.front{ opacity:0; transform: translateY(-6px); visibility:hidden; z-index:1; }
+    .flip-inner.flipped .face.back{ opacity:1; transform: translateY(0); visibility:visible; z-index:2; }
 
-    .flip-inner.flipped .face.front{ opacity:0; transform: translateY(-6px) scale(.995); visibility:hidden; z-index:1; }
-    .flip-inner.flipped .face.back{ opacity:1; transform: translateY(0) scale(1); visibility:visible; z-index:2; }
-
-    /* Eye toggle */
+    /* eye toggle */
     .eye-toggle {
       position:absolute; left:12px; top:12px;
       width:44px;height:44px;border-radius:12px;
       display:flex;align-items:center;justify-content:center;
-      background:rgba(255,255,255,0.95);
-      border:1px solid rgba(0,0,0,0.06);
-      cursor:pointer; z-index:10;
-      transition: transform .12s ease, background .18s;
-      box-shadow:0 8px 22px rgba(34,34,60,0.06);
+      background:rgba(255,255,255,0.9);
+      border:1px solid rgba(0,0,0,0.05);
+      cursor:pointer; z-index:10; transition: transform .12s ease;
+      box-shadow:0 12px 28px rgba(34,34,60,0.06);
     }
-    .eye-toggle:active{ transform:scale(.96) }
+    .eye-toggle:active{ transform:scale(.97) }
 
-    /* front small image (now icon circle) */
+    /* front image / icon circle */
     .front-image {
-      width:110px;height:110px;border-radius:50%;overflow:hidden;margin:22px auto 12px;
-      box-shadow:0 14px 36px rgba(34,34,60,0.06);
-      border:8px solid rgba(255,255,255,0.95);
+      width:120px;height:120px;border-radius:50%;overflow:hidden;margin:26px auto 12px;
+      box-shadow:0 16px 42px rgba(34,34,60,0.06);
+      border:8px solid rgba(255,255,255,0.92);
       background:linear-gradient(135deg,#fff,#fff);
-      display:flex;align-items:center;justify-content:center;
-      font-size:40px;
+      display:flex;align-items:center;justify-content:center;font-size:46px;
     }
     .product-img{ width:100%; height:100%; object-fit:cover; display:block }
 
-    .name { font-weight:900; text-align:center; margin-top:6px; font-size:1.05rem; color:#222 }
-    .meta { padding:12px 18px 0; display:flex;flex-direction:column; gap:8px; align-items:center }
+    .name { font-weight:800; text-align:center; margin-top:6px; font-size:1.05rem; color:#222; padding:0 18px }
+    .cat { font-size:12px; color:var(--muted); text-align:center; margin-top:6px }
 
-    .price { font-size:1.35rem; font-weight:900; text-align:center; color:#333 }
-    .stock { font-size:.85rem; padding:7px 14px; border-radius:20px; color:#fff; font-weight:800; background: linear-gradient(90deg,#9ad1ff,#b9ffd4) }
+    .meta { padding:8px 18px 0; display:flex;flex-direction:column; gap:10px; align-items:center }
 
-    .actions{display:flex;gap:10px;align-items:center;justify-content:center;padding:14px 18px 18px}
+    .price { font-size:1.4rem; font-weight:800; text-align:center; color:#333 }
+    .stock { font-size:.88rem; padding:6px 14px; border-radius:18px; color:#fff; font-weight:800; background: linear-gradient(90deg,#9ad1ff,#b9ffd4) }
+
+    .actions{display:flex;gap:10px;align-items:center;justify-content:center;padding:12px 18px 10px}
     .small{padding:8px 10px;border-radius:12px;border:1px solid rgba(0,0,0,0.06);background:#fff;cursor:pointer}
     .qty{min-width:26px;text-align:center;font-weight:800}
     .btn.order { background:#111;color:#fff;padding:10px 14px;border-radius:14px;border:0;cursor:pointer; font-weight:900 }
     .btn.order[disabled]{opacity:.5;cursor:not-allowed}
 
-    /* back face specifics */
-    .back-image-wrap { width:100%; height:220px; border-radius:12px; overflow:hidden; display:flex;align-items:center;justify-content:center; background: linear-gradient(180deg,#fff,#fbfbff) }
-    .back-image { width:100%; height:100%; object-fit:cover; display:block }
-    .desc-box { width:100%; max-height:120px; overflow:auto; padding:12px; border-radius:12px; background: linear-gradient(180deg,#fff,#fff); border:1px solid rgba(0,0,0,0.04); font-size:0.95rem; color:#333 }
+    /* back face specifics: fits in same area, image contained */
+    .back-image-wrap { width:100%; height:240px; border-radius:12px; overflow:hidden; display:flex;align-items:center;justify-content:center; background: linear-gradient(180deg,#fff,#fbfbff); margin:10px 12px 6px; }
+    .back-image { width:100%; height:100%; object-fit:contain; display:block; cursor:zoom-in }
+    .desc-box { width:calc(100% - 24px); max-height:110px; overflow:auto; margin:0 12px 10px; padding:12px; border-radius:12px; background: linear-gradient(180deg,#fff,#fff); border:1px solid rgba(0,0,0,0.04); font-size:0.95rem; color:#333 }
 
-    .card:hover .face{ transform: translateY(-6px); transition: transform .28s ease, opacity .28s; }
+    /* modal for full-size image */
+    #img-modal-overlay { position:fixed; inset:0; display:none; background:rgba(0,0,0,0.65); align-items:center; justify-content:center; z-index:20000; padding:18px; }
+    #img-modal { max-width:95vw; max-height:95vh; overflow:auto; border-radius:12px; box-shadow:0 20px 80px rgba(0,0,0,0.6); background:#fff; display:flex;flex-direction:column; align-items:center; justify-content:center; }
+    #img-modal img { max-width:100%; max-height:85vh; object-fit:contain; display:block; border-radius:6px; }
 
     @media (max-width:520px){
-      .grid{gap:14px}
-      .back-image-wrap{height:160px}
-      .front-image{width:92px;height:92px;font-size:34px;border-width:6px}
+      .grid{grid-template-columns:1fr}
+      .front-image{ width:100px;height:100px }
+      .flip-inner{ min-height:380px }
+      .back-image-wrap{height:180px}
     }
-
-    /* cart */
-    #cart-btn { position: fixed; right: 18px; bottom: 18px; background: linear-gradient(90deg,#9ad1ff,#ffd1e8); color: #111; border: none; padding: 12px 14px; border-radius: 14px; box-shadow: 0 12px 30px rgba(34,34,60,0.12); cursor: pointer; display:flex; gap:10px; align-items:center; z-index:9999; }
-    #cart-btn .badge { background:#111; color:#fff; padding:4px 8px; border-radius:999px; font-weight:700; font-size:.9rem }
-    #cart-popup-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.36); display:none; align-items:center; justify-content:center; z-index:10000 }
-    #cart-popup { background:white; width:92%; max-width:620px; border-radius:12px; padding:18px; box-shadow:0 14px 44px rgba(34,34,60,0.18); max-height:80vh; overflow:auto }
-    .cart-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #f0f0f0; }
-    .empty-msg { text-align:center; color:#666; padding:18px 0; }
-
-    /* center loading text */
-    #content { min-height:160px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:700; }
   </style>
 </head>
 <body>
-  <!-- pastel blobs -->
   <div class="bg-blob b1" aria-hidden="true"></div>
   <div class="bg-blob b2" aria-hidden="true"></div>
 
@@ -162,7 +148,7 @@
 
   <div id="app" style="position:relative;z-index:1">
     <div id="tabs">Cargando categorías...</div>
-    <div id="content">Cargando productos...</div>
+    <div id="content"><div class="loading">Cargando productos...</div></div>
   </div>
 
   <button id="cart-btn" title="Abrir carrito" style="display:none">
@@ -180,6 +166,14 @@
         <button id="cart-close" class="small">Seguir comprando</button>
         <button id="cart-confirm" class="btn order">Confirmar y enviar por WhatsApp</button>
       </div>
+    </div>
+  </div>
+
+  <!-- image modal -->
+  <div id="img-modal-overlay" role="dialog" aria-hidden="true">
+    <div id="img-modal">
+      <button id="img-modal-close" class="small" style="align-self:flex-end;margin:8px;border-radius:8px">Cerrar</button>
+      <img id="img-modal-img" alt="Imagen completa">
     </div>
   </div>
 
@@ -225,7 +219,7 @@
       return isNaN(n) ? 0 : n;
     }
 
-    /* Carrito */
+    /* Carrito (igual) */
     const WHATSAPP_NUMBER = '573207378992';
     let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
 
@@ -323,279 +317,49 @@
       updateCartUI();
     }
 
-    /* Cart modal functions */
-    function renderCartModal(){
-      cartItemsContainer.innerHTML = '';
-      if(cart.length === 0){
-        cartItemsContainer.innerHTML = `<div class="empty-msg">El carrito está vacío</div>`;
-        cartTotalEl.innerText = '';
-        return;
-      }
-
-      cart.forEach((it, index) => {
-        const div = document.createElement('div');
-        div.className = 'cart-item';
-        const left = document.createElement('div');
-        left.className = 'left';
-        left.innerHTML = `<strong>${it.name}</strong><div style="font-size:13px;color:#666">Precio: $ ${fmtPrice(it.price)} · Nota: ${it.sheetKey}</div>`;
-
-        const right = document.createElement('div');
-        right.className = 'right';
-        const controls = document.createElement('div');
-        controls.style.display = 'flex';
-        controls.style.flexDirection = 'column';
-        controls.style.alignItems = 'flex-end';
-        controls.innerHTML = `
-          <div style="display:flex;gap:6px;align-items:center">
-            <button class="small-btn cart-minus" data-idx="${index}">-</button>
-            <span class="cart-qty" data-idx="${index}">${it.qty}</span>
-            <button class="small-btn cart-plus" data-idx="${index}">+</button>
-          </div>
-          <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
-            <div style="font-weight:700">$ ${Number(parsePriceNumber(it._priceNum !== undefined ? it._priceNum : it.price) * Number(it.qty)).toLocaleString('de-DE')}</div>
-            <button class="small-btn cart-remove" data-idx="${index}">Eliminar</button>
-          </div>
-        `;
-        right.appendChild(controls);
-        div.appendChild(left); div.appendChild(right);
-        cartItemsContainer.appendChild(div);
-      });
-
-      const total = cart.reduce((s,i)=>s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)),0);
-      cartTotalEl.innerText = 'Total: $ ' + Number(total).toLocaleString();
-
-      Array.from(cartItemsContainer.querySelectorAll('.cart-minus')).forEach(btn=>{
-        btn.onclick = (e)=>{
-          const idx = Number(btn.dataset.idx);
-          if(isNaN(idx)) return;
-          if(cart[idx].qty > 1){
-            cart[idx].qty = cart[idx].qty - 1;
-            refreshCardStockDisplay(cart[idx].sheetKey, cart[idx].row);
-            saveCart(); updateCartUI(); renderCartModal();
-          } else {
-            const it = cart[idx];
-            cart.splice(idx,1);
-            refreshCardStockDisplay(it.sheetKey, it.row);
-            saveCart(); updateCartUI(); renderCartModal();
-          }
-        };
-      });
-
-      Array.from(cartItemsContainer.querySelectorAll('.cart-plus')).forEach(btn=>{
-        btn.onclick = (e)=>{
-          const idx = Number(btn.dataset.idx);
-          if(isNaN(idx)) return;
-          const it = cart[idx];
-          const orig = getOriginalStock(it.sheetKey, it.row);
-          if(Number(it.qty) < orig){
-            it.qty = Number(it.qty) + 1;
-            refreshCardStockDisplay(it.sheetKey, it.row);
-            saveCart(); updateCartUI(); renderCartModal();
-          } else {
-            alert('No hay más stock disponible para aumentar la cantidad.');
-          }
-        };
-      });
-      Array.from(cartItemsContainer.querySelectorAll('.cart-remove')).forEach(btn=>{
-        btn.onclick = (e)=>{
-          const idx = Number(btn.dataset.idx);
-          if(isNaN(idx)) return;
-          const it = cart[idx];
-          cart.splice(idx,1);
-          refreshCardStockDisplay(it.sheetKey, it.row);
-          saveCart(); updateCartUI(); renderCartModal();
-        };
-      });
+    /* Modal image handlers */
+    const imgModalOverlay = document.getElementById('img-modal-overlay');
+    const imgModalImg = document.getElementById('img-modal-img');
+    const imgModalClose = document.getElementById('img-modal-close');
+    function openImageModal(url, alt){
+      if(!url) return;
+      imgModalImg.src = proxiedUrl(url);
+      imgModalImg.alt = alt || '';
+      imgModalOverlay.style.display = 'flex';
+      imgModalOverlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
     }
-
-    function openCartModal(){
-      if(cart.length === 0){
-        alert('El carrito está vacío');
-        return;
-      }
-      renderCartModal();
-      if(cartOverlay) cartOverlay.style.display = 'flex';
+    function closeImageModal(){
+      imgModalOverlay.style.display = 'none';
+      imgModalOverlay.setAttribute('aria-hidden','true');
+      imgModalImg.src = '';
+      document.body.style.overflow = '';
     }
-    function closeCartModal(){ if(cartOverlay) cartOverlay.style.display = 'none'; }
+    imgModalClose.addEventListener('click', closeImageModal);
+    imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
 
-    async function sendOrderAndWhatsapp(){
-      if(cart.length === 0) return alert('Carrito vacío');
-      cartConfirmBtn.disabled = true;
-      cartConfirmBtn.innerText = 'Procesando...';
-
-      try{
-        const promises = cart.map(it => {
-          const form = new URLSearchParams();
-          form.append('action','decrement');
-          form.append('sheetKey', it.sheetKey);
-          form.append('row', it.row);
-          form.append('amount', it.qty);
-          return fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:form })
-            .then(r=>r.json())
-            .then(res => {
-              if(res.error) throw new Error(res.message || 'Error API');
-              return { ok:true, ...res, item: it };
-            });
-        });
-
-        const results = await Promise.all(promises);
-
-        results.forEach(r => {
-          const it = r.item;
-          const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
-            const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
-            const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
-            return sk === it.sheetKey && rrow === it.row.toString();
-          });
-          cards.forEach(card => {
-            const stockSpan = card.querySelector('.stockval');
-            if(stockSpan && typeof r.newStock !== 'undefined'){
-              card.dataset.origStock = Number(r.newStock);
-              stockSpan.innerText = Number(r.newStock);
-              const orderBtn = card.querySelector('.order');
-              if(Number(r.newStock) <= 0){
-                card.classList.add('out');
-                if(orderBtn) orderBtn.disabled = true;
-              } else {
-                card.classList.remove('out');
-                if(orderBtn) orderBtn.disabled = false;
-              }
-            }
-          });
-        });
-
-        let msg = 'buenas noches, me interesaria comprar:%0A';
-        cart.forEach(it => {
-          msg += `- ${it.name}, precio: $ ${fmtPrice(it.price)}, cantidad: ${it.qty}%0A`;
-        });
-        msg += '%0Amuchas gracias';
-
-        if(!WHATSAPP_NUMBER || WHATSAPP_NUMBER.includes('WHATSAPP_NUMBER_HERE')){
-          alert('Por favor reemplaza WHATSAPP_NUMBER_HERE por el número de destino en el script.');
-        } else {
-          const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
-          window.open(waUrl, '_blank');
-        }
-
-        cart = [];
-        saveCart();
-        updateCartUI();
-        closeCartModal();
-      }catch(err){
-        alert('Error al procesar el pedido: ' + (err.message || err));
-      }finally{
-        cartConfirmBtn.disabled = false;
-        cartConfirmBtn.innerText = 'Confirmar y enviar por WhatsApp';
-      }
-    }
-
-    if(cartCloseBtn) cartCloseBtn.onclick = closeCartModal;
-    if(cartConfirmBtn) cartConfirmBtn.onclick = sendOrderAndWhatsapp;
-    if(cartBtn) cartBtn.onclick = openCartModal;
-
-    updateCartUI();
-
-    /* Load categories & products */
-    async function loadCategories(){
-      try {
-        const r = await fetch(API_URL, {cache:'no-store'});
-        const data = await r.json();
-        if (!data.sheets) throw new Error("Respuesta inválida");
-        renderTabs(data.sheets);
-      } catch(err){
-        if(tabsEl) tabsEl.innerHTML = 'Error cargando categorías';
-        console.error(err);
-      }
-    }
-
-    function renderTabs(sheets){
-      if(!tabsEl) return;
-      tabsEl.innerHTML = '';
-
-      const allBtn = document.createElement('button');
-      allBtn.className = 'tab active';
-      allBtn.innerText = "Todos";
-      allBtn.onclick = () => {
-        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-        allBtn.classList.add('active');
-        loadProductsAll();
-      };
-      tabsEl.appendChild(allBtn);
-
-      sheets.forEach((s)=>{
-        const btn = document.createElement('button');
-        btn.className = 'tab';
-        btn.innerText = s.key;
-        btn.dataset.key = s.key;
-        btn.onclick = ()=> {
-          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-          btn.classList.add('active');
-          loadProductsFor(s.key);
-        };
-        tabsEl.appendChild(btn);
-      });
-
-      loadProductsAll();
-    }
-
-    async function loadProductsFor(sheetKey){
-      lastLoadedSheetKey = sheetKey;
-      if(contentEl) contentEl.innerHTML = 'Cargando...';
-      try {
-        const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
-        const data = await r.json();
-        if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
-        const products = data.products || [];
-        lastProductsCache = products;
-        renderProducts(products, sheetKey);
-      } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='Error cargando productos'; }
-    }
-
-    async function loadProductsAll(){
-      lastLoadedSheetKey = "ALL";
-      if(contentEl) contentEl.innerHTML = 'Cargando todos los productos... (puede tardar)';
-      try {
-        const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
-        const data = await r.json();
-        if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
-        const products = data.products || [];
-        lastProductsCache = products;
-        renderProducts(products, "ALL");
-      } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='Error cargando productos'; }
-    }
-
+    /* utilities */
     function escapeHtml(str){
       if(str === undefined || str === null) return '';
-      return String(str)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;')
-        .replace(/'/g,'&#39;');
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
-
     function proxiedUrl(raw){
       if(!raw || typeof raw !== 'string') return '';
       return API_URL + 'image-proxy?url=' + encodeURIComponent(raw);
     }
-
     function makeImgEl(raw, alt, className){
       const img = document.createElement('img');
       img.alt = alt || '';
       img.className = className || '';
-      try {
-        img.src = proxiedUrl(raw);
-      } catch(e){
-        img.src = '';
-      }
+      try { img.src = proxiedUrl(raw); } catch(e){ img.src = ''; }
       img.onerror = () => { img.remove(); };
       return img;
     }
 
-    /* Render products — now: Icono (emoji/text) -> front circle; Img (url) -> back image */
+    /* Render products — now reads icono (emoji) for front and img (url) for back */
     function renderProducts(products, sheetKey){
       if (!products || !products.length){
-        if(contentEl) contentEl.innerHTML = 'No hay productos';
+        if(contentEl) contentEl.innerHTML = '<div class="loading">No hay productos</div>';
         return;
       }
       const grid = document.createElement('div');
@@ -607,12 +371,12 @@
         const price = firstKeyValue(d, ['price','precio','Precio']) || '';
         const stock = Number(firstKeyValue(d, ['stock','cantidad','Stock']) || 0);
 
-        // NUEVO: Icono = emoji/text; Img = URL de imagen grande
-        const iconText = firstKeyValue(d, ['Icono','icono','icon','emoji']) || '🛍️';
-        const imgUrl   = firstKeyValue(d, ['Img','img','imagen','image','foto']) || '';
+        // icono = emoji / texto corto para el círculo frontal
+        const emojiIcon = firstKeyValue(d, ['icono','Icono','icon','emoji']) || '🛍️';
+        // img = url real para la cara posterior
+        const imgUrl = firstKeyValue(d, ['img','Img','imagen','image','url','Imagen']) || '';
 
         const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota']) || '';
-
         const productSheetKey = p.sheetKey || d.sheetKey || d.SheetKey || (sheetKey === "ALL" ? (d.Descripcion || d.descripcion || d.Categoria || d.categoria || d.category || 'UNKNOWN') : sheetKey);
 
         const cardWrap = document.createElement('div');
@@ -682,67 +446,50 @@
         cardWrap.appendChild(inner);
         grid.appendChild(cardWrap);
 
-        // populate front circle with iconText (emoji or short text)
+        // populate front circle with emojiIcon (if it's a URL we still show as emoji fallback)
         const frontImageWrap = front.querySelector('.front-image');
-        // prefer showing the iconText as-is (emoji/text). If iconText unexpectedly is a URL and imgUrl is empty, fall back to trying to show that as image.
-        if (typeof iconText === 'string' && iconText.trim() !== '' && !/^(https?:)?\/\//i.test(iconText)) {
+        if (emojiIcon && typeof emojiIcon === 'string' && !/^(https?:)?\/\//i.test(emojiIcon)) {
+          // treat as emoji / text
           const span = document.createElement('div');
-          span.style.fontSize = '40px';
+          span.style.fontSize = '46px';
           span.style.lineHeight = '1';
-          span.style.textAlign = 'center';
-          span.style.userSelect = 'none';
-          span.innerText = iconText;
+          span.innerText = emojiIcon;
           frontImageWrap.appendChild(span);
-        } else if (imgUrl) {
-          // If iconText is a URL or empty but we have an imgUrl, show a small image in the circle
-          const imgSmall = makeImgEl(imgUrl, name, 'product-img');
-          imgSmall.style.width = '100%';
-          imgSmall.style.height = '100%';
-          frontImageWrap.appendChild(imgSmall);
-        } else {
-          const span = document.createElement('div');
-          span.style.fontSize = '34px';
-          span.innerText = '🛍️';
-          frontImageWrap.appendChild(span);
+        } else if (emojiIcon && typeof emojiIcon === 'string') {
+          // rare: if icono is a url treat as image small
+          const smallImg = makeImgEl(emojiIcon, name, 'product-img');
+          frontImageWrap.appendChild(smallImg);
         }
 
-        // populate back with big image from imgUrl (Img field)
+        // back image: only from imgUrl
         const backImageWrap = back.querySelector('.back-image-wrap');
         if (imgUrl && typeof imgUrl === 'string' && /^(https?:)?\/\//i.test(imgUrl)) {
           const imgLarge = makeImgEl(imgUrl, name, 'back-image');
+          imgLarge.addEventListener('click', (e)=>{ e.stopPropagation(); openImageModal(imgUrl, name); });
           backImageWrap.appendChild(imgLarge);
         } else {
           backImageWrap.innerHTML = `<div style="padding:20px;color:#999">Imagen no disponible</div>`;
         }
 
-        // eye toggles: only open/close on click (no hover)
+        // toggles (only click)
         const eyeFront = front.querySelector('.eye-toggle');
         const eyeBack = back.querySelector('.eye-toggle');
 
         function showBack(){
-          inner.classList.add('flipped');
+          inner.classList.add('flipped'); // hides order (order only in front)
         }
         function showFront(){
           inner.classList.remove('flipped');
         }
 
-        eyeFront.addEventListener('click', (e)=>{
-          e.stopPropagation();
-          showBack();
-        });
-        eyeBack.addEventListener('click', (e)=>{
-          e.stopPropagation();
-          showFront();
-        });
+        eyeFront.addEventListener('click', (e)=>{ e.stopPropagation(); showBack(); });
+        eyeBack.addEventListener('click', (e)=>{ e.stopPropagation(); showFront(); });
 
-        // also close back if user clicks outside content but inside card area (keeps page stable)
+        // close back if click outside content area inside the card (keeps layout stable)
         cardWrap.addEventListener('click', (ev) => {
           if (inner.classList.contains('flipped')) {
             const targetIsInsideBack = back.contains(ev.target);
-            const targetIsEye = back.querySelector('.eye-toggle') && back.querySelector('.eye-toggle').contains(ev.target);
-            if (!targetIsInsideBack || targetIsEye) {
-              if (!targetIsInsideBack) showFront();
-            }
+            if (!targetIsInsideBack) showFront();
           }
         });
 
@@ -753,9 +500,7 @@
         minusBtns.forEach(btn => btn.addEventListener('click', (e)=>{
           e.stopPropagation();
           const current = Number(qtySpans[0].innerText || '1');
-          if(current > 1){
-            qtySpans.forEach(s=>s.innerText = current - 1);
-          }
+          if(current > 1){ qtySpans.forEach(s=>s.innerText = current - 1); }
         }));
         plusBtns.forEach(btn => btn.addEventListener('click', (e)=>{
           e.stopPropagation();
@@ -774,17 +519,84 @@
           addToCart(cardWrap, qty);
         }));
 
-        // ensure front visible initially (no flip)
         showFront();
       });
 
       if(contentEl){ contentEl.innerHTML=''; contentEl.appendChild(grid); }
     }
 
-    loadCategories();
-  </script>
-</body>
-</html>
+    /* load categories / tabs (same behavior) */
+    async function loadCategories(){
+      try {
+        const r = await fetch(API_URL, {cache:'no-store'});
+        const data = await r.json();
+        if (!data.sheets) throw new Error("Respuesta inválida");
+        renderTabs(data.sheets);
+      } catch(err){
+        if(tabsEl) tabsEl.innerHTML = 'Error cargando categorías';
+        console.error(err);
+      }
+    }
 
+    function renderTabs(sheets){
+      if(!tabsEl) return;
+      tabsEl.innerHTML = '';
+
+      const allBtn = document.createElement('button');
+      allBtn.className = 'tab active';
+      allBtn.innerText = "Todos";
+      allBtn.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        allBtn.classList.add('active');
+        loadProductsAll();
+      };
+      tabsEl.appendChild(allBtn);
+
+      sheets.forEach((s)=>{
+        const btn = document.createElement('button');
+        btn.className = 'tab';
+        btn.innerText = s.key;
+        btn.dataset.key = s.key;
+        btn.onclick = ()=> {
+          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+          btn.classList.add('active');
+          loadProductsFor(s.key);
+        };
+        tabsEl.appendChild(btn);
+      });
+
+      loadProductsAll();
+    }
+
+    async function loadProductsFor(sheetKey){
+      lastLoadedSheetKey = sheetKey;
+      if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando...</div>';
+      try {
+        const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
+        const data = await r.json();
+        if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
+        const products = data.products || [];
+        lastProductsCache = products;
+        renderProducts(products, sheetKey);
+      } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='<div class="loading">Error cargando productos</div>'; }
+    }
+
+    async function loadProductsAll(){
+      lastLoadedSheetKey = "ALL";
+      if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando todos los productos... (puede tardar)</div>';
+      try {
+        const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
+        const data = await r.json();
+        if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
+        const products = data.products || [];
+        lastProductsCache = products;
+        renderProducts(products, "ALL");
+      } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='<div class="loading">Error cargando productos</div>'; }
+    }
+
+    // init
+    loadCategories();
+    updateCartUI();
+  </script>
 </body>
 </html>

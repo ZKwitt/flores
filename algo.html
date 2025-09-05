@@ -899,7 +899,7 @@
   </div>
 
   <script>
-    const API_URL = "https://d.thepersonmrt.workers.dev/";
+    const API_URL = "https://d.thepersonmrt.workers.dev/"; // tu worker
     const tabsEl = document.getElementById('tabs');
     const contentEl = document.getElementById('content');
     let lastProductsCache = [];
@@ -940,7 +940,7 @@
       return isNaN(n) ? 0 : n;
     }
 
-    /* Carrito (igual) */
+    /* Carrito */
     const WHATSAPP_NUMBER = '573207378992';
     let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
 
@@ -967,7 +967,7 @@
         const p = window.lastProductsCache.find(pp => String(pp.row) === String(row));
         if(p){
           const d = p.data || {};
-          const stock = firstKeyValue(d, ['stock','cantidad']) || 0;
+          const stock = firstKeyValue(d, ['stock','cantidad','Stock','Stock']);
           return Number(stock || 0);
         }
       }
@@ -1011,6 +1011,65 @@
       saveCart();
     }
 
+    /**
+     * updateStockOnServer
+     * - Intento POST JSON al worker (que reenvía al TARGET).
+     * - Fallback: GET con query string updateStock=1 (más compatible con scripts sencillos).
+     *
+     * IMPORTANTE: Si tu AppsScript espera un payload distinto, pásame el fragmento y lo ajusto.
+     */
+    async function updateStockOnServer(sheetKey, row, delta){
+      const orig = getOriginalStock(sheetKey, row);
+      const newStock = Math.max(0, orig - delta);
+
+      // Try POST JSON first
+      try {
+        const resp = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'setStock', sheetKey, row: String(row), stock: newStock })
+        });
+        // worker returns text/json; si ok, actualizamos dataset
+        const txt = await resp.text().catch(()=>null);
+        // Si el worker devolvió OK (200), aplicamos en cards
+        if(resp.ok){
+          document.querySelectorAll('.card').forEach(card=>{
+            if(String(card.dataset.sheetKey) === String(sheetKey) && String(card.dataset.row) === String(row)){
+              card.dataset.origStock = String(newStock);
+            }
+          });
+          refreshCardStockDisplay(sheetKey, row);
+          return;
+        } else {
+          console.warn('POST updateStock no OK:', resp.status, txt);
+        }
+      } catch (e){
+        console.warn('POST updateStock fallo:', e);
+      }
+
+      // Fallback: GET query
+      try {
+        const q = `${API_URL}?updateStock=1&sheetKey=${encodeURIComponent(sheetKey)}&row=${encodeURIComponent(String(row))}&stock=${encodeURIComponent(String(newStock))}`;
+        const resp2 = await fetch(q, { method: 'GET' });
+        if(resp2.ok){
+          document.querySelectorAll('.card').forEach(card=>{
+            if(String(card.dataset.sheetKey) === String(sheetKey) && String(card.dataset.row) === String(row)){
+              card.dataset.origStock = String(newStock);
+            }
+          });
+          refreshCardStockDisplay(sheetKey, row);
+          return;
+        } else {
+          console.warn('GET fallback updateStock no OK:', resp2.status, await resp2.text().catch(()=>null));
+        }
+      } catch (e){
+        console.warn('GET fallback updateStock fallo:', e);
+      }
+
+      // Si llegamos aquí, no se pudo actualizar remoto. Cambio local sigue aplicado (optimistic).
+      console.warn('No se pudo confirmar actualización de stock en servidor; cambio hecho localmente.');
+    }
+
     function addToCart(card, qty){
       const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
       const row = card.dataset.row;
@@ -1034,24 +1093,33 @@
         cart.push({ sheetKey, row, name, price: priceRaw, _priceNum: priceNum, qty });
       }
 
+      // actualizar visual (reserva local)
       refreshCardStockDisplay(sheetKey,row);
       updateCartUI();
-      
-      // Animate cart button
-      cartBtn.style.animation = 'none';
-      setTimeout(() => {
-        cartBtn.style.animation = 'cartBounce 0.5s ease';
-      }, 10);
+
+      // intentar actualizar servidor (no bloqueante)
+      updateStockOnServer(sheetKey, row, qty);
+
+      // Animación
+      if(cartBtn){
+        cartBtn.style.animation = 'none';
+        setTimeout(() => {
+          cartBtn.style.animation = 'cartBounce 0.5s ease';
+        }, 10);
+      }
     }
 
     /* Cart popup functions */
     function openCartPopup(){
+      let html = '';
       if(cart.length === 0){
-        alert('El carrito está vacío');
+        cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
+        cartTotalEl.innerHTML = '';
+        cartOverlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
         return;
       }
-      
-      let html = '';
+
       cart.forEach((item, idx) => {
         const itemTotal = parsePriceNumber(item._priceNum !== undefined ? item._priceNum : item.price) * Number(item.qty||0);
         html += `
@@ -1063,12 +1131,12 @@
           </div>
         `;
       });
-      
+
       cartItemsContainer.innerHTML = html || '<p style="text-align:center;color:#999">Carrito vacío</p>';
-      
+
       const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
       cartTotalEl.innerHTML = `💰 Total: <span style="color:var(--primary)">${Number(total).toLocaleString('de-DE')}</span>`;
-      
+
       cartOverlay.style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
@@ -1082,9 +1150,11 @@
       if(idx >= 0 && idx < cart.length){
         const item = cart[idx];
         cart.splice(idx, 1);
+
+        // Actualizamos UI/stock local y no mostramos alert
         refreshCardStockDisplay(item.sheetKey, item.row);
         updateCartUI();
-        openCartPopup(); // Refresh popup
+        openCartPopup(); // refresca popup (ahora mostrará carrito vacío sin alert)
       }
     }
 
@@ -1093,10 +1163,10 @@
         alert('El carrito está vacío');
         return;
       }
-      
+
       let message = '✨ *Nuevo Pedido - Marrie* ✨\n\n';
       let total = 0;
-      
+
       cart.forEach(item => {
         const itemTotal = parsePriceNumber(item._priceNum !== undefined ? item._priceNum : item.price) * Number(item.qty||0);
         total += itemTotal;
@@ -1104,13 +1174,13 @@
         message += `   Cantidad: ${item.qty}\n`;
         message += `   Precio: ${Number(itemTotal).toLocaleString('de-DE')}\n\n`;
       });
-      
+
       message += `💰 *TOTAL: ${Number(total).toLocaleString('de-DE')}*\n\n`;
       message += '📍 Por favor, confirma tu dirección de envío.';
-      
+
       const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
-      
+
       // Clear cart after sending
       cart = [];
       updateCartUI();
@@ -1167,7 +1237,7 @@
       return img;
     }
 
-    /* Render products — now reads icono (emoji) for front and img (url) for back */
+    /* Render products — maneja distintos nombres de campos (Nombre/Precio/Stock/Icono/Img/descripcion) */
     function renderProducts(products, sheetKey){
       if (!products || !products.length){
         if(contentEl) contentEl.innerHTML = '<div class="loading">No hay productos</div>';
@@ -1178,24 +1248,24 @@
 
       products.forEach((p, index)=>{
         const d = p.data || {};
-        const name = firstKeyValue(d, ['name','nombre','producto','Nombre']) || 'Sin nombre';
+        const name = firstKeyValue(d, ['name','nombre','producto','Nombre','Nombre']) || 'Sin nombre';
         const price = firstKeyValue(d, ['price','precio','Precio']) || '';
         const stock = Number(firstKeyValue(d, ['stock','cantidad','Stock']) || 0);
 
         // icono = emoji / texto corto para el círculo frontal
-        const emojiIcon = firstKeyValue(d, ['icono','Icono','icon','emoji']) || '🛍️';
+        const emojiIcon = firstKeyValue(d, ['icono','Icono','icon','emoji']) || firstKeyValue(d, ['Icono']) || '🛍️';
         // img = url real para la cara posterior
         const imgUrl = firstKeyValue(d, ['img','Img','imagen','image','url','Imagen']) || '';
 
-        const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota']) || '';
-        const productSheetKey = p.sheetKey || d.sheetKey || d.SheetKey || (sheetKey === "ALL" ? (d.Descripcion || d.descripcion || d.Categoria || d.categoria || d.category || 'UNKNOWN') : sheetKey);
+        const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota','Nota']) || d.descripcion || d.Descripcion || '';
+        const productSheetKey = p.sheetKey || sheetKey || d.Categoria || d.Categoria || d.categoria || 'UNKNOWN';
 
         const cardWrap = document.createElement('div');
         cardWrap.className = 'card';
-        cardWrap.dataset.origStock = stock;
+        cardWrap.dataset.origStock = String(stock);
         cardWrap.dataset.price = price;
-        cardWrap.dataset.row = p.row;
-        cardWrap.dataset.sheetKey = productSheetKey;
+        cardWrap.dataset.row = String(p.row);
+        cardWrap.dataset.sheetKey = String(productSheetKey);
         cardWrap.style.setProperty('--card-index', index);
 
         const inner = document.createElement('div');
@@ -1258,17 +1328,15 @@
         cardWrap.appendChild(inner);
         grid.appendChild(cardWrap);
 
-        // populate front circle with emojiIcon (if it's a URL we still show as emoji fallback)
+        // populate front circle with emojiIcon (if it's not a URL)
         const frontImageWrap = front.querySelector('.front-image');
         if (emojiIcon && typeof emojiIcon === 'string' && !/^(https?:)?\/\//i.test(emojiIcon)) {
-          // treat as emoji / text
           const span = document.createElement('div');
           span.style.fontSize = '52px';
           span.style.lineHeight = '1';
           span.innerText = emojiIcon;
           frontImageWrap.appendChild(span);
         } else if (emojiIcon && typeof emojiIcon === 'string') {
-          // rare: if icono is a url treat as image small
           const smallImg = makeImgEl(emojiIcon, name, 'product-img');
           frontImageWrap.appendChild(smallImg);
         }
@@ -1337,7 +1405,7 @@
       if(contentEl){ contentEl.innerHTML=''; contentEl.appendChild(grid); }
     }
 
-    /* load categories / tabs (same behavior) */
+    /* load categories / tabs (usa worker tal cual) */
     async function loadCategories(){
       try {
         const r = await fetch(API_URL, {cache:'no-store'});
@@ -1393,6 +1461,12 @@
       } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='<div class="loading">Error cargando productos</div>'; }
     }
 
+    /**
+     * loadProductsAll:
+     * 1) pide all=1 para performance rápido
+     * 2) lee categorías detectadas y pide cada sheetKey (detalle) para recuperar campos faltantes (ej: descripcion)
+     * 3) mezcla la info y renderiza
+     */
     async function loadProductsAll(){
       lastLoadedSheetKey = "ALL";
       if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando todos los productos</div>';
@@ -1400,10 +1474,47 @@
         const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
         const data = await r.json();
         if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
-        const products = data.products || [];
+        let products = data.products || [];
+
+        // detectar categorías del resultado "all"
+        const cats = [...new Set(products.map(p => (p.data && (p.data.Categoria || p.data.Categoria || p.data.categoria)) ).filter(Boolean))];
+
+        // pedir detalle por categoría para obtener descripciones/otros campos
+        const detailsPromises = cats.map(cat => fetch(API_URL+'?sheetKey='+encodeURIComponent(cat), {cache:'no-store'})
+          .then(res=>res.json().catch(()=>({products:[]})))
+          .then(json => ({ cat, products: json.products || [] }))
+          .catch(()=>({cat, products:[]}))
+        );
+
+        const details = await Promise.all(detailsPromises);
+        const detailMap = {}; // key: row -> data
+        details.forEach(obj=>{
+          (obj.products||[]).forEach(pp=>{
+            detailMap[String(pp.row)] = pp.data || pp;
+          });
+        });
+
+        // Merge descriptions/imagenes/iconos si están ausentes en el all
+        products = products.map(p=>{
+          const d = p.data || {};
+          const det = detailMap[String(p.row)];
+          if(det){
+            // mezclar campos útiles sin borrar lo que ya exista
+            if(!d.descripcion && (det.descripcion || det.Descripcion || det.description)) d.descripcion = firstKeyValue(det, ['descripcion','Descripcion','description','desc','nota','Nota']);
+            if(!d.Icono && (det.Icono || det.icono || det.icon)) d.Icono = det.Icono || det.icono || det.icon;
+            if(!d.Img && (det.Img || det.img || det.imagen || det.image)) d.Img = det.Img || det.img || det.imagen || det.image;
+            if(!d.Categoria && det.Categoria) d.Categoria = det.Categoria;
+          }
+          p.data = d;
+          return p;
+        });
+
         lastProductsCache = products;
         renderProducts(products, "ALL");
-      } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='<div class="loading">Error cargando productos</div>'; }
+      } catch(err){
+        console.error(err);
+        if(contentEl) contentEl.innerHTML = '<div class="loading">Error cargando productos</div>';
+      }
     }
 
     // init

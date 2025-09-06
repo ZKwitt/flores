@@ -648,7 +648,6 @@
       });
 
       message += `💰 *TOTAL: ${Number(total).toLocaleString('de-DE')}*\n\n`;
-      message += '📍 Por favor, confirma tu dirección de envío.';
 
       const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');

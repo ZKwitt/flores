@@ -202,64 +202,49 @@
   let availableSheetKeys = []; // keys válidas devueltas por GET /
 
   (function(){
-    // create emoji decorative background
+    // create emoji decorative background (sin cambios funcionales)
     const emojis = ['💄','💋','🌸','✨','🩷','🌺'];
-    const count = 14; // number of emoji elements
+    const count = 14;
     const container = document.createElement('div');
     container.className = 'emoji-bg';
-
     for(let i=0;i<count;i++){
       const s = document.createElement('span');
       s.className = 'emoji';
       s.textContent = emojis[i % emojis.length];
-
-      const size = Math.round((Math.random()*36)+20); // 20-56px
+      const size = Math.round((Math.random()*36)+20);
       s.style.fontSize = size + 'px';
       s.style.left = (Math.random()*100) + '%';
       s.style.top = (Math.random()*100) + '%';
-      s.style.opacity = (Math.random()*0.06) + 0.03; // very low opacity
+      s.style.opacity = (Math.random()*0.06) + 0.03;
       s.style.animationDuration = (18 + Math.random()*32) + 's';
       s.style.animationDelay = (-Math.random()*20) + 's';
       s.style.transform = 'translate3d(0,0,0)';
       s.style.zIndex = '0';
-
       container.appendChild(s);
     }
-
     document.body.appendChild(container);
 
-    // Fix interactive visuals: tabs, small button click states
+    // visual helpers
     document.addEventListener('click', function(e){
-      // tabs: toggle active class for visual
       if(e.target.matches('.tab')){
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         e.target.classList.add('active');
       }
-      // small buttons: toggle a selected visual state (purely visual)
       if(e.target.matches('.small')){
         e.target.classList.toggle('selected');
       }
     });
 
-    // Ensure cart-close is an accessible X button (already changed in HTML), but set aria-label
     const cartClose = document.getElementById('cart-close');
-    if(cartClose){
-      cartClose.setAttribute('aria-label','Cerrar carrito');
-    }
-
-    // keyboard users: add focus-visible helper
+    if(cartClose) cartClose.setAttribute('aria-label','Cerrar carrito');
     document.addEventListener('keydown', function(e){ if(e.key === 'Tab') document.documentElement.classList.add('kbd'); });
-
-    // optional: gently reposition emojis on resize so they don't overlap critical elements too often
     window.addEventListener('resize', function(){
       const els = document.querySelectorAll('.emoji-bg .emoji');
-      els.forEach(el => {
-        if(Math.random() < 0.35){ el.style.left = (Math.random()*100) + '%'; el.style.top = (Math.random()*100) + '%'; }
-      });
+      els.forEach(el => { if(Math.random() < 0.35){ el.style.left = (Math.random()*100) + '%'; el.style.top = (Math.random()*100) + '%'; } });
     });
-
   })();
 
+  /* ---------- utilidades ---------- */
   function firstKeyValue(obj, keys){
     if (!obj) return undefined;
     const map = {};
@@ -295,7 +280,7 @@
     return isNaN(n) ? 0 : n;
   }
 
-  /* Carrito */
+  /* ---------- carrito ---------- */
   const WHATSAPP_NUMBER = '573207378992';
   let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
 
@@ -311,34 +296,28 @@
   function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
   function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
 
-  // Buscar en lastProductsCache por row + sheetKey (evita ambigüedades en "ALL")
   function findProductInCache(sheetKey, row){
     if(!Array.isArray(lastProductsCache)) return null;
-    // normalizar sheetKey
     const targetSk = (sheetKey || '').toString().trim();
     return lastProductsCache.find(pp => {
-      const sk = (pp.sheetKey || (pp.data && (pp.data.Categoria || pp.data.Categoria || pp.data.categoria)) || '').toString().trim();
+      const sk = (pp.sheetKey || (pp.data && (pp.data.Categoria || pp.data.categoria)) || '').toString().trim();
       return String(pp.row) === String(row) && sk.toString().trim().toLowerCase() === targetSk.toLowerCase();
     }) || null;
   }
 
   function getOriginalStock(sheetKey, row){
-    // primero intentar desde el DOM (dataset), luego desde lastProductsCache con match sheetKey+row
     const card = Array.from(document.querySelectorAll('.card')).find(c => {
       const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
       const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
       return sk.toString().trim().toLowerCase() === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
     });
     if (card && card.dataset.origStock !== undefined) return Number(card.dataset.origStock || 0);
-
     const p = findProductInCache(sheetKey, row);
     if (p){
       const d = p.data || {};
       const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0;
       return Number(stock || 0);
     }
-
-    // fallback: search by row only (legacy)
     const p2 = (Array.isArray(lastProductsCache) && lastProductsCache.find(pp=>String(pp.row)===String(row))) || null;
     if(p2){
       const d = p2.data || {};
@@ -367,11 +346,11 @@
       const orderBtn = card.querySelector('.order');
       if(avail <= 0){
         card.classList.add('out');
-        card.style.opacity = '0.45'; // baja opacidad cuando no hay stock
+        card.style.opacity = '0.45';
         if(orderBtn) orderBtn.disabled = true;
       } else {
         card.classList.remove('out');
-        card.style.opacity = ''; // restaurar opacidad
+        card.style.opacity = '';
         if(orderBtn) orderBtn.disabled = false;
       }
     });
@@ -387,59 +366,7 @@
     saveCart();
   }
 
-  /**
-   * updateStockOnServer_decrement
-   * - Usa action: "decrement" (AppsScript hace newStock = current - 1).
-   * - Llama tantas veces como qty (serial) para decrementar exactamente la cantidad.
-   * - Confirma la respuesta y actualiza dataset.origStock si el servidor devuelve ok.
-   */
-  async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
-    if(!qty || qty <= 0) return;
-    // Mapear sheetKeyRaw a uno válido (case-insensitive) si tenemos availableSheetKeys
-    const mappedKey = mapToAvailableSheetKey(sheetKeyRaw);
-    if(!mappedKey){
-      console.warn('updateStockOnServer_decrement: sheetKey no reconocido, no se enviará petición:', sheetKeyRaw);
-      return;
-    }
-
-    for(let i=0;i<qty;i++){
-      try {
-        const resp = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'decrement', sheetKey: mappedKey, row: String(row) })
-        });
-        const text = await resp.text().catch(()=>null);
-        let json = null;
-        try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
-
-        if(resp.ok && json && !json.error){
-          // AppsScript responde {status:'ok', oldStock, newStock}
-          const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : undefined;
-          if(confirmedStock !== undefined){
-            // actualizar todas las tarjetas que coincidan
-            document.querySelectorAll('.card').forEach(card=>{
-              const csk = (card.dataset.sheetKey||'').toString().trim();
-              const rw = card.dataset.row;
-              if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
-                // setear directamente al valor confirmado por servidor
-                card.dataset.origStock = String(confirmedStock);
-              }
-            });
-            refreshCardStockDisplay(mappedKey, row);
-          }
-          // continuar al siguiente decremento
-        } else {
-          console.warn('Decrement fallo o respuesta inesperada:', resp.status, text);
-          break; // romper el loop si el servidor falló
-        }
-      } catch (err){
-        console.warn('Decrement petición falló:', err);
-        break;
-      }
-    }
-  }
-
+  /* ---------- sync stock con servidor (decrement/set/increase) ---------- */
   function mapToAvailableSheetKey(input){
     if(!input) return null;
     const s = String(input).trim();
@@ -447,14 +374,9 @@
       const found = availableSheetKeys.find(k => String(k).toLowerCase() === s.toLowerCase());
       if(found) return found;
     }
-    // fallback: devolver input si parece válido (no ideal)
     return s || null;
   }
 
-  /**
-   * fetchServerStock(sheetKey, row)
-   * - lee desde API (GET ?sheetKey=...) y devuelve el stock numérico o null
-   */
   async function fetchServerStock(sheetKeyRaw, row){
     try {
       const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
@@ -473,11 +395,52 @@
     }
   }
 
-  /**
-   * updateStockOnServer_set
-   * - setea un nuevo stock (acción 'set' del AppsScript)
-   * - usa respuesta para confirmar dataset.origStock; si falla hace fallback optimistic
-   */
+  // Reconciliación: cuando el servidor responde con newStock, guardamos origStock = newStock + reservedLocal
+  async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
+    if(!qty || qty <= 0) return;
+    const mappedKey = mapToAvailableSheetKey(sheetKeyRaw);
+    if(!mappedKey){
+      console.warn('updateStockOnServer_decrement: sheetKey no reconocido, no se enviará petición:', sheetKeyRaw);
+      return;
+    }
+
+    for(let i=0;i<qty;i++){
+      try {
+        const resp = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'decrement', sheetKey: mappedKey, row: String(row) })
+        });
+        const text = await resp.text().catch(()=>null);
+        let json = null;
+        try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
+
+        if(resp.ok && json && !json.error){
+          const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : undefined;
+          console.debug('server newStock (decrement)', { sheetKey: mappedKey, row, confirmedStock });
+          if(confirmedStock !== undefined){
+            const reservedLocal = getReservedQty(mappedKey, row);
+            document.querySelectorAll('.card').forEach(card=>{
+              const csk = (card.dataset.sheetKey||'').toString().trim().toLowerCase();
+              const rw = card.dataset.row;
+              if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
+                // setear origStock = server + reservedLocal (reconciliación)
+                card.dataset.origStock = String(Math.max(0, confirmedStock + reservedLocal));
+              }
+            });
+            refreshCardStockDisplay(mappedKey, row);
+          }
+        } else {
+          console.warn('Decrement fallo o respuesta inesperada:', resp.status, text);
+          break;
+        }
+      } catch (err){
+        console.warn('Decrement petición falló:', err);
+        break;
+      }
+    }
+  }
+
   async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
     const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
     try {
@@ -493,11 +456,13 @@
 
       if(resp.ok && json && !json.error){
         const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : Number(newStock);
+        console.debug('server newStock (set)', { sheetKey: mappedKey, row, confirmedStock });
+        const reservedLocal = getReservedQty(mappedKey, row);
         document.querySelectorAll('.card').forEach(card=>{
-          const csk = (card.dataset.sheetKey||'').toString().trim();
+          const csk = (card.dataset.sheetKey||'').toString().trim().toLowerCase();
           const rw = card.dataset.row;
           if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
-            card.dataset.origStock = String(confirmedStock);
+            card.dataset.origStock = String(Math.max(0, confirmedStock + reservedLocal));
           }
         });
         refreshCardStockDisplay(mappedKey, row);
@@ -509,11 +474,6 @@
     }
   }
 
-  /**
-   * updateStockOnServer_increaseViaSet(sheetKey, row, delta)
-   * - lee stock en servidor y hace set = serverStock + delta
-   * - sirve para restaurar stock al eliminar items del carrito sin hacer over-increment
-   */
   async function updateStockOnServer_increaseViaSet(sheetKeyRaw, row, delta){
     if(!delta || delta <= 0) return;
     const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
@@ -526,28 +486,24 @@
       const serverStock = await fetchServerStock(mappedKey, row);
       const baseStock = (serverStock !== null && serverStock !== undefined) ? Number(serverStock) : Number(getOriginalStock(mappedKey, row) || 0);
       const newStock = Math.max(0, baseStock + Number(delta));
-
-      // realizar set
       await updateStockOnServer_set(mappedKey, row, newStock);
     } catch (err){
       console.warn('updateStockOnServer_increaseViaSet error', err);
     }
   }
 
-  /**
-   * addToCart
-   * - ahora realiza decremento optimista local de dataset.origStock para evitar la doble apariencia visual
-   * - luego hace la llamada al servidor (updateStockOnServer_decrement) como antes
-   */
+  /* ---------- addToCart / removeFromCart (sin modificar dataset.origStock al push) ---------- */
   async function addToCart(card, qty){
-    const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
-    const row = card.dataset.row;
-    const name = card.querySelector('.name')?.innerText || 'Sin nombre';
-    const priceRaw = card.dataset.price !== undefined ? card.dataset.price : (card.querySelector('.price')?.innerText || '');
+    const sheetKey = (card && card.dataset.sheetKey) || lastLoadedSheetKey || 'UNKNOWN';
+    const row = card && card.dataset.row;
+    const name = card?.querySelector('.name')?.innerText || 'Sin nombre';
+    const priceRaw = card?.dataset.price !== undefined ? card.dataset.price : (card?.querySelector('.price')?.innerText || '');
     const priceNum = parsePriceNumber(priceRaw);
     const origStock = getOriginalStock(sheetKey, row);
     const reserved = getReservedQty(sheetKey,row);
     const available = Math.max(0, origStock - reserved);
+
+    console.debug('addToCart called', { sheetKey, row, qty, origStock, reserved, available });
 
     if(qty > available){
       alert('No hay suficiente stock disponible.');
@@ -562,71 +518,23 @@
       cart.push({ sheetKey, row, name, price: priceRaw, _priceNum: priceNum, qty });
     }
 
-    // **Decremento optimista local del dataset.origStock en todas las tarjetas correspondientes**
-    document.querySelectorAll('.card').forEach(cardEl=>{
-      const csk = (cardEl.dataset.sheetKey||'').toString().trim().toLowerCase();
-      const rw = cardEl.dataset.row;
-      if(String(rw) === String(row) && csk === (sheetKey||'').toString().trim().toLowerCase()){
-        const current = Number(cardEl.dataset.origStock || getOriginalStock(sheetKey,row) || 0);
-        cardEl.dataset.origStock = String(Math.max(0, current - qty));
-      }
-    });
-
-    // actualizar visual (reserva local)
+    // NO modificamos dataset.origStock aquí. Sólo `reserved` cambia (el UI usa reserved para mostrar disponibilidad).
     refreshCardStockDisplay(sheetKey,row);
     updateCartUI();
 
-    // intentar decrementar en servidor (usar decrement repetido)
-    // fire-and-forget; no await here to keep UI snappy
+    // log del estado del carrito (después de actualizar)
+    console.debug('cart state after add', { cart: JSON.parse(JSON.stringify(cart)) });
+
+    // decrementar en servidor (serial per qty)
     updateStockOnServer_decrement(sheetKey, row, qty).catch(e=>console.warn('updateStockOnServer_decrement error', e));
 
     // Animación carrito
     if(cartBtn){
       cartBtn.style.animation = 'none';
-      setTimeout(() => {
-        cartBtn.style.animation = 'cartBounce 0.5s ease';
-      }, 10);
+      setTimeout(() => { cartBtn.style.animation = 'cartBounce 0.5s ease'; }, 10);
     }
   }
 
-  /* Cart popup functions */
-  function openCartPopup(){
-    let html = '';
-    if(cart.length === 0){
-      cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
-      cartTotalEl.innerHTML = '';
-      cartOverlay.style.display = 'flex';
-      document.body.style.overflow = 'hidden';
-      return;
-    }
-
-    cart.forEach((item, idx) => {
-      const itemTotal = parsePriceNumber(item._priceNum !== undefined ? item._priceNum : item.price) * Number(item.qty||0);
-      html += `
-        <div class="cart-item">
-          <span class="cart-item-name">${escapeHtml(item.name)}</span>
-          <span class="cart-item-qty">x${item.qty}</span>
-          <span class="cart-item-price">${Number(itemTotal).toLocaleString('de-DE')}</span>
-          <button class="cart-item-remove" onclick="removeFromCart(${idx})">✕</button>
-        </div>
-      `;
-    });
-
-    cartItemsContainer.innerHTML = html || '<p style="text-align:center;color:#999">Carrito vacío</p>';
-
-    const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
-    cartTotalEl.innerHTML = `💰 Total: <span style="color:var(--primary)">${Number(total).toLocaleString('de-DE')}</span>`;
-
-    cartOverlay.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeCartPopup(){ cartOverlay.style.display = 'none'; document.body.style.overflow = ''; }
-
-  /**
-   * removeFromCart
-   * - ahora realiza incremento optimista local de dataset.origStock antes de llamar al servidor
-   */
   function removeFromCart(idx){
     if(idx >= 0 && idx < cart.length){
       const item = cart[idx];
@@ -634,28 +542,22 @@
       const row = item.row;
       const removedQty = Number(item.qty || 0);
 
-      // incrementa optimistamente el dataset.origStock en todas las tarjetas que coincidan
-      document.querySelectorAll('.card').forEach(cardEl=>{
-        const csk = (cardEl.dataset.sheetKey||'').toString().trim().toLowerCase();
-        const rw = cardEl.dataset.row;
-        if(String(rw) === String(row) && csk === (sheetKey||'').toString().trim().toLowerCase()){
-          const current = Number(cardEl.dataset.origStock || getOriginalStock(sheetKey,row) || 0);
-          cardEl.dataset.origStock = String(current + removedQty);
-        }
-      });
+      console.debug('removeFromCart called', { sheetKey, row, removedQty });
 
-      // eliminar del carrito (optimistic)
+      // optimist increment: aumentamos reserved implícito porque eliminamos del carrito
+      // NO cambiamos dataset.origStock aquí — en su lugar confiamos en la reconcilación que hará updateStockOnServer_increaseViaSet
       cart.splice(idx, 1);
 
-      // actualizar UI local
       refreshCardStockDisplay(sheetKey, row);
       updateCartUI();
-      openCartPopup(); // refresca popup (mostrará carrito vacío cuando corresponda)
+      openCartPopup();
 
-      // sincronizar con servidor: aumentar stock de forma segura (read + set)
+      // sincronizar con servidor: read + set (increaseViaSet)
       updateStockOnServer_increaseViaSet(sheetKey, row, removedQty).catch(e => {
         console.warn('updateStockOnServer_increaseViaSet error', e);
       });
+
+      console.debug('cart state after remove', { cart: JSON.parse(JSON.stringify(cart)) });
     }
   }
 
@@ -685,25 +587,50 @@
     cart = [];
     updateCartUI();
 
-    // Después de enviar, refrescar visual de todas las tarjetas (porque la reserva ya es final)
+    // refrescar visual de todas las tarjetas
     document.querySelectorAll('.card').forEach(card=>{
-      // no cambiamos stock local here — el servidor ya debería reflejarlo por decrements previos
       refreshCardStockDisplay(card.dataset.sheetKey, card.dataset.row);
     });
 
     closeCartPopup();
   }
 
-  // Cart event listeners
+  // Cart UI handlers
+  function openCartPopup(){
+    let html = '';
+    if(cart.length === 0){
+      cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
+      cartTotalEl.innerHTML = '';
+      cartOverlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+    cart.forEach((item, idx) => {
+      const itemTotal = parsePriceNumber(item._priceNum !== undefined ? item._priceNum : item.price) * Number(item.qty||0);
+      html += `
+        <div class="cart-item">
+          <span class="cart-item-name">${escapeHtml(item.name)}</span>
+          <span class="cart-item-qty">x${item.qty}</span>
+          <span class="cart-item-price">${Number(itemTotal).toLocaleString('de-DE')}</span>
+          <button class="cart-item-remove" onclick="removeFromCart(${idx})">✕</button>
+        </div>
+      `;
+    });
+    cartItemsContainer.innerHTML = html || '<p style="text-align:center;color:#999">Carrito vacío</p>';
+    const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
+    cartTotalEl.innerHTML = `💰 Total: <span style="color:var(--primary)">${Number(total).toLocaleString('de-DE')}</span>`;
+    cartOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeCartPopup(){ cartOverlay.style.display = 'none'; document.body.style.overflow = ''; }
+
   cartBtn.addEventListener('click', openCartPopup);
   cartCloseBtn.addEventListener('click', closeCartPopup);
   cartConfirmBtn.addEventListener('click', sendToWhatsApp);
   cartOverlay.addEventListener('click', (e) => { if(e.target === cartOverlay) closeCartPopup(); });
-
-  // Make removeFromCart global
   window.removeFromCart = removeFromCart;
 
-  /* Modal image handlers */
+  /* ---------- modal de imagen ---------- */
   const imgModalOverlay = document.getElementById('img-modal-overlay');
   const imgModalImg = document.getElementById('img-modal-img');
   const imgModalClose = document.getElementById('img-modal-close');
@@ -719,7 +646,7 @@
   imgModalClose.addEventListener('click', closeImageModal);
   imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
 
-  /* utilities */
+  /* ---------- helpers restantes ---------- */
   function escapeHtml(str){
     if(str === undefined || str === null) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -729,7 +656,7 @@
     return API_URL + 'image-proxy?url=' + encodeURIComponent(raw);
   }
 
-  // --- Lazy-load images (IntersectionObserver)
+  /* ---------- lazy-load images ---------- */
   const lazyObserver = (function(){
     if (typeof IntersectionObserver === 'undefined') return null;
     return new IntersectionObserver((entries, obs) => {
@@ -744,7 +671,7 @@
         obs.unobserve(img);
       });
     }, {
-      rootMargin: '300px 0px', // cargar antes de entrar viewport
+      rootMargin: '300px 0px',
       threshold: 0.01
     });
   })();
@@ -752,12 +679,9 @@
   function observeLazyImages(rootEl) {
     if (!lazyObserver) return;
     const imgs = (rootEl || document).querySelectorAll('img[data-src]');
-    imgs.forEach(img => {
-      if (document.contains(img)) lazyObserver.observe(img);
-    });
+    imgs.forEach(img => { if (document.contains(img)) lazyObserver.observe(img); });
   }
 
-  // Reemplazo de makeImgEl: asigna data-src y placeholder
   function makeImgEl(raw, alt, className){
     const img = document.createElement('img');
     img.alt = alt || '';
@@ -772,14 +696,16 @@
     return img;
   }
 
-  /* Render products — ahora: skeletons + chunked + DocumentFragment + lazy images + event delegation */
+  /* ---------- render productos: skeletons + chunks + delegation ---------- */
   function renderProducts(products, sheetKey){
     if (!products || !products.length){
       if(contentEl) contentEl.innerHTML = '<div class="loading">No hay productos</div>';
       return;
     }
-    const CHUNK_SIZE = 10; // ajustar si quieres más/menos por lote
+    const CHUNK_SIZE = 20; // ajustar según dispositivo
     const total = products.length;
+
+    // actualizar cache
     lastProductsCache = (products || []).map(p => {
       return {
         row: p.row,
@@ -788,14 +714,11 @@
       };
     });
 
-    if(contentEl) contentEl.innerHTML = ''; // limpiamos y luego iremos append por chunks
-
-    // crea un contenedor grid que iremos rellenando por fragmentos
+    if(contentEl) contentEl.innerHTML = '';
     const grid = document.createElement('div');
     grid.className = 'grid';
     contentEl.appendChild(grid);
 
-    // función que crea la tarjeta DOM para un producto (skeleton/minimal)
     function createCardNodeSkeleton(p, index){
       const d = p.data || {};
       const name = firstKeyValue(d, ['name','nombre','producto','Nombre']) || d.Nombre || 'Sin nombre';
@@ -812,13 +735,11 @@
       cardWrap.dataset.price = price;
       cardWrap.dataset.row = String(p.row);
       cardWrap.dataset.sheetKey = String(productSheetKey);
-      // store detail fields to populate later
       cardWrap.dataset._imgUrl = imgUrl || '';
       cardWrap.dataset._emoji = emojiIcon || '';
       cardWrap.dataset._desc = description || '';
       cardWrap.style.setProperty('--card-index', index);
 
-      // minimal skeleton HTML: name + price + small placeholder image + actions
       cardWrap.innerHTML = `
         <div class="flip-inner">
           <div class="face front">
@@ -867,11 +788,9 @@
           </div>
         </div>
       `;
-
       return cardWrap;
     }
 
-    // función para rellenar detalles (img, desc, emoji) después del append
     function populateCardDetails(card){
       try {
         const imgUrl = card.dataset._imgUrl || '';
@@ -880,9 +799,8 @@
         const front = card.querySelector('.face.front');
         const back = card.querySelector('.face.back');
 
-        // front-image: replace placeholder with emoji or small image (lazy)
         const frontImageWrap = front.querySelector('.front-image');
-        frontImageWrap.innerHTML = ''; // limpiar placeholder
+        frontImageWrap.innerHTML = '';
 
         if (emojiIcon && typeof emojiIcon === 'string' && !/^(https?:)?\/\//i.test(emojiIcon)) {
           const span = document.createElement('div');
@@ -894,27 +812,22 @@
           const smallImg = makeImgEl(emojiIcon, card.querySelector('.name')?.innerText || '', 'product-img');
           frontImageWrap.appendChild(smallImg);
         } else {
-          // no emoji/img: leave a neutral circle
           frontImageWrap.innerHTML = '<div style="padding:18px;color:#eee;font-size:2rem">🛍️</div>';
         }
 
-        // back image
         const backImageWrap = back.querySelector('.back-image-wrap');
         backImageWrap.innerHTML = '';
         if (imgUrl && typeof imgUrl === 'string' && /^(https?:)?\/\//i.test(imgUrl)) {
           const imgLarge = makeImgEl(imgUrl, card.querySelector('.name')?.innerText || '', 'back-image');
-          // click to open modal delegated also supported: set attribute to later detect
           imgLarge.addEventListener('click', (e)=>{ e.stopPropagation(); openImageModal(imgUrl, card.querySelector('.name')?.innerText || ''); });
           backImageWrap.appendChild(imgLarge);
         } else {
           backImageWrap.innerHTML = `<div style="padding:30px;color:#bbb;font-size:3rem">🖼️</div>`;
         }
 
-        // description
         const descBox = back.querySelector('.desc-box');
         if (descBox) descBox.innerText = description || 'Sin descripción disponible';
 
-        // finally observe lazy images inside this card
         observeLazyImages(card);
 
       } catch (err) {
@@ -922,14 +835,15 @@
       }
     }
 
-    // Procesado por chunks sin bloquear el hilo, y rellenado de detalles por chunk
+    // chunk processing
     let index = 0;
     function processChunk(){
       if (index >= total) {
-        // attach delegated handlers (once) after all chunks appended
+        console.info('renderProducts: all chunks processed', { total });
         return;
       }
 
+      const start = index;
       const frag = document.createDocumentFragment();
       const end = Math.min(index + CHUNK_SIZE, total);
       const appendedCards = [];
@@ -941,7 +855,9 @@
       }
       grid.appendChild(frag);
 
-      // ahora rellenar detalles para las tarjetas añadidas sin bloquear mucho
+      // log chunk cargado
+      console.info('renderProducts: chunk appended', { start, end: end-1, total });
+
       function fillDetailsForAppended(){
         try {
           appendedCards.forEach(card => populateCardDetails(card));
@@ -964,10 +880,9 @@
       }
     }
 
-    // iniciar
     processChunk();
 
-    // EVENT DELEGATION: un único listener en el grid para manejar plus/minus/order/toggle/modal clicks
+    // delegación de eventos (único listener por grid)
     if (!grid._hasDelegation) {
       grid.addEventListener('click', function(e){
         const plus = e.target.closest('.plus');
@@ -1001,12 +916,10 @@
           const card = orderBtn.closest('.card');
           if (!card) return;
           const qty = Number(card.querySelector('.qty')?.innerText || '1');
-          // single invocation of addToCart (fixes double-decrement bug)
           addToCart(card, qty);
           return;
         }
 
-        // eye-toggle (abrir/cerrar back)
         const eye = e.target.closest('.eye-toggle');
         if (eye) {
           e.preventDefault();
@@ -1014,11 +927,7 @@
           if (!card) return;
           const inner = card.querySelector('.flip-inner');
           if (!inner) return;
-          if (inner.classList.contains('flipped')) {
-            inner.classList.remove('flipped');
-          } else {
-            inner.classList.add('flipped');
-          }
+          inner.classList.toggle('flipped');
           return;
         }
       });
@@ -1026,13 +935,12 @@
     }
   }
 
-  /* load categories / tabs (usa worker tal cual) */
+  /* ---------- categorías y carga ---------- */
   async function loadCategories(){
     try {
       const r = await fetch(API_URL, {cache:'no-store'});
       const data = await r.json();
       if (!data.sheets) throw new Error("Respuesta inválida");
-      // data.sheets = [{ key, sheetName }]
       availableSheetKeys = (data.sheets || []).map(s => s.key).filter(Boolean);
       renderTabs(data.sheets);
     } catch(err){
@@ -1044,7 +952,6 @@
   function renderTabs(sheets){
     if(!tabsEl) return;
     tabsEl.innerHTML = '';
-
     const allBtn = document.createElement('button');
     allBtn.className = 'tab active';
     allBtn.innerText = "✨ Todos";
@@ -1078,21 +985,12 @@
       const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
       const data = await r.json();
       if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
-      const products = (data.products || []).map(p=> {
-        if(!p.sheetKey) p.sheetKey = sheetKey;
-        return p;
-      });
+      const products = (data.products || []).map(p=> { if(!p.sheetKey) p.sheetKey = sheetKey; return p; });
       lastProductsCache = products;
       renderProducts(products, sheetKey);
     } catch(err){ console.error(err); if(contentEl) contentEl.innerHTML='<div class="loading">Error cargando productos</div>'; }
   }
 
-  /**
-   * loadProductsAll:
-   * - pide all=1
-   * - detecta categorías (Categoria) de cada producto y hace peticiones por categoría para obtener filas completas
-   * - mergea por clave composta: `${categoria}::${row}` — evita colisiones de row entre hojas
-   */
   async function loadProductsAll(){
     lastLoadedSheetKey = "ALL";
     if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando todos los productos</div>';
@@ -1102,16 +1000,13 @@
       if (data.error){ contentEl.innerHTML='Error: '+data.message; return; }
       let products = data.products || [];
 
-      // Asegurar que cada product tenga data.Categoria consistente
       products.forEach(p=>{
         p.data = p.data || {};
-        if(!p.data.Categoria) p.data.Categoria = p.data.Categoria || p.data.categoria || p.data.Categoria || 'UNKNOWN';
+        if(!p.data.Categoria) p.data.Categoria = p.data.Categoria || p.data.categoria || 'UNKNOWN';
       });
 
-      // detectar categorías presentes en "all"
       const cats = [...new Set(products.map(p => (p.data && (p.data.Categoria || p.data.categoria)) ).filter(Boolean))];
 
-      // pedir detalle por categoría (sheetKey) para obtener filas completas
       const detailsPromises = cats.map(cat => fetch(API_URL+'?sheetKey='+encodeURIComponent(cat), {cache:'no-store'})
         .then(res=>res.json().catch(()=>({products:[]})))
         .then(json => ({ cat, products: json.products || [] }))
@@ -1120,8 +1015,7 @@
 
       const details = await Promise.all(detailsPromises);
 
-      // construir mapa por clave compuesta cat::row para lookup preciso
-      const detailMap = {}; // key: `${cat}::${row}` -> data
+      const detailMap = {};
       details.forEach(obj=>{
         const cat = obj.cat;
         (obj.products || []).forEach(pp=>{
@@ -1131,7 +1025,6 @@
         });
       });
 
-      // Merge: por cada producto en "all", buscamos detalle por categoria+row y mezclamos sin sobreescribir
       products = products.map(p=>{
         const d = p.data || {};
         const cat = d.Categoria || d.categoria || 'UNKNOWN';
@@ -1148,7 +1041,6 @@
         return p;
       });
 
-      // Guardar cache con sheetKey claro (clave compuesta)
       lastProductsCache = products.map(p => {
         return {
           row: p.row,
@@ -1157,7 +1049,6 @@
         };
       });
 
-      // Renderizar (cada card tendrá dataset.sheetKey con la categoria/hoja)
       renderProducts(lastProductsCache.map(p=>({ row: p.row, data: p.data, sheetKey: p.sheetKey })), "ALL");
     } catch(err){
       console.error(err);

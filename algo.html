@@ -737,7 +737,7 @@
       if(contentEl) contentEl.innerHTML = '<div class="loading">No hay productos</div>';
       return;
     }
-    const CHUNK_SIZE = 20; // ajustar si quieres más/menos por lote
+    const CHUNK_SIZE = 10; // ajustar si quieres más/menos por lote
     const total = products.length;
     lastProductsCache = (products || []).map(p => {
       return {

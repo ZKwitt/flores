@@ -204,7 +204,7 @@
   (function(){
     // create emoji decorative background
     const emojis = ['💄','💋','🌸','✨','🩷','🌺'];
-    const count = 24; // number of emoji elements
+    const count = 14; // number of emoji elements
     const container = document.createElement('div');
     container.className = 'emoji-bg';
 
@@ -237,7 +237,6 @@
       }
       // small buttons: toggle a selected visual state (purely visual)
       if(e.target.matches('.small')){
-        // some small buttons are quantity controls — do not prevent native behavior, only toggle visual class briefly
         e.target.classList.toggle('selected');
       }
     });
@@ -396,7 +395,6 @@
    */
   async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
     if(!qty || qty <= 0) return;
-    // Mapear sheetKeyRaw a uno válido (case-insensitive) si tenemos availableSheetKeys
     const mappedKey = mapToAvailableSheetKey(sheetKeyRaw);
     if(!mappedKey){
       console.warn('updateStockOnServer_decrement: sheetKey no reconocido, no se enviará petición:', sheetKeyRaw);
@@ -415,10 +413,8 @@
         try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
 
         if(resp.ok && json && !json.error){
-          // AppsScript responde {status:'ok', oldStock, newStock}
           const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : undefined;
           if(confirmedStock !== undefined){
-            // actualizar todas las tarjetas que coincidan
             document.querySelectorAll('.card').forEach(card=>{
               const csk = (card.dataset.sheetKey||'').toString().trim();
               const rw = card.dataset.row;
@@ -428,10 +424,9 @@
             });
             refreshCardStockDisplay(mappedKey, row);
           }
-          // continuar al siguiente decremento
         } else {
           console.warn('Decrement fallo o respuesta inesperada:', resp.status, text);
-          break; // romper el loop si el servidor falló
+          break;
         }
       } catch (err){
         console.warn('Decrement petición falló:', err);
@@ -447,7 +442,6 @@
       const found = availableSheetKeys.find(k => String(k).toLowerCase() === s.toLowerCase());
       if(found) return found;
     }
-    // fallback: devolver input si parece válido (no ideal)
     return s || null;
   }
 
@@ -534,6 +528,7 @@
     }
   }
 
+  // NOTE: addToCart no longer attached directly to buttons; it's called only by the delegated click handler.
   async function addToCart(card, qty){
     const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
     const row = card.dataset.row;
@@ -562,9 +557,10 @@
     updateCartUI();
 
     // intentar decrementar en servidor (usar decrement repetido)
+    // fire-and-forget; no await here to keep UI snappy
     updateStockOnServer_decrement(sheetKey, row, qty).catch(e=>console.warn('updateStockOnServer_decrement error', e));
 
-    // Animación
+    // Animación carrito
     if(cartBtn){
       cartBtn.style.animation = 'none';
       setTimeout(() => {
@@ -623,7 +619,6 @@
       openCartPopup(); // refresca popup (mostrará carrito vacío cuando corresponda)
 
       // sincronizar con servidor: aumentar stock de forma segura
-      // usa read-server + set-server para evitar over-increment
       updateStockOnServer_increaseViaSet(sheetKey, row, removedQty).catch(e => {
         console.warn('updateStockOnServer_increaseViaSet error', e);
       });
@@ -700,7 +695,6 @@
       entries.forEach(entry => {
         if (!entry.isIntersecting) return;
         const img = entry.target;
-        // asignar src desde data-src
         const src = img.dataset && img.dataset.src;
         if (src) {
           img.src = src;
@@ -718,7 +712,6 @@
     if (!lazyObserver) return;
     const imgs = (rootEl || document).querySelectorAll('img[data-src]');
     imgs.forEach(img => {
-      // solo observar si está en el DOM
       if (document.contains(img)) lazyObserver.observe(img);
     });
   }
@@ -729,9 +722,7 @@
     img.alt = alt || '';
     img.className = className || '';
     try {
-      // No asignamos src directo: usamos data-src para lazy-load
       img.dataset.src = proxiedUrl(raw);
-      // opcional placeholder tiny pixel (mejor UX que elemento vacío)
       img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
     } catch(e) {
       img.src = '';
@@ -740,9 +731,7 @@
     return img;
   }
 
-  /* Render products — maneja distintos nombres de campos (Nombre/Precio/Stock/Icono/Img/descripcion)
-     Reemplazamos por versión chunked + DocumentFragment + lazy images
-  */
+  /* Render products — ahora: skeletons + chunked + DocumentFragment + lazy images + event delegation */
   function renderProducts(products, sheetKey){
     if (!products || !products.length){
       if(contentEl) contentEl.innerHTML = '<div class="loading">No hay productos</div>';
@@ -750,6 +739,14 @@
     }
     const CHUNK_SIZE = 20; // ajustar si quieres más/menos por lote
     const total = products.length;
+    lastProductsCache = (products || []).map(p => {
+      return {
+        row: p.row,
+        sheetKey: (p.sheetKey || (p.data && (p.data.Categoria || p.data.categoria)) || sheetKey || 'UNKNOWN').toString(),
+        data: p.data || {}
+      };
+    });
+
     if(contentEl) contentEl.innerHTML = ''; // limpiamos y luego iremos append por chunks
 
     // crea un contenedor grid que iremos rellenando por fragmentos
@@ -757,8 +754,8 @@
     grid.className = 'grid';
     contentEl.appendChild(grid);
 
-    // función que crea la tarjeta DOM para un producto
-    function createCardNode(p, index){
+    // función que crea la tarjeta DOM para un producto (skeleton/minimal)
+    function createCardNodeSkeleton(p, index){
       const d = p.data || {};
       const name = firstKeyValue(d, ['name','nombre','producto','Nombre']) || d.Nombre || 'Sin nombre';
       const price = firstKeyValue(d, ['price','precio','Precio']) || d.Precio || '';
@@ -774,154 +771,152 @@
       cardWrap.dataset.price = price;
       cardWrap.dataset.row = String(p.row);
       cardWrap.dataset.sheetKey = String(productSheetKey);
+      // store detail fields to populate later
+      cardWrap.dataset._imgUrl = imgUrl || '';
+      cardWrap.dataset._emoji = emojiIcon || '';
+      cardWrap.dataset._desc = description || '';
       cardWrap.style.setProperty('--card-index', index);
 
-      const inner = document.createElement('div');
-      inner.className = 'flip-inner';
+      // minimal skeleton HTML: name + price + small placeholder image + actions
+      cardWrap.innerHTML = `
+        <div class="flip-inner">
+          <div class="face front">
+            <div style="position:relative;padding:12px;">
+              <button class="eye-toggle" aria-pressed="false" title="Ver imagen y descripción" type="button" aria-label="Ver imagen y descripción">
+                <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="#ff6b9d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="#ff6b9d" stroke-width="2"/>
+                </svg>
+              </button>
 
-      const front = document.createElement('div');
-      front.className = 'face front';
-      front.innerHTML = `
-        <div style="position:relative;padding:12px;">
-          <button class="eye-toggle" aria-pressed="false" title="Ver imagen y descripción" type="button" aria-label="Ver imagen y descripción">
-            <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="#ff6b9d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="12" cy="12" r="3" stroke="#ff6b9d" stroke-width="2"/>
-            </svg>
-          </button>
+              <div class="front-image" aria-hidden="true">
+                <div style="padding:20px;color:#ddd;font-size:2rem">🔜</div>
+              </div>
 
-          <div class="front-image"></div>
+              <div class="meta">
+                <div class="name">${escapeHtml(name)}</div>
+                <div style="display:flex;gap:12px;align-items:center;justify-content:center;margin-top:12px">
+                  <div class="price">$ ${fmtPrice(price)}</div>
+                  <div class="stock">Stock: <span class="stockval">${Math.max(0, stock - getReservedQty(productSheetKey, p.row))}</span></div>
+                </div>
+              </div>
+            </div>
 
-          <div class="meta">
-            <div class="name">${escapeHtml(name)}</div>
-            <div style="display:flex;gap:12px;align-items:center;justify-content:center;margin-top:12px">
-              <div class="price">$ ${fmtPrice(price)}</div>
-              <div class="stock">Stock: <span class="stockval">${Math.max(0, stock - getReservedQty(productSheetKey, p.row))}</span></div>
+            <div style="padding:0 16px 16px">
+              <div class="actions">
+                <button class="small minus">−</button>
+                <span class="qty">1</span>
+                <button class="small plus">+</button>
+                <button class="btn order" ${stock<=0?'disabled':''}>Pedir</button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style="padding:0 16px 16px">
-          <div class="actions">
-            <button class="small minus">−</button>
-            <span class="qty">1</span>
-            <button class="small plus">+</button>
-            <button class="btn order" ${stock<=0?'disabled':''}>Pedir</button>
+          <div class="face back" aria-hidden="true">
+            <div style="position:relative;padding:12px">
+              <button class="eye-toggle" aria-pressed="true" title="Volver" type="button" aria-label="Volver">
+                <svg class="eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19 12H5" stroke="#ff6b9d" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 19l-7-7 7-7" stroke="#ff6b9d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            <div class="back-image-wrap"><div style="padding:30px;color:#bbb;font-size:3rem">🖼️</div></div>
+            <div style="padding:12px"><div class="desc-box">Cargando...</div></div>
           </div>
         </div>
       `;
-
-      const back = document.createElement('div');
-      back.className = 'face back';
-      back.innerHTML = `
-        <div style="position:relative;padding:12px">
-          <button class="eye-toggle" aria-pressed="true" title="Volver" type="button" aria-label="Volver">
-            <svg class="eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 12H5" stroke="#ff6b9d" stroke-width="2" stroke-linecap="round"/>
-              <path d="M12 19l-7-7 7-7" stroke="#ff6b9d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
-
-        <div class="back-image-wrap"></div>
-        <div style="padding:12px">
-          <div class="desc-box">${escapeHtml(description || 'Sin descripción disponible')}</div>
-        </div>
-
-        <div style="height:12px"></div>
-      `;
-
-      inner.appendChild(front);
-      inner.appendChild(back);
-      cardWrap.appendChild(inner);
-
-      // front-image: emoji o imagen (usamos makeImgEl que asigna data-src)
-      const frontImageWrap = front.querySelector('.front-image');
-      if (emojiIcon && typeof emojiIcon === 'string' && !/^(https?:)?\/\//i.test(emojiIcon)) {
-        const span = document.createElement('div');
-        span.style.fontSize = '52px';
-        span.style.lineHeight = '1';
-        span.innerText = emojiIcon;
-        frontImageWrap.appendChild(span);
-      } else if (emojiIcon && typeof emojiIcon === 'string') {
-        const smallImg = makeImgEl(emojiIcon, name, 'product-img');
-        frontImageWrap.appendChild(smallImg);
-      }
-
-      // back image: solo desde imgUrl (lazy)
-      const backImageWrap = back.querySelector('.back-image-wrap');
-      if (imgUrl && typeof imgUrl === 'string' && /^(https?:)?\/\//i.test(imgUrl)) {
-        const imgLarge = makeImgEl(imgUrl, name, 'back-image');
-        imgLarge.addEventListener('click', (e)=>{ e.stopPropagation(); openImageModal(imgUrl, name); });
-        backImageWrap.appendChild(imgLarge);
-      } else {
-        backImageWrap.innerHTML = `<div style="padding:30px;color:#bbb;font-size:3rem">🖼️</div>`;
-      }
-
-      // Delegados listeners por tarjeta: añadimos los esenciales (cantidad + order + toggle)
-      const eyeFront = front.querySelector('.eye-toggle');
-      const eyeBack = back.querySelector('.eye-toggle');
-
-      function showBack(){ inner.classList.add('flipped'); }
-      function showFront(){ inner.classList.remove('flipped'); }
-
-      eyeFront.addEventListener('click', (e)=>{ e.stopPropagation(); showBack(); });
-      eyeBack.addEventListener('click', (e)=>{ e.stopPropagation(); showFront(); });
-
-      // quantity controls
-      const minusBtns = cardWrap.querySelectorAll('.minus');
-      const plusBtns = cardWrap.querySelectorAll('.plus');
-      const qtySpans = cardWrap.querySelectorAll('.qty');
-      minusBtns.forEach(btn => btn.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        const current = Number(qtySpans[0].innerText || '1');
-        if(current > 1){ qtySpans.forEach(s=>s.innerText = current - 1); }
-      }));
-      plusBtns.forEach(btn => btn.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        const orig = getOriginalStock(cardWrap.dataset.sheetKey, cardWrap.dataset.row);
-        const current = Number(qtySpans[0].innerText || '1');
-        if(current < Math.max(0, orig - getReservedQty(cardWrap.dataset.sheetKey, cardWrap.dataset.row))){
-          qtySpans.forEach(s=>s.innerText = current + 1);
-        }
-      }));
-
-      // order
-      const orderBtns = cardWrap.querySelectorAll('.order');
-      orderBtns.forEach(btn => btn.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        const qty = Number(cardWrap.querySelector('.qty').innerText || '1');
-        addToCart(cardWrap, qty);
-      }));
-
-      // asegurar front por defecto
-      inner.classList.remove('flipped');
 
       return cardWrap;
     }
 
-    // Procesado por chunks sin bloquear el hilo
+    // función para rellenar detalles (img, desc, emoji) después del append
+    function populateCardDetails(card){
+      try {
+        const imgUrl = card.dataset._imgUrl || '';
+        const emojiIcon = card.dataset._emoji || '';
+        const description = card.dataset._desc || '';
+        const front = card.querySelector('.face.front');
+        const back = card.querySelector('.face.back');
+
+        // front-image: replace placeholder with emoji or small image (lazy)
+        const frontImageWrap = front.querySelector('.front-image');
+        frontImageWrap.innerHTML = ''; // limpiar placeholder
+
+        if (emojiIcon && typeof emojiIcon === 'string' && !/^(https?:)?\/\//i.test(emojiIcon)) {
+          const span = document.createElement('div');
+          span.style.fontSize = '52px';
+          span.style.lineHeight = '1';
+          span.innerText = emojiIcon;
+          frontImageWrap.appendChild(span);
+        } else if (emojiIcon && typeof emojiIcon === 'string') {
+          const smallImg = makeImgEl(emojiIcon, card.querySelector('.name')?.innerText || '', 'product-img');
+          frontImageWrap.appendChild(smallImg);
+        } else {
+          // no emoji/img: leave a neutral circle
+          frontImageWrap.innerHTML = '<div style="padding:18px;color:#eee;font-size:2rem">🛍️</div>';
+        }
+
+        // back image
+        const backImageWrap = back.querySelector('.back-image-wrap');
+        backImageWrap.innerHTML = '';
+        if (imgUrl && typeof imgUrl === 'string' && /^(https?:)?\/\//i.test(imgUrl)) {
+          const imgLarge = makeImgEl(imgUrl, card.querySelector('.name')?.innerText || '', 'back-image');
+          // click to open modal delegated also supported: set attribute to later detect
+          imgLarge.addEventListener('click', (e)=>{ e.stopPropagation(); openImageModal(imgUrl, card.querySelector('.name')?.innerText || ''); });
+          backImageWrap.appendChild(imgLarge);
+        } else {
+          backImageWrap.innerHTML = `<div style="padding:30px;color:#bbb;font-size:3rem">🖼️</div>`;
+        }
+
+        // description
+        const descBox = back.querySelector('.desc-box');
+        if (descBox) descBox.innerText = description || 'Sin descripción disponible';
+
+        // finally observe lazy images inside this card
+        observeLazyImages(card);
+
+      } catch (err) {
+        console.warn('populateCardDetails error', err);
+      }
+    }
+
+    // Procesado por chunks sin bloquear el hilo, y rellenado de detalles por chunk
     let index = 0;
     function processChunk(){
       if (index >= total) {
-        // luego de último chunk, observar imágenes lazy dentro del grid
-        observeLazyImages(grid);
+        // attach delegated handlers (once) after all chunks appended
         return;
       }
 
       const frag = document.createDocumentFragment();
       const end = Math.min(index + CHUNK_SIZE, total);
+      const appendedCards = [];
       for (let i = index; i < end; i++){
         const p = products[i];
-        const node = createCardNode(p, i);
+        const node = createCardNodeSkeleton(p, i);
         frag.appendChild(node);
+        appendedCards.push(node);
       }
       grid.appendChild(frag);
-      // observar imágenes añadidas en este chunk
-      observeLazyImages(grid);
+
+      // ahora rellenar detalles para las tarjetas añadidas sin bloquear mucho
+      // usamos requestIdleCallback si existe, fallback a setTimeout
+      function fillDetailsForAppended(){
+        try {
+          appendedCards.forEach(card => populateCardDetails(card));
+        } catch(e){
+          console.warn('fillDetailsForAppended error', e);
+        }
+      }
+
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(fillDetailsForAppended, { timeout: 300 });
+      } else {
+        setTimeout(fillDetailsForAppended, 80);
+      }
 
       index = end;
-      // usar requestIdleCallback si existe (mejor UX), fallback a setTimeout
       if (typeof requestIdleCallback !== 'undefined') {
         requestIdleCallback(processChunk, { timeout: 500 });
       } else {
@@ -931,6 +926,67 @@
 
     // iniciar
     processChunk();
+
+    // EVENT DELEGATION: un único listener en el grid para manejar plus/minus/order/toggle/modal clicks
+    // (colocado aquí para que grid exista; si ya existía, remover duplicados)
+    if (!grid._hasDelegation) {
+      grid.addEventListener('click', function(e){
+        const plus = e.target.closest('.plus');
+        if (plus) {
+          e.preventDefault();
+          const card = plus.closest('.card');
+          if (!card) return;
+          const qtySpan = card.querySelector('.qty');
+          const current = Number(qtySpan?.innerText || '1');
+          const orig = getOriginalStock(card.dataset.sheetKey, card.dataset.row);
+          if (current < Math.max(0, orig - getReservedQty(card.dataset.sheetKey, card.dataset.row))){
+            qtySpan.innerText = current + 1;
+          }
+          return;
+        }
+
+        const minus = e.target.closest('.minus');
+        if (minus) {
+          e.preventDefault();
+          const card = minus.closest('.card');
+          if (!card) return;
+          const qtySpan = card.querySelector('.qty');
+          const current = Number(qtySpan?.innerText || '1');
+          if (current > 1) qtySpan.innerText = current - 1;
+          return;
+        }
+
+        const orderBtn = e.target.closest('.order');
+        if (orderBtn) {
+          e.preventDefault();
+          const card = orderBtn.closest('.card');
+          if (!card) return;
+          const qty = Number(card.querySelector('.qty')?.innerText || '1');
+          // IMPORTANT: single invocation of addToCart (fixes double-decrement bug)
+          addToCart(card, qty);
+          return;
+        }
+
+        // eye-toggle (abrir/cerrar back)
+        const eye = e.target.closest('.eye-toggle');
+        if (eye) {
+          e.preventDefault();
+          const card = eye.closest('.card');
+          if (!card) return;
+          const inner = card.querySelector('.flip-inner');
+          if (!inner) return;
+          if (inner.classList.contains('flipped')) {
+            inner.classList.remove('flipped');
+          } else {
+            inner.classList.add('flipped');
+          }
+          return;
+        }
+
+        // back-image click (delegated opening handled in populateCardDetails already via direct listener).
+      });
+      grid._hasDelegation = true;
+    }
   }
 
   /* load categories / tabs (usa worker tal cual) */
@@ -1034,7 +1090,6 @@
         (obj.products || []).forEach(pp=>{
           const key = `${cat}::${String(pp.row)}`;
           detailMap[key] = pp.data || pp;
-          // también aseguramos que pp.sheetKey esté presente
           if(!pp.sheetKey) pp.sheetKey = cat;
         });
       });
@@ -1046,13 +1101,11 @@
         const key = `${cat}::${String(p.row)}`;
         const det = detailMap[key];
         if(det){
-          // mezclar campos útiles si faltan
           if(!d.descripcion && (det.descripcion || det.Descripcion || det.description)) d.descripcion = firstKeyValue(det, ['descripcion','Descripcion','description','desc','nota','Nota']);
           if(!d.Icono && (det.Icono || det.icono || det.icon)) d.Icono = det.Icono || det.icono || det.icon;
           if(!d.Img && (det.Img || det.img || det.imagen || det.image)) d.Img = det.Img || det.img || det.imagen || det.image;
           if(!d.Categoria && det.Categoria) d.Categoria = det.Categoria;
         }
-        // asegurar sheetKey explícito para evitar ambigüedad
         p.sheetKey = p.sheetKey || d.Categoria || cat;
         p.data = d;
         return p;

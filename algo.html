@@ -35,7 +35,7 @@
       position: relative;
       overflow-x: hidden;
     }
-    /* animated gradient orbs (sin cambios) */
+    /* animated gradient orbs */
     body::before, body::after {
       content: '';
       position: fixed;
@@ -49,28 +49,22 @@
     body::after  { width: 500px; height: 500px; background: linear-gradient(135deg, #66d9ef, #f093fb); bottom: -150px; right: -150px; animation-delay: -10s; }
     @keyframes float { 0%,100%{transform:translate(0,0) scale(1)} 25%{transform:translate(30px,-30px) scale(1.05)} 50%{transform:translate(-20px,20px) scale(0.95)} 75%{transform:translate(-30px,-10px) scale(1.02)} }
 
-    /* Emoji decorative background - unchanged */
+    /* Emoji decorative background container (behind content) */
     .emoji-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
     .emoji-bg .emoji { position: absolute; will-change: transform, opacity; opacity: 0.06; filter: blur(0.3px); animation: floatEmoji linear infinite; transform-origin: center; mix-blend-mode: screen; }
     @keyframes floatEmoji { 0% { transform: translateY(0) rotate(0deg) } 50% { transform: translateY(-40px) rotate(18deg) } 100% { transform: translateY(0) rotate(0deg) } }
 
-    /* header - unchanged */
+    /* header */
     .header{ text-align:center; margin-bottom:30px; position:relative; z-index:1; animation: fadeInDown 0.8s ease; }
     .header h1{ font-size:2.8rem; font-weight:900; background: var(--gradient2); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:8px; letter-spacing:-0.02em; filter: drop-shadow(2px 2px 20px rgba(255,107,157,0.3)); }
     .header p{ color:var(--muted); font-size:1.1rem; font-weight:500; letter-spacing:0.5px; }
     @keyframes fadeInDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
 
-    /* =========================
-       FIX PRINCIPAL PARA TABS
-       =========================
-       Cambios clave:
-       - Usamos ::after para pintar el degradado activo
-       - Aseguramos stacking (z-index) para que el texto esté siempre por encima
-       - No tocamos otros estilos visuales (bordes, sombras)
-    */
-    #tabs{ display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin:20px 0 30px; z-index:1; position:relative; animation: fadeIn 1s ease 0.3s both; overflow:visible; }
-
-    .tab{
+    /* ================= FIX: asegurar que el gradiente de selección no tape el texto ================= */
+    /* Principio: dejamos el pseudo-elemento (fondo) detrás del texto con z-index controlado, y ponemos el contenido (texto/emoji) con z-index superior. */
+    .tab {
+      position: relative;   /* crea stacking context para el pseudo */
+      z-index: 1;           /* texto y contenido por encima por defecto */
       background: var(--card-bg);
       padding:10px 20px;
       border-radius:999px;
@@ -78,94 +72,42 @@
       font-weight:600;
       cursor:pointer;
       color:#5a4a6b;
-      transition:all 0.28s cubic-bezier(0.4,0,0.2,1);
+      transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
       box-shadow:0 4px 15px rgba(0,0,0,0.05);
-      position:relative; /* crea stacking context para pseudo */
       overflow:visible;
-      z-index:1; /* aseguramos que el contenido (texto) esté en un nivel superior al ::after */
     }
 
-    /* pseudo usado para el hover suave (gradient-soft) - se queda detrás del texto */
+    /* pseudo de fondo: lo usamos para el estado hover/active y está POR DEBAJO del texto */
     .tab::before{
-      content:'';
-      position:absolute;
-      inset:0;
-      background: var(--gradient-soft);
-      opacity:0;
-      transition:opacity 0.28s;
-      border-radius:999px;
-      z-index:0; /* detrás del contenido */
-      pointer-events:none;
-    }
-    .tab:hover{ transform:translateY(-3px); box-shadow:0 8px 25px rgba(255,107,157,0.15); border-color:rgba(255,107,157,0.3); }
-    .tab:hover::before{ opacity:1; }
-
-    /* PSEUDO que aplica el degradado "activo" y extiende ligeramente para cubrir el borde */
-    .tab::after{
       content: '';
       position: absolute;
       inset: 0;
       border-radius: 999px;
-      opacity: 0;
-      transition: opacity 0.22s ease, transform 0.22s ease;
-      z-index: -1; /* inicialmente detrás del fondo de la .tab */
       pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      opacity: 0;
+      z-index: 0; /* detrás del contenido (que está en z-index:1) */
+      background: var(--gradient-soft);
     }
 
-    /* Estado activo: en lugar de cambiar background directamente, activamos ::after.
-       Esto evita que un background solape elementos internos por stacking inesperado. */
-    .tab.active{
-      color: #fff; /* texto blanco sobre degradado */
-      border-color: transparent;
-      transform: translateY(-3px) scale(1.03);
-      box-shadow:0 10px 30px rgba(255,107,157,0.25);
-      z-index:2; /* aseguramos que la caja y su contenido estén por encima del pseudo */
-      background: transparent; /* transparente para que el ::after muestre el degradado */
-    }
-    .tab.active::after{
-      opacity: 1;
-      inset: -3px; /* extender para cubrir bordes */
+    /* cuando hover, elevamos la opacidad del pseudo */
+    .tab:hover::before { opacity: 1; }
+
+    /* estado active: usamos ::before para pintar el gradiente principal y lo estiramos un poco para cubrir el borde */
+    .tab.active::before{
       background: var(--gradient2);
-      filter: blur(0.0px);
-      z-index: 0; /* justo detrás de la .tab pero debajo del contenido (que está en z-index:2) */
+      opacity: 1;
+      /* extender para cubrir borde externo sin mostrar "corte" */
+      inset: -3px;
       transform: scale(1);
     }
 
-    /* Asegurar que el texto y los elementos hijos estén por encima del ::after */
-    .tab, .tab * { position: relative; z-index: 2; }
-
-    /* =========================
-       FIX PARA BOTONES SMALL (seleccionados)
-       ========================= */
-    .small{ position:relative; z-index:1; }
-    .small::after{
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 12px;
-      opacity: 0;
-      transition: opacity 0.18s ease, transform 0.18s ease;
-      z-index: -1;
-      pointer-events: none;
+    /* aseguramos que el texto/descendientes del botón estén por encima */
+    .tab > * {
+      position: relative;
+      z-index: 2;
     }
-    .small.selected{
-      color:#fff;
-      border-color:transparent;
-      z-index:2;
-      background: transparent;
-    }
-    .small.selected::after{
-      opacity: 1;
-      inset: -2px;
-      background: var(--gradient2);
-      filter: blur(0);
-      z-index: 0;
-    }
-
-    /* =========================
-       RESTO DEL CSS (sin cambios funcionales)
-       ========================= */
-    @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+    /* ================================================================================================ */
 
     /* content */
     #content { max-width:1200px; margin:0 auto; min-height:160px; text-align:center; z-index:1; animation: fadeInUp 0.8s ease 0.5s both; }
@@ -197,11 +139,30 @@
     .stock{ font-size:.9rem; padding:8px 16px; border-radius:999px; color:#fff; font-weight:700; background: var(--gradient3); box-shadow:0 4px 15px rgba(255,107,157,0.2); }
     /* actions */
     .actions{ display:flex; gap:12px; align-items:center; justify-content:center; padding:12px 20px 10px; position:relative; z-index:1; }
-    .small{ width:36px; height:36px; border-radius:12px; border:2px solid rgba(255,107,157,0.15); background:linear-gradient(135deg, #fff, rgba(255,107,157,0.05)); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:700; color:#5a4a6b; transition:all 0.2s; box-shadow:0 4px 10px rgba(0,0,0,0.05); }
+    .small{ width:36px; height:36px; border-radius:12px; border:2px solid rgba(255,107,157,0.15); background:linear-gradient(135deg, #fff, rgba(255,107,157,0.05)); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:700; color:#5a4a6b; transition:all 0.2s; box-shadow:0 4px 10px rgba(0,0,0,0.05); position:relative; z-index:1; }
     .small:hover{ transform:scale(1.1); border-color:rgba(255,107,157,0.3); box-shadow:0 6px 15px rgba(255,107,157,0.15); }
-    /* improved selected/active visual state for small buttons */
-    .small:active, .small.selected, .small:focus-visible { background: var(--gradient2); color:#fff; border-color:transparent; box-shadow: 0 10px 25px rgba(255,107,157,0.25); transform: translateY(-2px) scale(1.03); }
-    .small.selected { border-radius:12px; }
+
+    /* Small buttons: corregimos igual que .tab para que el gradiente no tape texto/iconos */
+    .small::before{
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      pointer-events: none;
+      transition: opacity .18s ease;
+      opacity: 0;
+      z-index: 0;
+      background: var(--gradient-soft);
+    }
+    .small.selected::before{
+      opacity: 1;
+      inset: -2px;
+      background: var(--gradient2);
+    }
+    .small > * { position: relative; z-index: 2; }
+
+    /* improved selected/active visual state for small buttons (kept) */
+    .small:active, .small.selected, .small:focus-visible { color:#fff; border-color:transparent; box-shadow: 0 10px 25px rgba(255,107,157,0.25); transform: translateY(-2px) scale(1.03); }
 
     .qty{ min-width:36px; text-align:center; font-weight:800; font-size:1.1rem; color:#2a2438; }
     .btn.order{ background: var(--gradient2); color:#fff; padding:12px 24px; border-radius:999px; border:0; cursor:pointer; font-weight:700; font-size:0.95rem; letter-spacing:0.5px; transition:all 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow:0 8px 20px rgba(255,107,157,0.25); }
@@ -217,9 +178,37 @@
     .desc-box::-webkit-scrollbar-track{ background: rgba(255,107,157,0.05); border-radius:10px; }
     .desc-box::-webkit-scrollbar-thumb{ background: rgba(255,107,157,0.3); border-radius:10px; }
     .desc-box::-webkit-scrollbar-thumb:hover{ background: rgba(255,107,157,0.5); }
-    /* cart + modal styles etc. (sin cambios) */
-    /* ... (omitted here for brevity but unchanged) ... */
-
+    /* cart + modal styles omitted for brevity (kept same as before) - they are included below unmodified */
+    #cart-btn{ position: fixed; bottom: 30px; right: 30px; background: var(--gradient2); color: #fff; padding: 16px 24px; border-radius: 999px; border: none; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; box-shadow: 0 10px 30px rgba(255,107,157,0.3); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; animation: cartBounce 2s ease infinite; }
+    @keyframes cartBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+    #cart-btn:hover{ transform: translateY(-3px) scale(1.05); box-shadow: 0 15px 40px rgba(255,107,157,0.4); }
+    #cart-icon{ font-size: 1.3rem; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1)); }
+    #cart-count{ background: #fff; color: var(--primary); padding: 4px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: 800; min-width: 24px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    #cart-popup-overlay{ position: fixed; inset: 0; background: rgba(30,20,50,0.7); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px; animation: fadeIn 0.3s ease; }
+    #cart-popup{ background: linear-gradient(135deg, #fff 0%, #fef5f8 100%); border-radius: 24px; padding: 30px; max-width: 500px; width: 100%; max-height: 80vh; overflow: auto; box-shadow: 0 30px 60px rgba(255,107,157,0.2), 0 0 0 1px rgba(255,255,255,0.5); animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid rgba(255,107,157,0.1); }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    #cart-popup h3{ font-size: 1.8rem; margin-bottom: 20px; background: var(--gradient2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-align: center; font-weight: 800; }
+    #cart-items-container{ margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.7); border-radius: 16px; border: 1px solid rgba(255,107,157,0.1); max-height: 350px; overflow-y: auto; }
+    .cart-item{ display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 10px; background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,240,245,0.9)); border-radius: 12px; border: 1px solid rgba(255,107,157,0.08); transition: all 0.2s; }
+    .cart-item:hover{ transform: translateX(5px); box-shadow: 0 5px 15px rgba(255,107,157,0.1); }
+    .cart-item-name{ font-weight: 600; color: #2a2438; flex: 1; }
+    .cart-item-qty{ background: var(--gradient3); color: #fff; padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; margin: 0 10px; }
+    .cart-item-price{ font-weight: 700; color: var(--primary); }
+    .cart-item-remove{ background: rgba(255,107,157,0.1); color: var(--primary); border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; margin-left: 10px; transition: all 0.2s; font-weight: 600; }
+    .cart-item-remove:hover{ background: rgba(255,107,157,0.2); transform: scale(1.05); }
+    #cart-total{ text-align: center; font-size: 1.3rem; font-weight: 800; padding: 15px; background: var(--gradient-soft); border-radius: 12px; margin-top: 15px; color: #2a2438; }
+    #cart-confirm{ background: var(--gradient2); color: #fff; padding: 14px 28px; border-radius: 999px; border: none; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(255,107,157,0.25); transition: all 0.3s; font-size: 1rem; }
+    #cart-confirm:hover{ transform: translateY(-2px); box-shadow: 0 12px 30px rgba(255,107,157,0.35); }
+    /* cart-close updated to be a circular X button */
+    #cart-close{ background: rgba(255,255,255,0.95); color: var(--muted); padding: 0; width:44px; height:44px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; border: 2px solid rgba(0,0,0,0.05); font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    #cart-close:hover{ border-color: rgba(255,107,157,0.2); background: var(--gradient2); color:#fff; }
+    /* modal */
+    #img-modal-overlay{ position:fixed; inset:0; display:none; background:rgba(30,20,50,0.85); backdrop-filter: blur(15px); align-items:center; justify-content:center; z-index:20000; padding:20px; animation: fadeIn 0.3s ease; }
+    #img-modal{ max-width:95vw; max-height:95vh; overflow:auto; border-radius:20px; box-shadow:0 30px 80px rgba(255,107,157,0.3); background:linear-gradient(135deg, #fff, #fef5f8); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; border: 2px solid rgba(255,107,157,0.1); animation: zoomIn 0.4s cubic-bezier(0.4,0,0.2,1); }
+    @keyframes zoomIn { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1); } }
+    #img-modal img{ max-width:100%; max-height:80vh; object-fit:contain; display:block; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); }
+    #img-modal-close{ align-self:flex-end; margin-bottom:10px; background: linear-gradient(135deg, #fff, rgba(255,107,157,0.1)); color: var(--primary); padding: 10px 20px; border-radius: 999px; border: 2px solid rgba(255,107,157,0.2); font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    #img-modal-close:hover{ transform: scale(1.05); background: var(--gradient2); color:#fff; border-color:transparent; }
     /* responsive */
     @media (max-width:768px) { .header h1 { font-size: 2.2rem; } .grid { grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 20px; } #cart-btn { bottom: 20px; right: 20px; padding: 14px 20px; } }
     @media (max-width:520px) { body { padding: 20px; } .header h1 { font-size: 1.8rem; } .grid { grid-template-columns: 1fr; } .front-image { width: 110px; height: 110px; } .flip-inner { min-height: 400px; } .back-image-wrap { height: 200px; } #cart-popup { padding: 20px; } #cart-btn { bottom: 15px; right: 15px; padding: 12px 18px; font-size: 0.9rem; } }
@@ -260,7 +249,7 @@
   <!-- image modal -->
   <div id="img-modal-overlay" role="dialog" aria-hidden="true">
     <div id="img-modal">
-      <button id="img-modal-close" class="small">✕</button>
+      <button id="img-modal-close" class="small">✕ Cerrar</button>
       <img id="img-modal-img" alt="Imagen completa">
     </div>
   </div>

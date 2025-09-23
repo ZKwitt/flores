@@ -391,10 +391,11 @@
    * updateStockOnServer_decrement
    * - Usa action: "decrement" (AppsScript hace newStock = current - 1).
    * - Llama tantas veces como qty (serial) para decrementar exactamente la cantidad.
-   * - Confirma la respuesta y actualiza dataset.origStock si el server devuelve ok.
+   * - Confirma la respuesta y actualiza dataset.origStock si el servidor devuelve ok.
    */
   async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
     if(!qty || qty <= 0) return;
+    // Mapear sheetKeyRaw a uno válido (case-insensitive) si tenemos availableSheetKeys
     const mappedKey = mapToAvailableSheetKey(sheetKeyRaw);
     if(!mappedKey){
       console.warn('updateStockOnServer_decrement: sheetKey no reconocido, no se enviará petición:', sheetKeyRaw);
@@ -413,20 +414,24 @@
         try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
 
         if(resp.ok && json && !json.error){
+          // AppsScript responde {status:'ok', oldStock, newStock}
           const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : undefined;
           if(confirmedStock !== undefined){
+            // actualizar todas las tarjetas que coincidan
             document.querySelectorAll('.card').forEach(card=>{
               const csk = (card.dataset.sheetKey||'').toString().trim();
               const rw = card.dataset.row;
               if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
+                // setear directamente al valor confirmado por servidor
                 card.dataset.origStock = String(confirmedStock);
               }
             });
             refreshCardStockDisplay(mappedKey, row);
           }
+          // continuar al siguiente decremento
         } else {
           console.warn('Decrement fallo o respuesta inesperada:', resp.status, text);
-          break;
+          break; // romper el loop si el servidor falló
         }
       } catch (err){
         console.warn('Decrement petición falló:', err);
@@ -442,6 +447,7 @@
       const found = availableSheetKeys.find(k => String(k).toLowerCase() === s.toLowerCase());
       if(found) return found;
     }
+    // fallback: devolver input si parece válido (no ideal)
     return s || null;
   }
 
@@ -528,7 +534,11 @@
     }
   }
 
-  // NOTE: addToCart no longer attached directly to buttons; it's called only by the delegated click handler.
+  /**
+   * addToCart
+   * - ahora realiza decremento optimista local de dataset.origStock para evitar la doble apariencia visual
+   * - luego hace la llamada al servidor (updateStockOnServer_decrement) como antes
+   */
   async function addToCart(card, qty){
     const sheetKey = card.dataset.sheetKey || lastLoadedSheetKey || 'UNKNOWN';
     const row = card.dataset.row;
@@ -551,6 +561,16 @@
     } else {
       cart.push({ sheetKey, row, name, price: priceRaw, _priceNum: priceNum, qty });
     }
+
+    // **Decremento optimista local del dataset.origStock en todas las tarjetas correspondientes**
+    document.querySelectorAll('.card').forEach(cardEl=>{
+      const csk = (cardEl.dataset.sheetKey||'').toString().trim().toLowerCase();
+      const rw = cardEl.dataset.row;
+      if(String(rw) === String(row) && csk === (sheetKey||'').toString().trim().toLowerCase()){
+        const current = Number(cardEl.dataset.origStock || getOriginalStock(sheetKey,row) || 0);
+        cardEl.dataset.origStock = String(Math.max(0, current - qty));
+      }
+    });
 
     // actualizar visual (reserva local)
     refreshCardStockDisplay(sheetKey,row);
@@ -603,12 +623,26 @@
 
   function closeCartPopup(){ cartOverlay.style.display = 'none'; document.body.style.overflow = ''; }
 
+  /**
+   * removeFromCart
+   * - ahora realiza incremento optimista local de dataset.origStock antes de llamar al servidor
+   */
   function removeFromCart(idx){
     if(idx >= 0 && idx < cart.length){
       const item = cart[idx];
       const sheetKey = item.sheetKey;
       const row = item.row;
       const removedQty = Number(item.qty || 0);
+
+      // incrementa optimistamente el dataset.origStock en todas las tarjetas que coincidan
+      document.querySelectorAll('.card').forEach(cardEl=>{
+        const csk = (cardEl.dataset.sheetKey||'').toString().trim().toLowerCase();
+        const rw = cardEl.dataset.row;
+        if(String(rw) === String(row) && csk === (sheetKey||'').toString().trim().toLowerCase()){
+          const current = Number(cardEl.dataset.origStock || getOriginalStock(sheetKey,row) || 0);
+          cardEl.dataset.origStock = String(current + removedQty);
+        }
+      });
 
       // eliminar del carrito (optimistic)
       cart.splice(idx, 1);
@@ -618,7 +652,7 @@
       updateCartUI();
       openCartPopup(); // refresca popup (mostrará carrito vacío cuando corresponda)
 
-      // sincronizar con servidor: aumentar stock de forma segura
+      // sincronizar con servidor: aumentar stock de forma segura (read + set)
       updateStockOnServer_increaseViaSet(sheetKey, row, removedQty).catch(e => {
         console.warn('updateStockOnServer_increaseViaSet error', e);
       });
@@ -650,6 +684,13 @@
     // Clear cart after sending
     cart = [];
     updateCartUI();
+
+    // Después de enviar, refrescar visual de todas las tarjetas (porque la reserva ya es final)
+    document.querySelectorAll('.card').forEach(card=>{
+      // no cambiamos stock local here — el servidor ya debería reflejarlo por decrements previos
+      refreshCardStockDisplay(card.dataset.sheetKey, card.dataset.row);
+    });
+
     closeCartPopup();
   }
 
@@ -901,7 +942,6 @@
       grid.appendChild(frag);
 
       // ahora rellenar detalles para las tarjetas añadidas sin bloquear mucho
-      // usamos requestIdleCallback si existe, fallback a setTimeout
       function fillDetailsForAppended(){
         try {
           appendedCards.forEach(card => populateCardDetails(card));
@@ -928,7 +968,6 @@
     processChunk();
 
     // EVENT DELEGATION: un único listener en el grid para manejar plus/minus/order/toggle/modal clicks
-    // (colocado aquí para que grid exista; si ya existía, remover duplicados)
     if (!grid._hasDelegation) {
       grid.addEventListener('click', function(e){
         const plus = e.target.closest('.plus');
@@ -962,7 +1001,7 @@
           const card = orderBtn.closest('.card');
           if (!card) return;
           const qty = Number(card.querySelector('.qty')?.innerText || '1');
-          // IMPORTANT: single invocation of addToCart (fixes double-decrement bug)
+          // single invocation of addToCart (fixes double-decrement bug)
           addToCart(card, qty);
           return;
         }
@@ -982,8 +1021,6 @@
           }
           return;
         }
-
-        // back-image click (delegated opening handled in populateCardDetails already via direct listener).
       });
       grid._hasDelegation = true;
     }

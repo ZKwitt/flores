@@ -3,463 +3,318 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mapa Conceptual: Sistemas Digitales y Analógicos</title>
+  <title>Mapa Conceptual — Digital vs Analógico (Blanco y Negro)</title>
   <style>
-    :root{
-      --bg:#f6f9fc;
-      --card:#ffffff;
-      --muted:#556;
-      --accent:#06b6d4;
-      --stroke:rgba(10,10,10,0.08);
-    }
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg)}
-    .app{height:100%;display:flex;flex-direction:column;}
-    .toolbar{position:fixed;top:12px;right:12px;z-index:1002;display:flex;gap:8px;flex-wrap:wrap;}
-    .toolbar button{background:#fff;border:1px solid #ddd;padding:8px 10px;border-radius:8px;cursor:pointer;box-shadow:0 4px 12px rgba(8,12,20,0.06)}
-    .legend{position:fixed;left:12px;bottom:12px;background:#fff;border:1px solid #ddd;padding:10px;border-radius:8px;z-index:1002;font-size:13px;box-shadow:0 6px 18px rgba(8,12,20,0.06)}
-    .canvas-wrap{flex:1;overflow:auto;padding:24px}
-    #mapContainer{position:relative;background:linear-gradient(180deg,#f9fafb,#eef2f7);min-width:1400px;min-height:900px;border:1px solid var(--stroke);box-shadow:0 10px 30px rgba(11,22,38,0.04);margin:0 auto;padding:40px}
-    /* SVG overlay */
-    svg#connectors{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1}
+    /* Estilo sencillo: blanco, negro y grises */
+    :root{--bg:#ffffff;--card:#ffffff;--text:#0b0b0b;--muted:#555;--border:#bbb;--link:#333}
+    html,body{height:100%;margin:0;font-family:Arial, Helvetica, sans-serif;background:var(--bg);color:var(--text)}
+    .toolbar{position:fixed;top:12px;right:12px;z-index:1200;display:flex;gap:8px}
+    .toolbar button{background:#fff;border:1px solid var(--border);padding:8px 10px;border-radius:6px;cursor:pointer}
+    .controls-panel{position:fixed;left:12px;top:12px;z-index:1200;background:#fff;border:1px solid var(--border);padding:10px;border-radius:6px;max-height:85vh;overflow:auto;font-size:13px}
+    .controls-panel h4{margin:0 0 8px 0;font-size:14px}
 
-    /* node cards */
-    .node{position:absolute;background:var(--card);border-radius:10px;padding:12px 14px;border:2px solid var(--stroke);box-shadow:0 6px 18px rgba(6,8,10,0.06);z-index:2;cursor:grab;min-width:140px;max-width:340px}
+    .canvas-wrap{padding:24px;overflow:auto;height:100vh}
+    #mapContainer{position:relative;margin:0 auto;background:#fff;border:1px solid var(--border);min-width:1200px;min-height:800px;padding:24px}
+    svg#connectors{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:auto;z-index:1}
+
+    .node{position:absolute;background:var(--card);border-radius:6px;padding:10px 12px;border:1px solid var(--border);box-shadow:none;z-index:2;cursor:grab;min-width:140px}
     .node:active{cursor:grabbing}
-    .node h3{margin:0;font-size:14px;color:#07122b}
-    .node .info{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.3}
-    /* size variants */
-    .main{width:320px;border-width:3px;background:#fffdea}
-    .primary{width:260px;background:#f6fcff}
-    .secondary{width:220px;background:#f3f7fb}
-    .detail{width:200px;background:#fff}
-    .example{width:190px;background:#fbfbfb}
+    .node h3{margin:0;font-size:14px}
+    .node .info{margin-top:8px;color:var(--muted);font-size:12px;line-height:1.3}
+    .main{border-width:2px;font-weight:bold;background:#f3f3f3;padding:12px}
+    .primary{background:#ececec;padding:10px}
+    .secondary{background:#e6e6e6;padding:10px}
+    .detail{background:#ffffff;padding:8px;font-size:12px}
+    .example{background:#fbfbfb;padding:8px}
 
-    /* print styles */
-    @media print{
-      .toolbar,.legend{display:none}
-      body{background:white}
-      #mapContainer{border:none;box-shadow:none;margin:0;padding:8mm}
-    }
+    /* Tamaño adaptable: el contenido define el ancho, con límites */
+    .node{min-width:130px;max-width:360px;white-space:normal;overflow-wrap:break-word;word-break:break-word;box-sizing:border-box}
+
+    .conn-item{display:flex;align-items:center;gap:8px;margin:4px 0}
+    .small{font-size:12px;color:var(--muted)}
+
+    @media print{.toolbar,.controls-panel{display:none}#mapContainer{border:none;padding:6mm}}
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="toolbar" role="toolbar" aria-label="Controles">
-      <button id="autoLayoutBtn">Auto-organizar</button>
-      <button id="resetLayoutBtn">Restablecer posiciones</button>
-      <button id="toggleConnBtn">Ocultar conexiones</button>
-      <button id="centerBtn">Centrar</button>
-      <button id="printBtn">Descargar PDF</button>
-    </div>
+  <div class="controls-panel" aria-label="Panel de conexiones">
+    <h4>Conexiones (activar/desactivar)</h4>
+    <div id="connectionsList" style="min-width:220px"></div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
+    <div class="small">Consejo: desmarca conexiones que no quieras imprimir. Luego usa <strong>Descargar PDF</strong>.</div>
+  </div>
 
-    <div class="canvas-wrap">
-      <div id="mapContainer">
-        <!-- SVG overlay for connectors -->
-        <svg id="connectors"></svg>
-        <!-- Nodes will be injected by JS -->
-      </div>
-    </div>
+  <div class="toolbar">
+    <button id="autoLayoutBtn">Auto-organizar</button>
+    <button id="resetLayoutBtn">Restablecer posiciones</button>
+    <button id="centerBtn">Centrar</button>
+    <button id="printBtn">Descargar PDF</button>
+  </div>
 
-    <div class="legend" aria-hidden="true">
-      <strong>Leyenda</strong>
-      <div style="margin-top:8px;font-size:13px">
-        <div><span style="display:inline-block;width:12px;height:10px;background:#fffdea;border:1px solid #ddd;margin-right:8px"></span> Concepto principal</div>
-        <div><span style="display:inline-block;width:12px;height:10px;background:#f6fcff;border:1px solid #ddd;margin-right:8px"></span> Conceptos primarios</div>
-        <div><span style="display:inline-block;width:12px;height:10px;background:#f3f7fb;border:1px solid #ddd;margin-right:8px"></span> Conceptos secundarios</div>
-        <div><span style="display:inline-block;width:12px;height:10px;background:#fff;border:1px solid #ddd;margin-right:8px"></span> Detalles</div>
-      </div>
+  <div class="canvas-wrap">
+    <div id="mapContainer">
+      <svg id="connectors"></svg>
+      <!-- nodos inyectados por JS -->
     </div>
   </div>
 
   <script>
-  /*************************************************************************
-   * Datos del mapa (nodos + conexiones)
-   * - Cada nodo tiene id, title, info, class (main/primary/secondary/detail/example)
-   * - connections es lista de pares [fromId, toId]
-   *************************************************************************/
-  const nodesData = [
-    {id:'principal', x:900, y:40, cls:'main', title:'SISTEMAS DE PROCESAMIENTO DE INFORMACIÓN', info:'Los sistemas procesan información de forma analógica (continua) o digital (discreta).'},
-    // primarios
-    {id:'conv', x:120, y:200, cls:'primary', title:'CONVERSIÓN A/D y D/A', info:'Interfaces entre mundo analógico y digital.'},
-    {id:'analog', x:520, y:200, cls:'primary', title:'REPRESENTACIÓN ANALÓGICA', info:'Señales continuas (ej: aguja, mercurio).'},
-    {id:'digital', x:900, y:200, cls:'primary', title:'REPRESENTACIÓN DIGITAL', info:'Valores discretos (ej: bits, relojes digitales).'},
-    {id:'examples', x:1280, y:200, cls:'primary', title:'EJEMPLOS Y APLICACIONES', info:'Sistemas híbridos, cámaras, audio digital, automóviles.'},
-    // secundarios (bajo conversión)
-    {id:'proceso_conv', x:60, y:360, cls:'secondary', title:'PROCESO DE CONVERSIÓN', info:'Sensor → ADC → Procesamiento → DAC → Actuador.'},
-    // secundarios analógico
-    {id:'sistemas_analog', x:460, y:360, cls:'secondary', title:'SISTEMAS ANALÓGICOS', info:'Manipulan cantidades continuas.'},
-    {id:'senal_cont', x:640, y:360, cls:'secondary', title:'SEÑALES CONTINUAS', info:'Valores en un rango continuo; susceptibles al ruido.'},
-    // secundarios digital
-    {id:'sistemas_dig', x:900, y:360, cls:'secondary', title:'SISTEMAS DIGITALES', info:'Manipulan información discreta.'},
-    {id:'senal_disc', x:1080, y:360, cls:'secondary', title:'SEÑALES DISCRETAS', info:'Valores determinados y discretos.'},
-    {id:'ventajas', x:1260, y:360, cls:'secondary', title:'VENTAJAS DIGITALES', info:'Almacenamiento, resistencia al ruido, programabilidad.'},
-    {id:'limit', x:740, y:520, cls:'secondary', title:'LIMITACIONES DIGITALES', info:'Necesidad de conversión, tiempo/procesamiento.'},
-    // detalles proceso
-    {id:'sensor', x:20, y:520, cls:'detail', title:'Sensor', info:'Convierte variables físicas a señal eléctrica analógica.'},
-    {id:'adc', x:260, y:520, cls:'detail', title:'ADC (A/D)', info:'Convierte analógico → digital (número).'},
-    {id:'proc_dig', x:20, y:640, cls:'detail', title:'Procesamiento digital', info:'Operaciones lógicas y aritméticas.'},
-    {id:'dac', x:260, y:640, cls:'detail', title:'DAC (D/A)', info:'Convierte digital → analógico.'},
-    // detalles ventajas
-    {id:'diseño', x:1160, y:520, cls:'detail', title:'Diseño sencillo', info:'Circuitos de conmutación (ON/OFF).'},
-    {id:'almacen', x:1420, y:520, cls:'detail', title:'Facilidad de almacenamiento', info:'Bits en memorias compactas.'},
-    {id:'precision', x:1680, y:520, cls:'detail', title:'Precisión mantenida', info:'La información no se degrada tras digitalizar.'},
-    {id:'program', x:1160, y:640, cls:'detail', title:'Programabilidad', info:'Control por software.'},
-    {id:'ruido', x:1420, y:640, cls:'detail', title:'Resistencia al ruido', info:'Pequeñas fluctuaciones no afectan.'},
-    {id:'integracion', x:1680, y:640, cls:'detail', title:'Alta integración en chips', info:'Muchos componentes en un IC.'},
-    // examples analog
-    {id:'temp_analog', x:1220, y:520, cls:'example', title:'Temperatura (analógico)', info:'Mercurio, termómetros de aguja.'},
-    {id:'corriente', x:1220, y:640, cls:'example', title:'Corriente eléctrica', info:'Flujo variable de electrones.'},
-    {id:'velocidad', x:1220, y:760, cls:'example', title:'Velocidad de auto', info:'Velocímetro de aguja.'},
-    // examples digital
-    {id:'interruptor', x:1520, y:520, cls:'example', title:'Interruptor múltiple', info:'Posiciones discretas.'},
-    {id:'granos', x:1520, y:640, cls:'example', title:'Granos de arena', info:'Cuenta en enteros.'},
-    {id:'disp_dig', x:1520, y:760, cls:'example', title:'Dispositivos digitales', info:'Relojes, ordenadores, MP3.'},
-    // tendencias y aplicaciones
-    {id:'tendencias', x:900, y:920, cls:'secondary', title:'TENDENCIAS Y FUTURO', info:'Digitalización masiva: VR, telecomunicaciones, imágenes médicas.'},
-    {id:'control_temp', x:1440, y:920, cls:'example', title:'Control de temperatura', info:'Sensor→ADC→Proc→DAC→calefactor.'},
-    {id:'audio_cd', x:1680, y:920, cls:'example', title:'Audio digital (CD)', info:'Mic→ADC→almacenamiento→DAC→altavoz.'},
-    {id:'levit', x:1920, y:920, cls:'example', title:'Levitación magnética', info:'Híbrido: sensor analógico + control rápido.'},
-  ];
+    // Datos (nodos y conexiones) - manteniendo la estructura del mapa
+    const nodesData = [
+      {id:'principal', x:900, y:40, cls:'main', title:'SISTEMAS DE PROCESAMIENTO DE INFORMACIÓN', info:'Los sistemas procesan información en forma analógica o digital.'},
+      {id:'conv', x:120, y:200, cls:'primary', title:'CONVERSIÓN A/D y D/A', info:'Interfaces entre mundo analógico y digital.'},
+      {id:'analog', x:520, y:200, cls:'primary', title:'REPRESENTACIÓN ANALÓGICA', info:'Señales continuas (ej: aguja, mercurio).'},
+      {id:'digital', x:900, y:200, cls:'primary', title:'REPRESENTACIÓN DIGITAL', info:'Valores discretos (ej: bits, relojes digitales).'},
+      {id:'examples', x:1280, y:200, cls:'primary', title:'EJEMPLOS Y APLICACIONES', info:'Sistemas híbridos y aplicaciones prácticas.'},
+      {id:'proceso_conv', x:60, y:360, cls:'secondary', title:'PROCESO DE CONVERSIÓN', info:'Sensor → ADC → Procesamiento → DAC → Actuador.'},
+      {id:'sistemas_analog', x:460, y:360, cls:'secondary', title:'SISTEMAS ANALÓGICOS', info:'Manipulan cantidades continuas.'},
+      {id:'senal_cont', x:640, y:360, cls:'secondary', title:'SEÑALES CONTINUAS', info:'Valores en rango continuo; susceptibles al ruido.'},
+      {id:'sistemas_dig', x:900, y:360, cls:'secondary', title:'SISTEMAS DIGITALES', info:'Manipulan información discreta.'},
+      {id:'senal_disc', x:1080, y:360, cls:'secondary', title:'SEÑALES DISCRETAS', info:'Valores discretos definidos.'},
+      {id:'ventajas', x:1260, y:360, cls:'secondary', title:'VENTAJAS DIGITALES', info:'Almacenamiento, resistencia al ruido, programabilidad.'},
+      {id:'limit', x:740, y:520, cls:'secondary', title:'LIMITACIONES DIGITALES', info:'Necesidad de conversión, tiempo y coste.'},
+      {id:'sensor', x:20, y:520, cls:'detail', title:'Sensor', info:'Convierte variable física en señal analógica.'},
+      {id:'adc', x:260, y:520, cls:'detail', title:'ADC (A/D)', info:'Convierte analógico → digital.'},
+      {id:'proc_dig', x:20, y:640, cls:'detail', title:'Procesamiento digital', info:'Operaciones a los valores digitales.'},
+      {id:'dac', x:260, y:640, cls:'detail', title:'DAC (D/A)', info:'Convierte digital → analógico.'},
+      {id:'diseño', x:1160, y:520, cls:'detail', title:'Diseño sencillo', info:'Circuitos de conmutación.'},
+      {id:'almacen', x:1420, y:520, cls:'detail', title:'Facilidad de almacenamiento', info:'Bits en memorias compactas.'},
+      {id:'precision', x:1680, y:520, cls:'detail', title:'Precisión mantenida', info:'Información no se degrada tras digitalizar.'},
+      {id:'program', x:1160, y:640, cls:'detail', title:'Programabilidad', info:'Control por software.'},
+      {id:'ruido', x:1420, y:640, cls:'detail', title:'Resistencia al ruido', info:'Pequeñas fluctuaciones no afectan.'},
+      {id:'integracion', x:1680, y:640, cls:'detail', title:'Alta integración', info:'Miles de componentes en un chip.'},
+      {id:'temp_analog', x:1220, y:520, cls:'example', title:'Temperatura', info:'Ej: mercurio que se expande.'},
+      {id:'corriente', x:1220, y:640, cls:'example', title:'Corriente eléctrica', info:'Flujo variable de electrones.'},
+      {id:'velocidad', x:1220, y:760, cls:'example', title:'Velocidad de auto', info:'Velocímetro de aguja.'},
+      {id:'interruptor', x:1520, y:520, cls:'example', title:'Interruptor múltiple', info:'Posiciones discretas.'},
+      {id:'granos', x:1520, y:640, cls:'example', title:'Granos de arena', info:'Cuenta en enteros.'},
+      {id:'disp_dig', x:1520, y:760, cls:'example', title:'Dispositivos digitales', info:'Relojes, ordenadores.'},
+      {id:'tendencias', x:900, y:920, cls:'secondary', title:'TENDENCIAS Y FUTURO', info:'Digitalización masiva: VR, telecoms, imágenes médicas.'},
+      {id:'control_temp', x:1440, y:920, cls:'example', title:'Control de temperatura', info:'Sensor→ADC→Proc→DAC→calefactor.'},
+      {id:'audio_cd', x:1680, y:920, cls:'example', title:'Audio digital (CD)', info:'Mic→ADC→almacenamiento→DAC.'},
+      {id:'levit', x:1920, y:920, cls:'example', title:'Levitación magnética', info:'Sensor analógico + control rápido.'},
+    ];
 
-  // conexiones (pares id)
-  const connections = [
-    ['principal','conv'],
-    ['principal','analog'],
-    ['principal','digital'],
-    ['principal','examples'],
+    const connectionsData = [
+      {id:'c1', from:'principal', to:'conv', label:'Principal → Conversión'},
+      {id:'c2', from:'principal', to:'analog', label:'Principal → Analógico'},
+      {id:'c3', from:'principal', to:'digital', label:'Principal → Digital'},
+      {id:'c4', from:'principal', to:'examples', label:'Principal → Ejemplos'},
 
-    ['conv','proceso_conv'],
-    ['proceso_conv','sensor'],
-    ['proceso_conv','adc'],
-    ['proceso_conv','proc_dig'],
-    ['proceso_conv','dac'],
+      {id:'c5', from:'conv', to:'proceso_conv', label:'Conversión → Proceso'},
+      {id:'c6', from:'proceso_conv', to:'sensor', label:'Proceso → Sensor'},
+      {id:'c7', from:'proceso_conv', to:'adc', label:'Proceso → ADC'},
+      {id:'c8', from:'proceso_conv', to:'proc_dig', label:'Proceso → Procesamiento'},
+      {id:'c9', from:'proceso_conv', to:'dac', label:'Proceso → DAC'},
 
-    ['analog','sistemas_analog'],
-    ['analog','senal_cont'],
+      {id:'c10', from:'analog', to:'sistemas_analog', label:'Analógico → Sistemas'},
+      {id:'c11', from:'analog', to:'senal_cont', label:'Analógico → Señales continuas'},
 
-    ['digital','sistemas_dig'],
-    ['digital','senal_disc'],
-    ['digital','ventajas'],
-    ['digital','limit'],
+      {id:'c12', from:'digital', to:'sistemas_dig', label:'Digital → Sistemas'},
+      {id:'c13', from:'digital', to:'senal_disc', label:'Digital → Señales discretas'},
+      {id:'c14', from:'digital', to:'ventajas', label:'Digital → Ventajas'},
+      {id:'c15', from:'digital', to:'limit', label:'Digital → Limitaciones'},
 
-    ['ventajas','diseño'],
-    ['ventajas','almacen'],
-    ['ventajas','precision'],
-    ['ventajas','program'],
-    ['ventajas','ruido'],
-    ['ventajas','integracion'],
+      {id:'c16', from:'ventajas', to:'diseño', label:'Ventajas → Diseño'},
+      {id:'c17', from:'ventajas', to:'almacen', label:'Ventajas → Almacenamiento'},
+      {id:'c18', from:'ventajas', to:'precision', label:'Ventajas → Precisión'},
+      {id:'c19', from:'ventajas', to:'program', label:'Ventajas → Programabilidad'},
+      {id:'c20', from:'ventajas', to:'ruido', label:'Ventajas → Ruido'},
+      {id:'c21', from:'ventajas', to:'integracion', label:'Ventajas → Integración'},
 
-    ['examples','temp_analog'],
-    ['examples','corriente'],
-    ['examples','velocidad'],
-    ['examples','interruptor'],
-    ['examples','granos'],
-    ['examples','disp_dig'],
+      {id:'c22', from:'examples', to:'temp_analog', label:'Ejemplos → Temperatura'},
+      {id:'c23', from:'examples', to:'corriente', label:'Ejemplos → Corriente'},
+      {id:'c24', from:'examples', to:'velocidad', label:'Ejemplos → Velocidad'},
+      {id:'c25', from:'examples', to:'interruptor', label:'Ejemplos → Interruptor'},
+      {id:'c26', from:'examples', to:'granos', label:'Ejemplos → Granos'},
+      {id:'c27', from:'examples', to:'disp_dig', label:'Ejemplos → Dispositivos'},
 
-    ['principal','tendencias'],
-    ['tendencias','control_temp'],
-    ['tendencias','audio_cd'],
-    ['tendencias','levit'],
+      {id:'c28', from:'principal', to:'tendencias', label:'Principal → Tendencias'},
+      {id:'c29', from:'tendencias', to:'control_temp', label:'Tendencias → Control temperatura'},
+      {id:'c30', from:'tendencias', to:'audio_cd', label:'Tendencias → Audio CD'},
+      {id:'c31', from:'tendencias', to:'levit', label:'Tendencias → Levitación'},
 
-    // algunas conexiones cruzadas
-    ['limit','proc_dig'],
-    ['sistemas_analog','temp_analog'],
-    ['sistemas_dig','disp_dig'],
-    ['senal_cont','corriente'],
-    ['senal_disc','granos'],
-  ];
+      {id:'c32', from:'limit', to:'proc_dig', label:'Limitaciones → Procesamiento'},
+      {id:'c33', from:'sistemas_analog', to:'temp_analog', label:'Sistemas analógicos → Temperatura'},
+      {id:'c34', from:'sistemas_dig', to:'disp_dig', label:'Sistemas digitales → Dispositivos'},
+    ];
 
-  /*************************************************************************
-   * Crear DOM de nodos dentro de mapContainer
-   *************************************************************************/
-  const container = document.getElementById('mapContainer');
+    // Crear nodos en DOM
+    const container = document.getElementById('mapContainer');
+    function createNodes(){
+      nodesData.forEach(n=>{
+        const el = document.createElement('div');
+        el.className = 'node '+n.cls;
+        el.id = 'node-'+n.id;
+        el.style.left = (n.x || 100) + 'px';
+        el.style.top = (n.y || 100) + 'px';
+        el.innerHTML = `<h3>${n.title}</h3><div class="info">${n.info}</div>`;
+        container.appendChild(el);
+        makeDraggable(el);
+      });
+    }
 
-  function createNodes(){
-    nodesData.forEach(n=>{
-      const el = document.createElement('div');
-      el.className = 'node '+n.cls;
-      el.id = 'node-'+n.id;
-      el.style.left = (n.x || 100) + 'px';
-      el.style.top = (n.y || 100) + 'px';
-      el.innerHTML = `<h3>${n.title}</h3><div class="info">${n.info}</div>`;
-      container.appendChild(el);
+    // Crear panel de conexiones con checkboxes
+    function createConnectionsPanel(){
+      const list = document.getElementById('connectionsList');
+      list.innerHTML = '';
+      connectionsData.forEach(conn=>{
+        const row = document.createElement('div'); row.className='conn-item';
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = true; cb.id = 'cb-'+conn.id;
+        cb.addEventListener('change', ()=> updateConnectionVisibility(conn.id, cb.checked));
+        const lbl = document.createElement('label'); lbl.htmlFor = cb.id; lbl.textContent = conn.label; lbl.style.color = 'var(--link)'; lbl.style.fontSize='13px';
+        row.appendChild(cb); row.appendChild(lbl); list.appendChild(row);
+      });
+    }
 
-      // enable simple drag
-      makeDraggable(el);
-    });
-  }
+    // Dibujar conexiones SVG; cada path tiene data-conn-id
+    const svg = document.getElementById('connectors');
+    function drawConnections(){
+      // ajustar tamaño svg
+      svg.setAttribute('width', container.scrollWidth);
+      svg.setAttribute('height', container.scrollHeight);
+      while(svg.firstChild) svg.removeChild(svg.firstChild);
+      connectionsData.forEach(conn=>{
+        const a = document.getElementById('node-'+conn.from);
+        const b = document.getElementById('node-'+conn.to);
+        if(!a || !b) return;
+        const ra = a.getBoundingClientRect();
+        const rb = b.getBoundingClientRect();
+        const ctn = container.getBoundingClientRect();
+        const ax = ra.left - ctn.left + ra.width/2;
+        const ay = ra.top - ctn.top + ra.height/2;
+        const bx = rb.left - ctn.left + rb.width/2;
+        const by = rb.top - ctn.top + rb.height/2;
+        const curv = Math.min(120, Math.max(30, Math.hypot(bx-ax,by-ay)/6));
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        const d = `M ${ax} ${ay} C ${ax} ${ay+curv} ${bx} ${by-curv} ${bx} ${by}`;
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', '#555');
+        path.setAttribute('stroke-width','1.6');
+        path.setAttribute('fill','none');
+        path.setAttribute('data-conn-id', conn.id);
+        svg.appendChild(path);
+        const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        circ.setAttribute('cx', bx);
+        circ.setAttribute('cy', by);
+        circ.setAttribute('r', 3);
+        circ.setAttribute('fill', '#000');
+        circ.setAttribute('data-conn-id', conn.id);
+        svg.appendChild(circ);
+      });
+    }
 
-  /*************************************************************************
-   * Dibujar conexiones SVG con curvas suaves
-   *************************************************************************/
-  const svg = document.getElementById('connectors');
-  const SVG_NS = 'http://www.w3.org/2000/svg';
+    // Mostrar/ocultar conexión por id (usa el atributo data-conn-id)
+    function updateConnectionVisibility(connId, visible){
+      const paths = svg.querySelectorAll(`[data-conn-id='${connId}']`);
+      paths.forEach(p=> p.style.display = visible ? 'block' : 'none');
+    }
 
-  function drawConnections(show=true){
-    // ajustar tamaño svg al contenedor
-    svg.setAttribute('width', container.scrollWidth);
-    svg.setAttribute('height', container.scrollHeight);
-    // limpiar
-    while(svg.firstChild) svg.removeChild(svg.firstChild);
-    if(!show) return;
+    // Toggle visibility de todas (útil al restablecer)
+    function setAllConnectionsVisible(v){
+      connectionsData.forEach(c=>{
+        const cb = document.getElementById('cb-'+c.id);
+        if(cb) cb.checked = v;
+        updateConnectionVisibility(c.id, v);
+      });
+    }
 
-    connections.forEach(([a,b])=>{
-      const elA = document.getElementById('node-'+a);
-      const elB = document.getElementById('node-'+b);
-      if(!elA || !elB) return;
-      const rA = elA.getBoundingClientRect();
-      const rB = elB.getBoundingClientRect();
-      const ctnRect = container.getBoundingClientRect();
-
-      // centers relative to container
-      const ax = rA.left - ctnRect.left + rA.width/2;
-      const ay = rA.top - ctnRect.top + rA.height/2;
-      const bx = rB.left - ctnRect.left + rB.width/2;
-      const by = rB.top - ctnRect.top + rB.height/2;
-
-      // Create smooth cubic bezier path
-      const dx = Math.abs(bx-ax);
-      const dy = Math.abs(by-ay);
-      const curv = Math.min(160, Math.max(40, (dx+dy)/6));
-      const path = document.createElementNS(SVG_NS,'path');
-      const d = `M ${ax} ${ay} C ${ax} ${ay+curv} ${bx} ${by-curv} ${bx} ${by}`;
-      path.setAttribute('d', d);
-      path.setAttribute('fill','none');
-      path.setAttribute('stroke','#6b7280');
-      path.setAttribute('stroke-width','2.2');
-      path.setAttribute('opacity','0.9');
-      svg.appendChild(path);
-
-      // endpoint circle for clarity
-      const circ = document.createElementNS(SVG_NS,'circle');
-      circ.setAttribute('cx', bx);
-      circ.setAttribute('cy', by);
-      circ.setAttribute('r', 3.5);
-      circ.setAttribute('fill','#06b6d4');
-      svg.appendChild(circ);
-    });
-  }
-
-  /*************************************************************************
-   * Auto-layout: simple force-directed layout + collision resolution
-   * - works iteratively on node positions (in pixels)
-   *************************************************************************/
-  function autoLayout(iterations=500){
-    // build simulation nodes with positions & sizes
-    const simNodes = nodesData.map(n => {
-      const el = document.getElementById('node-'+n.id);
-      const r = el.getBoundingClientRect();
-      const ctnRect = container.getBoundingClientRect();
-      return {
-        id: n.id,
-        el,
-        x: parseFloat(el.style.left) || (n.x||100),
-        y: parseFloat(el.style.top) || (n.y||100),
-        w: r.width,
-        h: r.height,
-        fx: null, fy: null
-      };
-    });
-
-    // map id->index
-    const idx = {};
-    simNodes.forEach((s,i)=> idx[s.id]=i);
-
-    // edge list as index pairs
-    const edges = connections.map(([a,b]) => [idx[a], idx[b]]).filter(e=> e[0]!==undefined && e[1]!==undefined);
-
-    const k = Math.sqrt((container.clientWidth * container.clientHeight) / Math.max(1, simNodes.length));
-    const repulsion = k * 1.6;
-    const attraction = 0.02 * k;
-
-    for(let it=0; it<iterations; it++){
-      // apply repulsive forces between every pair
-      for(let i=0;i<simNodes.length;i++){
-        const ni = simNodes[i];
-        ni.vx = ni.vx || 0; ni.vy = ni.vy || 0;
-      }
-      for(let i=0;i<simNodes.length;i++){
-        for(let j=i+1;j<simNodes.length;j++){
-          const a = simNodes[i], b = simNodes[j];
-          let dx = a.x - b.x, dy = a.y - b.y;
-          let dist = Math.hypot(dx,dy) + 0.01;
-          let force = repulsion * ( (a.w + a.h + b.w + b.h) / 4 ) / (dist * dist);
-          let fx = (dx / dist) * force;
-          let fy = (dy / dist) * force;
-          a.vx += fx; a.vy += fy;
-          b.vx -= fx; b.vy -= fy;
+    /*************************************************************************
+     * Auto-layout: fuerza simple + colisiones (similar al anterior)
+     *************************************************************************/
+    function autoLayout(iterations=400){
+      // construir nodos simulados
+      const sim = nodesData.map(n=>{
+        const el = document.getElementById('node-'+n.id);
+        const r = el.getBoundingClientRect();
+        return {id:n.id, el, x:parseFloat(el.style.left)||n.x||100, y:parseFloat(el.style.top)||n.y||100, w:r.width, h:r.height, vx:0, vy:0};
+      });
+      const id2i = {}; sim.forEach((s,i)=> id2i[s.id]=i);
+      const edges = connectionsData.map(c=>[id2i[c.from], id2i[c.to]]).filter(e=> e[0]!==undefined && e[1]!==undefined);
+      const k = Math.sqrt((container.clientWidth*container.clientHeight)/Math.max(1,sim.length));
+      const rep = k*1.8; const attr = 0.02 * k;
+      for(let it=0; it<iterations; it++){
+        // repulsion
+        for(let i=0;i<sim.length;i++){
+          for(let j=i+1;j<sim.length;j++){
+            const a=sim[i], b=sim[j];
+            let dx=a.x-b.x, dy=a.y-b.y; let dist=Math.hypot(dx,dy)+0.01;
+            let f = rep * ((a.w+b.w+a.h+b.h)/4) / (dist*dist);
+            let fx=(dx/dist)*f, fy=(dy/dist)*f;
+            a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+          }
         }
-      }
-      // attractive forces along edges
-      edges.forEach(([i,j])=>{
-        const a = simNodes[i], b = simNodes[j];
-        let dx = b.x - a.x, dy = b.y - a.y;
-        let dist = Math.hypot(dx,dy) + 0.01;
-        let desired = Math.max(120, (a.w + b.w + a.h + b.h)/4);
-        let f = (dist - desired) * attraction;
-        let fx = (dx / dist) * f;
-        let fy = (dy / dist) * f;
-        a.vx += fx; a.vy += fy;
-        b.vx -= fx; b.vy -= fy;
-      });
-      // integrate velocities & limit max step
-      simNodes.forEach(s=>{
-        const stepLimit = 25;
-        s.x += Math.max(-stepLimit, Math.min(stepLimit, s.vx));
-        s.y += Math.max(-stepLimit, Math.min(stepLimit, s.vy));
-        // small damping
-        s.vx *= 0.75; s.vy *= 0.75;
-        // keep inside container bounds
-        s.x = Math.max(8, Math.min(container.clientWidth - s.w - 8, s.x));
-        s.y = Math.max(8, Math.min(container.clientHeight - s.h - 8, s.y));
-      });
-      // collision resolution (separate overlapping boxes)
-      for(let a=0;a<simNodes.length;a++){
-        for(let b=a+1;b<simNodes.length;b++){
-          const A = simNodes[a], B = simNodes[b];
-          const overlapX = (A.w/2 + B.w/2) - Math.abs((A.x + A.w/2) - (B.x + B.w/2));
-          const overlapY = (A.h/2 + B.h/2) - Math.abs((A.y + A.h/2) - (B.y + B.h/2));
-          if (overlapX > 0 && overlapY > 0) {
-            // push them apart proportionally
-            const dx = (A.x + A.w/2) - (B.x + B.w/2) || (Math.random()-0.5);
-            const dy = (A.y + A.h/2) - (B.y + B.h/2) || (Math.random()-0.5);
-            const dist = Math.hypot(dx,dy) || 0.1;
-            const pushX = (overlapX/2) * (dx/dist);
-            const pushY = (overlapY/2) * (dy/dist);
-            A.x += pushX; A.y += pushY;
-            B.x -= pushX; B.y -= pushY;
-            // clamp to container
-            A.x = Math.max(8, Math.min(container.clientWidth - A.w - 8, A.x));
-            A.y = Math.max(8, Math.min(container.clientHeight - A.h - 8, A.y));
-            B.x = Math.max(8, Math.min(container.clientWidth - B.w - 8, B.x));
-            B.y = Math.max(8, Math.min(container.clientHeight - B.h - 8, B.y));
+        // attraction
+        edges.forEach(([i,j])=>{
+          const a=sim[i], b=sim[j];
+          let dx=b.x-a.x, dy=b.y-a.y; let dist=Math.hypot(dx,dy)+0.01;
+          let desired = Math.max(120, (a.w+b.w+a.h+b.h)/4);
+          let f = (dist - desired) * attr; let fx=(dx/dist)*f, fy=(dy/dist)*f;
+          a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+        });
+        // integrate
+        sim.forEach(s=>{
+          s.x += Math.max(-30, Math.min(30, s.vx)); s.y += Math.max(-30, Math.min(30, s.vy));
+          s.vx *= 0.6; s.vy *= 0.6;
+          s.x = Math.max(8, Math.min(container.clientWidth - s.w - 8, s.x));
+          s.y = Math.max(8, Math.min(container.clientHeight - s.h - 8, s.y));
+        });
+        // simple collision
+        for(let a=0;a<sim.length;a++){
+          for(let b=a+1;b<sim.length;b++){
+            const A=sim[a], B=sim[b];
+            const overlapX = (A.w/2 + B.w/2) - Math.abs((A.x + A.w/2) - (B.x + B.w/2));
+            const overlapY = (A.h/2 + B.h/2) - Math.abs((A.y + A.h/2) - (B.y + B.h/2));
+            if(overlapX>0 && overlapY>0){
+              const dx = (A.x + A.w/2) - (B.x + B.w/2) || (Math.random()-0.5);
+              const dy = (A.y + A.h/2) - (B.y + B.h/2) || (Math.random()-0.5);
+              const dist = Math.hypot(dx,dy) || 0.1;
+              const pushX = (overlapX/2) * (dx/dist);
+              const pushY = (overlapY/2) * (dy/dist);
+              A.x += pushX; A.y += pushY; B.x -= pushX; B.y -= pushY;
+            }
           }
         }
       }
-    } // end iterations
+      // aplicar posiciones
+      sim.forEach(s=>{ s.el.style.left = Math.round(s.x)+'px'; s.el.style.top = Math.round(s.y)+'px'; });
+      drawConnections();
+    }
 
-    // write back positions to DOM
-    simNodes.forEach(s=>{
-      s.el.style.left = Math.round(s.x) + 'px';
-      s.el.style.top = Math.round(s.y) + 'px';
+    /*************************************************************************
+     * Drag
+     *************************************************************************/
+    function makeDraggable(el){
+      el.addEventListener('pointerdown', (e)=>{
+        el.setPointerCapture(e.pointerId);
+        const sx=e.clientX, sy=e.clientY;
+        const ox=parseFloat(el.style.left||0), oy=parseFloat(el.style.top||0);
+        function onMove(ev){ el.style.left = (ox + (ev.clientX - sx)) + 'px'; el.style.top = (oy + (ev.clientY - sy)) + 'px'; drawConnections(); }
+        function onUp(){ window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); }
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+      });
+    }
+
+    /*************************************************************************
+     * Utilidades y eventos
+     *************************************************************************/
+    function centerMap(){ const wrap = document.querySelector('.canvas-wrap'); const rect = container.getBoundingClientRect(); const wrapRect = wrap.getBoundingClientRect(); wrap.scrollLeft = Math.max(0,(rect.width - wrapRect.width)/2); wrap.scrollTop = Math.max(0,(rect.height - wrapRect.height)/6); }
+    function expandContainerIfNeeded(){ const maxX = Math.max(...nodesData.map(n => (parseFloat(n.x)||0))) + 800; const maxY = Math.max(...nodesData.map(n => (parseFloat(n.y)||0))) + 600; container.style.minWidth = Math.max(container.clientWidth, maxX) + 'px'; container.style.minHeight = Math.max(container.clientHeight, maxY) + 'px'; }
+
+    // botones
+    document.addEventListener('DOMContentLoaded', ()=>{
+      createNodes(); createConnectionsPanel(); expandContainerIfNeeded(); drawConnections();
+      // guardar posiciones iniciales
+      window.initialPositions = {};
+      nodesData.forEach(n=>{ const el = document.getElementById('node-'+n.id); window.initialPositions[el.id] = {left: el.style.left, top: el.style.top}; });
+      document.getElementById('autoLayoutBtn').addEventListener('click', ()=>{ expandContainerIfNeeded(); autoLayout(350); centerMap(); });
+      document.getElementById('resetLayoutBtn').addEventListener('click', ()=>{ Object.keys(window.initialPositions).forEach(id=>{ const el = document.getElementById(id); el.style.left = window.initialPositions[id].left; el.style.top = window.initialPositions[id].top; }); drawConnections(); setAllConnectionsVisible(true); centerMap(); });
+      document.getElementById('centerBtn').addEventListener('click', ()=> centerMap());
+      document.getElementById('printBtn').addEventListener('click', ()=>{ window.print(); });
+      // redibujar al cambiar tamaño o scrollear
+      window.addEventListener('resize', ()=> drawConnections()); document.querySelector('.canvas-wrap').addEventListener('scroll', ()=> drawConnections());
     });
-
-    // after layout, redraw connections
-    drawConnections(true);
-  }
-
-  /*************************************************************************
-   * Drag helper for nodes (updates connections while dragging)
-   *************************************************************************/
-  function makeDraggable(el){
-    el.addEventListener('pointerdown', (e)=>{
-      el.setPointerCapture(e.pointerId);
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const origLeft = parseFloat(el.style.left || 0);
-      const origTop = parseFloat(el.style.top || 0);
-      const onMove = (ev)=>{
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        el.style.left = (origLeft + dx) + 'px';
-        el.style.top = (origTop + dy) + 'px';
-        // live update lines
-        drawConnections(true);
-      };
-      const onUp = (ev)=>{
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-        el.releasePointerCapture && el.releasePointerCapture(e.pointerId);
-      };
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-    });
-  }
-
-  /*************************************************************************
-   * Controls
-   *************************************************************************/
-  let connectionsVisible = true;
-  document.getElementById('toggleConnBtn').addEventListener('click', ()=>{
-    connectionsVisible = !connectionsVisible;
-    document.getElementById('toggleConnBtn').textContent = connectionsVisible ? 'Ocultar conexiones' : 'Mostrar conexiones';
-    drawConnections(connectionsVisible);
-  });
-
-  document.getElementById('autoLayoutBtn').addEventListener('click', ()=>{
-    // ensure container is large enough
-    expandContainerIfNeeded();
-    // run layout
-    autoLayout(450);
-    // scroll center to view
-    centerMap();
-  });
-
-  const initialPositions = {};
-  document.getElementById('resetLayoutBtn').addEventListener('click', ()=>{
-    // restore initial recorded positions
-    Object.keys(initialPositions).forEach(id=>{
-      const el = document.getElementById(id);
-      if(el){
-        el.style.left = initialPositions[id].left;
-        el.style.top = initialPositions[id].top;
-      }
-    });
-    drawConnections(connectionsVisible);
-    centerMap();
-  });
-
-  document.getElementById('centerBtn').addEventListener('click', ()=> centerMap());
-
-  document.getElementById('printBtn').addEventListener('click', ()=>{
-    // For a full-page PDF, open print dialog. The print CSS hides controls & legend.
-    window.print();
-  });
-
-  function centerMap(){
-    // center the mapContainer inside .canvas-wrap
-    const wrap = document.querySelector('.canvas-wrap');
-    const rect = container.getBoundingClientRect();
-    const wrapRect = wrap.getBoundingClientRect();
-    wrap.scrollLeft = Math.max(0, (rect.width - wrapRect.width)/2);
-    wrap.scrollTop = Math.max(0, (rect.height - wrapRect.height)/6);
-  }
-
-  function expandContainerIfNeeded(){
-    // ensure there's room so layout won't push elements out of bounds
-    // expand container size to max of nodes current positions + margin
-    const maxX = Math.max(...nodesData.map(n => (n.x||0))) + 800;
-    const maxY = Math.max(...nodesData.map(n => (n.y||0))) + 600;
-    container.style.minWidth = Math.max(container.clientWidth, maxX) + 'px';
-    container.style.minHeight = Math.max(container.clientHeight, maxY) + 'px';
-  }
-
-  /*************************************************************************
-   * Init
-   *************************************************************************/
-  createNodes();
-
-  // save initial positions
-  nodesData.forEach(n=>{
-    const el = document.getElementById('node-'+n.id);
-    initialPositions[el.id] = { left: el.style.left, top: el.style.top };
-  });
-
-  // draw initial connections once DOM is settled
-  window.addEventListener('load', ()=> {
-    // enlarge container a bit for layout room
-    expandContainerIfNeeded();
-    drawConnections(connectionsVisible);
-    // optionally auto organize shortly after load for nice layout
-    setTimeout(()=>{ /* don't auto-run by default to let user see original */ }, 400);
-    // center
-    centerMap();
-  });
-
-  // redraw on resize or scroll (keeps SVG aligned)
-  window.addEventListener('resize', ()=> drawConnections(connectionsVisible));
-  document.querySelector('.canvas-wrap').addEventListener('scroll', ()=> drawConnections(connectionsVisible));
-
   </script>
 </body>
 </html>

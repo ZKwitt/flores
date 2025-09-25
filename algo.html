@@ -1,536 +1,465 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Conceptual: Sistemas Digitales y Analógicos</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            background: white;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-        
-        .container {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-            overflow: auto;
-        }
-        
-        .map-container {
-            width: 2800px;
-            height: 1400px;
-            position: relative;
-            margin: 50px;
-        }
-        
-        .concept-node {
-            position: absolute;
-            background: white;
-            border: 2px solid black;
-            padding: 15px;
-            cursor: pointer;
-            min-width: 200px;
-            text-align: center;
-            font-size: 14px;
-        }
-        
-        .concept-info {
-            font-size: 11px;
-            margin-top: 8px;
-            color: #333;
-            text-align: left;
-            line-height: 1.3;
-            border-top: 1px solid #ccc;
-            padding-top: 8px;
-        }
-        
-        .main-concept {
-            background: #f0f0f0;
-            font-size: 16px;
-            font-weight: bold;
-            width: 280px;
-            border: 3px solid black;
-        }
-        
-        .primary-concept {
-            background: #e0e0e0;
-            font-weight: bold;
-            width: 250px;
-        }
-        
-        .secondary-concept {
-            background: #d0d0d0;
-            font-weight: bold;
-            width: 220px;
-        }
-        
-        .detail-concept {
-            background: white;
-            width: 200px;
-        }
-        
-        .example-concept {
-            background: #f8f8f8;
-            width: 180px;
-            font-size: 13px;
-        }
-        
-        .connection-line {
-            position: absolute;
-            background: #666;
-            height: 2px;
-            transform-origin: left center;
-            z-index: -1;
-        }
-        
-        .controls {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        
-        .control-btn {
-            background: white;
-            border: 2px solid black;
-            padding: 10px 15px;
-            margin: 5px;
-            cursor: pointer;
-        }
-        
-        .legend {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background: white;
-            border: 2px solid black;
-            padding: 15px;
-            z-index: 1000;
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin: 5px 0;
-            font-size: 12px;
-        }
-        
-        .legend-color {
-            width: 20px;
-            height: 15px;
-            border: 1px solid black;
-            margin-right: 8px;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mapa Conceptual: Sistemas Digitales y Analógicos</title>
+  <style>
+    :root{
+      --bg:#f6f9fc;
+      --card:#ffffff;
+      --muted:#556;
+      --accent:#06b6d4;
+      --stroke:rgba(10,10,10,0.08);
+    }
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg)}
+    .app{height:100%;display:flex;flex-direction:column;}
+    .toolbar{position:fixed;top:12px;right:12px;z-index:1002;display:flex;gap:8px;flex-wrap:wrap;}
+    .toolbar button{background:#fff;border:1px solid #ddd;padding:8px 10px;border-radius:8px;cursor:pointer;box-shadow:0 4px 12px rgba(8,12,20,0.06)}
+    .legend{position:fixed;left:12px;bottom:12px;background:#fff;border:1px solid #ddd;padding:10px;border-radius:8px;z-index:1002;font-size:13px;box-shadow:0 6px 18px rgba(8,12,20,0.06)}
+    .canvas-wrap{flex:1;overflow:auto;padding:24px}
+    #mapContainer{position:relative;background:linear-gradient(180deg,#f9fafb,#eef2f7);min-width:1400px;min-height:900px;border:1px solid var(--stroke);box-shadow:0 10px 30px rgba(11,22,38,0.04);margin:0 auto;padding:40px}
+    /* SVG overlay */
+    svg#connectors{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1}
+
+    /* node cards */
+    .node{position:absolute;background:var(--card);border-radius:10px;padding:12px 14px;border:2px solid var(--stroke);box-shadow:0 6px 18px rgba(6,8,10,0.06);z-index:2;cursor:grab;min-width:140px;max-width:340px}
+    .node:active{cursor:grabbing}
+    .node h3{margin:0;font-size:14px;color:#07122b}
+    .node .info{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.3}
+    /* size variants */
+    .main{width:320px;border-width:3px;background:#fffdea}
+    .primary{width:260px;background:#f6fcff}
+    .secondary{width:220px;background:#f3f7fb}
+    .detail{width:200px;background:#fff}
+    .example{width:190px;background:#fbfbfb}
+
+    /* print styles */
+    @media print{
+      .toolbar,.legend{display:none}
+      body{background:white}
+      #mapContainer{border:none;box-shadow:none;margin:0;padding:8mm}
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="controls">
-            <button class="control-btn" onclick="resetZoom()">Reset Vista</button>
-            <button class="control-btn" onclick="toggleConnections()">Conexiones</button>
-        </div>
-        
-        <div class="legend">
-            <h4>Leyenda</h4>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #f0f0f0;"></div>
-                Concepto Principal
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #e0e0e0;"></div>
-                Conceptos Primarios
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #d0d0d0;"></div>
-                Conceptos Secundarios
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: white;"></div>
-                Detalles
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #f8f8f8;"></div>
-                Ejemplos
-            </div>
-        </div>
-        
-        <div class="map-container" id="mapContainer">
-            <!-- Concepto principal -->
-            <div class="concept-node main-concept" style="top: 50px; left: 1200px;">
-                <div>SISTEMAS DE PROCESAMIENTO DE INFORMACIÓN</div>
-                <div class="concept-info">Los sistemas pueden procesar información de forma analógica (continua) o digital (discreta). Cada enfoque tiene ventajas y aplicaciones específicas.</div>
-            </div>
-            
-            <!-- NIVEL PRIMARIO - Conceptos principales -->
-            <div class="concept-node primary-concept" style="top: 250px; left: 200px;">
-                <div>CONVERSIÓN A/D Y D/A</div>
-                <div class="concept-info">Los convertidores permiten la interfaz entre el mundo analógico real y el procesamiento digital.</div>
-            </div>
-            
-            <div class="concept-node primary-concept" style="top: 250px; left: 800px;">
-                <div>REPRESENTACIÓN ANALÓGICA</div>
-                <div class="concept-info">Las cantidades analógicas varían de forma continua y se representan mediante indicadores proporcionales como agujas o columnas de mercurio.</div>
-            </div>
-            
-            <div class="concept-node primary-concept" style="top: 250px; left: 1400px;">
-                <div>REPRESENTACIÓN DIGITAL</div>
-                <div class="concept-info">Las cantidades digitales se representan mediante símbolos discretos que cambian en pasos definidos, sin ambigüedad en la lectura.</div>
-            </div>
-            
-            <div class="concept-node primary-concept" style="top: 250px; left: 2000px;">
-                <div>EJEMPLOS Y APLICACIONES</div>
-                <div class="concept-info">Múltiples aplicaciones demuestran el uso práctico de sistemas híbridos y digitales en la vida cotidiana.</div>
-            </div>
-            
-            <!-- NIVEL SECUNDARIO - Conceptos derivados -->
-            <!-- Bajo Conversión -->
-            <div class="concept-node secondary-concept" style="top: 450px; left: 50px;">
-                <div>PROCESO DE CONVERSIÓN</div>
-                <div class="concept-info">Secuencia de pasos para convertir señales analógicas a digitales y viceversa.</div>
-            </div>
-            
-            <!-- Bajo Analógico -->
-            <div class="concept-node secondary-concept" style="top: 450px; left: 250px;">
-                <div>SISTEMAS ANALÓGICOS</div>
-                <div class="concept-info">Los sistemas analógicos manipulan cantidades físicas continuas que pueden variar en un rango infinito de valores.</div>
-            </div>
-            
-            <div class="concept-node secondary-concept" style="top: 450px; left: 450px;">
-                <div>SEÑALES CONTINUAS</div>
-                <div class="concept-info">Las señales analógicas son continuas y pueden tomar cualquier valor dentro de un rango, pero son susceptibles al ruido.</div>
-            </div>
-            
-            <!-- Bajo Digital -->
-            <div class="concept-node secondary-concept" style="top: 450px; left: 950px;">
-                <div>SISTEMAS DIGITALES</div>
-                <div class="concept-info">Los sistemas digitales manipulan información discreta, normalmente usando niveles ALTO y BAJO para representar datos.</div>
-            </div>
-            
-            <div class="concept-node secondary-concept" style="top: 450px; left: 1250px;">
-                <div>SEÑALES DISCRETAS</div>
-                <div class="concept-info">Las señales digitales tienen valores discretos definidos, lo que elimina ambigüedad pero requiere conversión del mundo analógico.</div>
-            </div>
-            
-            <div class="concept-node secondary-concept" style="top: 450px; left: 1500px;">
-                <div>VENTAJAS DIGITALES</div>
-                <div class="concept-info">Las técnicas digitales ofrecen múltiples ventajas que las hacen preferibles en muchas aplicaciones modernas.</div>
-            </div>
-            
-            <div class="concept-node secondary-concept" style="top: 450px; left: 1700px;">
-                <div>LIMITACIONES DIGITALES</div>
-                <div class="concept-info">A pesar de sus ventajas, las técnicas digitales tienen limitaciones importantes que deben considerarse.</div>
-            </div>
-            
-            <!-- Bajo Ejemplos -->
-            <div class="concept-node secondary-concept" style="top: 450px; left: 1850px;">
-                <div>EJEMPLOS ANALÓGICOS</div>
-                <div class="concept-info">Ejemplos prácticos de cantidades y sistemas analógicos en la vida real.</div>
-            </div>
-            
-            <div class="concept-node secondary-concept" style="top: 450px; left: 2150px;">
-                <div>EJEMPLOS DIGITALES</div>
-                <div class="concept-info">Ejemplos prácticos de cantidades y sistemas digitales en uso común.</div>
-            </div>
-            
-            <div class="concept-node secondary-concept" style="top: 650px; left: 2000px;">
-                <div>TENDENCIAS FUTURAS</div>
-                <div class="concept-info">Las tendencias indican una digitalización creciente en todas las áreas de la vida y tecnología.</div>
-            </div>
-            
-            <!-- NIVEL DE DETALLES - Elementos específicos bajo secundarios -->
-            <!-- Detalles de Proceso de Conversión -->
-            <div class="concept-node detail-concept" style="top: 750px; left: 50px;">
-                <div>Sensor</div>
-                <div class="concept-info">Convierte variables físicas en señales eléctricas analógicas proporcionales.</div>
-            </div>
-            
-            <div class="concept-node detail-concept" style="top: 750px; left: 300px;">
-                <div>ADC (Análogo-Digital)</div>
-                <div class="concept-info">Transforma señales analógicas en valores digitales con precisión finita.</div>
-            </div>
-            
-            <div class="concept-node detail-concept" style="top: 900px; left: 50px;">
-                <div>Procesamiento Digital</div>
-                <div class="concept-info">Aplica operaciones lógicas y aritméticas a los valores digitales.</div>
-            </div>
-            
-            <div class="concept-node detail-concept" style="top: 900px; left: 300px;">
-                <div>DAC (Digital-Análogo)</div>
-                <div class="concept-info">Convierte resultados digitales en señales analógicas para control de dispositivos físicos.</div>
-            </div>
-            
-            <!-- Detalles de Ventajas Digitales -->
-            <div class="concept-node detail-concept" style="top: 750px; left: 1600px;">
-                <div>Diseño Más Sencillo</div>
-                <div class="concept-info">Los circuitos digitales son de conmutación simple (ON/OFF), lo que simplifica significativamente el diseño electrónico.</div>
-            </div>
-            
-            <div class="concept-node detail-concept" style="top: 750px; left: 1850px;">
-                <div>Facilidad de Almacenamiento</div>
-                <div class="concept-info">La información digital se almacena fácilmente en memorias compactas, con capacidades de millones de bits en espacios reducidos.</div>
-            </div>
-            
-            <div class="concept-node detail-concept" style="top: 750px; left: 2100px;">
-                <div>Precisión Mantenida</div>
-                <div class="concept-info">Una vez digitalizada, la información no se degrada durante el procesamiento, manteniendo precisión constante.</div>
-            </div>
-            
-            <div class="concept-node detail-concept" style="top: 900px; left: 1600px;">
-                <div>Programabilidad</div>
-                <div class="concept-info">Los sistemas digitales se controlan mediante programas, permitiendo operaciones complejas y flexibilidad operacional.</div>
-            </div>
-            
-            <div class="concept-node detail-concept" style="top: 900px; left: 1850px;">
-                <div>Resistencia al Ruido</div>
-                <div class="concept-info">Las pequeñas fluctuaciones de voltaje (ruido) afectan mínimamente los sistemas digitales bien diseñados.</div>
-            </div>
-            
-            <div class="concept-node detail-concept" style="top: 900px; left: 2100px;">
-                <div>Alta Integración en Chips</div>
-                <div class="concept-info">Miles o millones de componentes digitales se integran en un solo chip, reduciendo costos y tamaño significativamente.</div>
-            </div>
-            
-            <!-- Detalles de Limitaciones -->
-            <div class="concept-node detail-concept" style="top: 800px; left: 800px;">
-                <div>Mundo Real es Analógico</div>
-                <div class="concept-info">La mayoría de variables físicas son continuas, requiriendo conversión para procesamiento digital.</div>
-            </div>
-            
-            <div class="concept-node detail-concept" style="top: 800px; left: 1100px;">
-                <div>Tiempo de Procesamiento</div>
-                <div class="concept-info">El procesamiento digital requiere tiempo, especialmente para alta precisión, y necesita conversores ADC/DAC.</div>
-            </div>
-            
-            <!-- NIVEL DE EJEMPLOS - Casos específicos -->
-            <!-- Ejemplos Analógicos -->
-            <div class="concept-node example-concept" style="top: 750px; left: 1900px;">
-                <div>Temperatura Analógica</div>
-                <div class="concept-info">Varía continuamente. Ejemplos: mercurio que se expande proporcionalmente, voltaje que cambia con la temperatura.</div>
-            </div>
-            
-            <div class="concept-node example-concept" style="top: 900px; left: 1900px;">
-                <div>Corriente Eléctrica</div>
-                <div class="concept-info">Flujo variable de electrones, puede tomar cualquier valor en un rango continuo.</div>
-            </div>
-            
-            <div class="concept-node example-concept" style="top: 1050px; left: 1900px;">
-                <div>Velocidad de Auto</div>
-                <div class="concept-info">Variable continua que puede medirse con velocímetro de aguja proporcional.</div>
-            </div>
-            
-            <!-- Ejemplos Digitales -->
-            <div class="concept-node example-concept" style="top: 750px; left: 2200px;">
-                <div>Interruptor Múltiple</div>
-                <div class="concept-info">Posición fija, valores discretos. Ejemplo: interruptor de 10 posiciones definidas.</div>
-            </div>
-            
-            <div class="concept-node example-concept" style="top: 900px; left: 2200px;">
-                <div>Granos de Arena</div>
-                <div class="concept-info">Se cuentan en números enteros, no puede haber fracciones de grano.</div>
-            </div>
-            
-            <div class="concept-node example-concept" style="top: 1050px; left: 2200px;">
-                <div>Dispositivos Digitales</div>
-                <div class="concept-info">Relojes digitales, computadoras, calculadoras, sistemas de audio/video digital.</div>
-            </div>
-            
-            <!-- Ejemplos de Tendencias Futuras -->
-            <div class="concept-node example-concept" style="top: 800px; left: 2050px;">
-                <div>Adopción Masiva</div>
-                <div class="concept-info">Termómetros digitales, automóviles controlados electrónicamente, audio/video digital, cámaras digitales.</div>
-            </div>
-            
-            <div class="concept-node example-concept" style="top: 800px; left: 2350px;">
-                <div>Digitalización Telecomunicaciones</div>
-                <div class="concept-info">Infraestructura telefónica y televisiva completamente digital con mejor calidad y nuevas funciones.</div>
-            </div>
-            
-            <div class="concept-node example-concept" style="top: 950px; left: 2050px;">
-                <div>Realidad Virtual</div>
-                <div class="concept-info">Realidad virtual y simulaciones educativas basadas en computación digital para aprendizaje práctico.</div>
-            </div>
-            
-            <!-- Aplicaciones híbridas específicas -->
-            <div class="concept-node example-concept" style="top: 1200px; left: 1800px;">
-                <div>Control de Temperatura</div>
-                <div class="concept-info">Sensor analógico → ADC → procesamiento digital → DAC → control de calentador analógico.</div>
-            </div>
-            
-            <div class="concept-node example-concept" style="top: 1200px; left: 2100px;">
-                <div>Audio Digital (CD)</div>
-                <div class="concept-info">Micrófono (analógico) → ADC → almacenamiento digital → DAC → amplificador → bocina (analógico).</div>
-            </div>
-            
-            <div class="concept-node example-concept" style="top: 1200px; left: 2400px;">
-                <div>Levitación Magnética</div>
-                <div class="concept-info">Sensor óptico analógico para posición, circuito analógico rápido para control de corriente del electroimán.</div>
-            </div>
-        </div>
+  <div class="app">
+    <div class="toolbar" role="toolbar" aria-label="Controles">
+      <button id="autoLayoutBtn">Auto-organizar</button>
+      <button id="resetLayoutBtn">Restablecer posiciones</button>
+      <button id="toggleConnBtn">Ocultar conexiones</button>
+      <button id="centerBtn">Centrar</button>
+      <button id="printBtn">Descargar PDF</button>
     </div>
 
-    <script>
-        // Variables globales
-        let connectionsVisible = true;
-        let connections = [];
-        
-        // Definir conexiones organizadas jerárquicamente (actualizadas)
-        const nodeConnections = [
-            // Principal a Primarios
-            [1200, 50, 200, 250], // Principal a Conversión
-            [1200, 50, 800, 250], // Principal a Analógico
-            [1200, 50, 1400, 250], // Principal a Digital
-            [1200, 50, 2000, 250], // Principal a Ejemplos
-            
-            // Primarios a Secundarios
-            [200, 250, 50, 450], // Conversión a Proceso
-            [800, 250, 550, 450], // Analógico a Sistemas Analógicos
-            [800, 250, 850, 450], // Analógico a Señales Continuas
-            [1400, 250, 1150, 450], // Digital a Sistemas Digitales
-            [1400, 250, 1450, 450], // Digital a Señales Discretas
-            [1400, 250, 1750, 450], // Digital a Ventajas
-            [1400, 250, 950, 600], // Digital a Limitaciones
-            [2000, 250, 2050, 450], // Ejemplos a Analógicos
-            [2000, 250, 2350, 450], // Ejemplos a Digitales
-            [2000, 250, 2200, 600], // Ejemplos a Tendencias
-            
-            // Secundarios a Detalles
-            [50, 450, 50, 750], // Proceso a Sensor
-            [50, 450, 300, 750], // Proceso a ADC
-            [50, 450, 50, 900], // Proceso a Procesamiento
-            [50, 450, 300, 900], // Proceso a DAC
-            
-            [1750, 450, 1600, 750], // Ventajas a Diseño
-            [1750, 450, 1850, 750], // Ventajas a Almacenamiento
-            [1750, 450, 2100, 750], // Ventajas a Precisión
-            [1750, 450, 1600, 900], // Ventajas a Programabilidad
-            [1750, 450, 1850, 900], // Ventajas a Resistencia
-            [1750, 450, 2100, 900], // Ventajas a Integración
-            
-            [950, 600, 800, 800], // Limitaciones a Mundo Real
-            [950, 600, 1100, 800], // Limitaciones a Tiempo
-            
-            // Secundarios a Ejemplos
-            [2050, 450, 1900, 750], // Ejemplos Analógicos a Temperatura
-            [2050, 450, 1900, 900], // Ejemplos Analógicos a Corriente
-            [2050, 450, 1900, 1050], // Ejemplos Analógicos a Velocidad
-            
-            [2350, 450, 2200, 750], // Ejemplos Digitales a Interruptor
-            [2350, 450, 2200, 900], // Ejemplos Digitales a Granos
-            [2350, 450, 2200, 1050], // Ejemplos Digitales a Dispositivos
-            
-            [2200, 600, 2050, 800], // Tendencias a Adopción
-            [2200, 600, 2350, 800], // Tendencias a Telecomunicaciones
-            [2200, 600, 2050, 950], // Tendencias a Realidad Virtual
-            [2200, 600, 1800, 1200], // Tendencias a Control Temperatura
-            [2200, 600, 2100, 1200], // Tendencias a Audio CD
-            [2200, 600, 2400, 1200], // Tendencias a Levitación
-        ];, 1700, 950], // Ejemplos Analógicos a Velocidad
-            
-            [2150, 450, 2000, 650], // Ejemplos Digitales a Interruptor
-            [2150, 450, 2000, 800], // Ejemplos Digitales a Granos
-            [2150, 450, 2000, 950], // Ejemplos Digitales a Dispositivos
-            
-            [2000, 650, 1800, 850], // Tendencias a Adopción
-            [2000, 650, 2050, 850], // Tendencias a Telecomunicaciones
-            [2000, 650, 2300, 850], // Tendencias a Realidad Virtual
-            [2000, 650, 1600, 1100], // Tendencias a Control Temperatura
-            [2000, 650, 1900, 1100], // Tendencias a Audio CD
-            [2000, 650, 2200, 1100], // Tendencias a Levitación
-        ]; a primarios
-            [1300, 100, 1100, 300], // Principal a Analógico
-            [1300, 100, 1600, 300], // Principal a Digital
-            [300, 100, 1300, 150], // Conversión a Principal
-            [2200, 100, 1300, 150], // Ejemplos a Principal
-            
-            // Analógico a sus sistemas
-            [1100, 300, 800, 500], // Analógico a Sistemas
-            [1100, 300, 1100, 500], // Analógico a Señales
-            
-            // Digital a sus sistemas
-            [1600, 300, 1400, 500], // Digital a Sistemas
-            [1600, 300, 1700, 500], // Digital a Señales
-            [1600, 300, 1400, 700], // Digital a Ventajas
-            [1600, 300, 800, 700], // Digital a Limitaciones
-            
-            // Conversión en cadena
-            [50, 300, 300, 300], // Sensor a ADC
-            [300, 300, 550, 300], // ADC a Procesamiento
-            [550, 300, 800, 300], // Procesamiento a DAC
-            
-            // Ventajas digitales
-            [1400, 700, 1100, 900], // Ventajas a detalles
-            [1400, 700, 1350, 900],
-            [1400, 700, 1600, 900],
-            [1400, 700, 1200, 1050],
-            [1400, 700, 1450, 1050],
-            [1400, 700, 1700, 1050],
-            
-            // Limitaciones digitales
-            [800, 700, 700, 900], // Limitaciones a detalles
-            [800, 700, 950, 900],
-            
-            // Tendencias
-            [1300, 150, 1300, 1300], // Principal a Tendencias
-            [1300, 1300, 800, 1500], // Tendencias a ejemplos
-            [1300, 1300, 1100, 1500],
-            [1300, 1300, 1400, 1500],
-            [1300, 1300, 1700, 1500],
-            [1300, 1300, 600, 1700], // A aplicaciones específicas
-            [1300, 1300, 1000, 1700],
-            [1300, 1300, 1400, 1700],
-        ];
-        
-        // Crear líneas de conexión
-        function createConnections() {
-            const container = document.getElementById('mapContainer');
-            
-            nodeConnections.forEach(([x1, y1, x2, y2]) => {
-                const line = document.createElement('div');
-                line.className = 'connection-line';
-                
-                const dx = x2 - x1;
-                const dy = y2 - y1;
-                const length = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                
-                line.style.left = `${x1 + 100}px`;
-                line.style.top = `${y1 + 20}px`;
-                line.style.width = `${length}px`;
-                line.style.transform = `rotate(${angle}deg)`;
-                
-                container.appendChild(line);
-                connections.push(line);
-            });
+    <div class="canvas-wrap">
+      <div id="mapContainer">
+        <!-- SVG overlay for connectors -->
+        <svg id="connectors"></svg>
+        <!-- Nodes will be injected by JS -->
+      </div>
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <strong>Leyenda</strong>
+      <div style="margin-top:8px;font-size:13px">
+        <div><span style="display:inline-block;width:12px;height:10px;background:#fffdea;border:1px solid #ddd;margin-right:8px"></span> Concepto principal</div>
+        <div><span style="display:inline-block;width:12px;height:10px;background:#f6fcff;border:1px solid #ddd;margin-right:8px"></span> Conceptos primarios</div>
+        <div><span style="display:inline-block;width:12px;height:10px;background:#f3f7fb;border:1px solid #ddd;margin-right:8px"></span> Conceptos secundarios</div>
+        <div><span style="display:inline-block;width:12px;height:10px;background:#fff;border:1px solid #ddd;margin-right:8px"></span> Detalles</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /*************************************************************************
+   * Datos del mapa (nodos + conexiones)
+   * - Cada nodo tiene id, title, info, class (main/primary/secondary/detail/example)
+   * - connections es lista de pares [fromId, toId]
+   *************************************************************************/
+  const nodesData = [
+    {id:'principal', x:900, y:40, cls:'main', title:'SISTEMAS DE PROCESAMIENTO DE INFORMACIÓN', info:'Los sistemas procesan información de forma analógica (continua) o digital (discreta).'},
+    // primarios
+    {id:'conv', x:120, y:200, cls:'primary', title:'CONVERSIÓN A/D y D/A', info:'Interfaces entre mundo analógico y digital.'},
+    {id:'analog', x:520, y:200, cls:'primary', title:'REPRESENTACIÓN ANALÓGICA', info:'Señales continuas (ej: aguja, mercurio).'},
+    {id:'digital', x:900, y:200, cls:'primary', title:'REPRESENTACIÓN DIGITAL', info:'Valores discretos (ej: bits, relojes digitales).'},
+    {id:'examples', x:1280, y:200, cls:'primary', title:'EJEMPLOS Y APLICACIONES', info:'Sistemas híbridos, cámaras, audio digital, automóviles.'},
+    // secundarios (bajo conversión)
+    {id:'proceso_conv', x:60, y:360, cls:'secondary', title:'PROCESO DE CONVERSIÓN', info:'Sensor → ADC → Procesamiento → DAC → Actuador.'},
+    // secundarios analógico
+    {id:'sistemas_analog', x:460, y:360, cls:'secondary', title:'SISTEMAS ANALÓGICOS', info:'Manipulan cantidades continuas.'},
+    {id:'senal_cont', x:640, y:360, cls:'secondary', title:'SEÑALES CONTINUAS', info:'Valores en un rango continuo; susceptibles al ruido.'},
+    // secundarios digital
+    {id:'sistemas_dig', x:900, y:360, cls:'secondary', title:'SISTEMAS DIGITALES', info:'Manipulan información discreta.'},
+    {id:'senal_disc', x:1080, y:360, cls:'secondary', title:'SEÑALES DISCRETAS', info:'Valores determinados y discretos.'},
+    {id:'ventajas', x:1260, y:360, cls:'secondary', title:'VENTAJAS DIGITALES', info:'Almacenamiento, resistencia al ruido, programabilidad.'},
+    {id:'limit', x:740, y:520, cls:'secondary', title:'LIMITACIONES DIGITALES', info:'Necesidad de conversión, tiempo/procesamiento.'},
+    // detalles proceso
+    {id:'sensor', x:20, y:520, cls:'detail', title:'Sensor', info:'Convierte variables físicas a señal eléctrica analógica.'},
+    {id:'adc', x:260, y:520, cls:'detail', title:'ADC (A/D)', info:'Convierte analógico → digital (número).'},
+    {id:'proc_dig', x:20, y:640, cls:'detail', title:'Procesamiento digital', info:'Operaciones lógicas y aritméticas.'},
+    {id:'dac', x:260, y:640, cls:'detail', title:'DAC (D/A)', info:'Convierte digital → analógico.'},
+    // detalles ventajas
+    {id:'diseño', x:1160, y:520, cls:'detail', title:'Diseño sencillo', info:'Circuitos de conmutación (ON/OFF).'},
+    {id:'almacen', x:1420, y:520, cls:'detail', title:'Facilidad de almacenamiento', info:'Bits en memorias compactas.'},
+    {id:'precision', x:1680, y:520, cls:'detail', title:'Precisión mantenida', info:'La información no se degrada tras digitalizar.'},
+    {id:'program', x:1160, y:640, cls:'detail', title:'Programabilidad', info:'Control por software.'},
+    {id:'ruido', x:1420, y:640, cls:'detail', title:'Resistencia al ruido', info:'Pequeñas fluctuaciones no afectan.'},
+    {id:'integracion', x:1680, y:640, cls:'detail', title:'Alta integración en chips', info:'Muchos componentes en un IC.'},
+    // examples analog
+    {id:'temp_analog', x:1220, y:520, cls:'example', title:'Temperatura (analógico)', info:'Mercurio, termómetros de aguja.'},
+    {id:'corriente', x:1220, y:640, cls:'example', title:'Corriente eléctrica', info:'Flujo variable de electrones.'},
+    {id:'velocidad', x:1220, y:760, cls:'example', title:'Velocidad de auto', info:'Velocímetro de aguja.'},
+    // examples digital
+    {id:'interruptor', x:1520, y:520, cls:'example', title:'Interruptor múltiple', info:'Posiciones discretas.'},
+    {id:'granos', x:1520, y:640, cls:'example', title:'Granos de arena', info:'Cuenta en enteros.'},
+    {id:'disp_dig', x:1520, y:760, cls:'example', title:'Dispositivos digitales', info:'Relojes, ordenadores, MP3.'},
+    // tendencias y aplicaciones
+    {id:'tendencias', x:900, y:920, cls:'secondary', title:'TENDENCIAS Y FUTURO', info:'Digitalización masiva: VR, telecomunicaciones, imágenes médicas.'},
+    {id:'control_temp', x:1440, y:920, cls:'example', title:'Control de temperatura', info:'Sensor→ADC→Proc→DAC→calefactor.'},
+    {id:'audio_cd', x:1680, y:920, cls:'example', title:'Audio digital (CD)', info:'Mic→ADC→almacenamiento→DAC→altavoz.'},
+    {id:'levit', x:1920, y:920, cls:'example', title:'Levitación magnética', info:'Híbrido: sensor analógico + control rápido.'},
+  ];
+
+  // conexiones (pares id)
+  const connections = [
+    ['principal','conv'],
+    ['principal','analog'],
+    ['principal','digital'],
+    ['principal','examples'],
+
+    ['conv','proceso_conv'],
+    ['proceso_conv','sensor'],
+    ['proceso_conv','adc'],
+    ['proceso_conv','proc_dig'],
+    ['proceso_conv','dac'],
+
+    ['analog','sistemas_analog'],
+    ['analog','senal_cont'],
+
+    ['digital','sistemas_dig'],
+    ['digital','senal_disc'],
+    ['digital','ventajas'],
+    ['digital','limit'],
+
+    ['ventajas','diseño'],
+    ['ventajas','almacen'],
+    ['ventajas','precision'],
+    ['ventajas','program'],
+    ['ventajas','ruido'],
+    ['ventajas','integracion'],
+
+    ['examples','temp_analog'],
+    ['examples','corriente'],
+    ['examples','velocidad'],
+    ['examples','interruptor'],
+    ['examples','granos'],
+    ['examples','disp_dig'],
+
+    ['principal','tendencias'],
+    ['tendencias','control_temp'],
+    ['tendencias','audio_cd'],
+    ['tendencias','levit'],
+
+    // algunas conexiones cruzadas
+    ['limit','proc_dig'],
+    ['sistemas_analog','temp_analog'],
+    ['sistemas_dig','disp_dig'],
+    ['senal_cont','corriente'],
+    ['senal_disc','granos'],
+  ];
+
+  /*************************************************************************
+   * Crear DOM de nodos dentro de mapContainer
+   *************************************************************************/
+  const container = document.getElementById('mapContainer');
+
+  function createNodes(){
+    nodesData.forEach(n=>{
+      const el = document.createElement('div');
+      el.className = 'node '+n.cls;
+      el.id = 'node-'+n.id;
+      el.style.left = (n.x || 100) + 'px';
+      el.style.top = (n.y || 100) + 'px';
+      el.innerHTML = `<h3>${n.title}</h3><div class="info">${n.info}</div>`;
+      container.appendChild(el);
+
+      // enable simple drag
+      makeDraggable(el);
+    });
+  }
+
+  /*************************************************************************
+   * Dibujar conexiones SVG con curvas suaves
+   *************************************************************************/
+  const svg = document.getElementById('connectors');
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function drawConnections(show=true){
+    // ajustar tamaño svg al contenedor
+    svg.setAttribute('width', container.scrollWidth);
+    svg.setAttribute('height', container.scrollHeight);
+    // limpiar
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    if(!show) return;
+
+    connections.forEach(([a,b])=>{
+      const elA = document.getElementById('node-'+a);
+      const elB = document.getElementById('node-'+b);
+      if(!elA || !elB) return;
+      const rA = elA.getBoundingClientRect();
+      const rB = elB.getBoundingClientRect();
+      const ctnRect = container.getBoundingClientRect();
+
+      // centers relative to container
+      const ax = rA.left - ctnRect.left + rA.width/2;
+      const ay = rA.top - ctnRect.top + rA.height/2;
+      const bx = rB.left - ctnRect.left + rB.width/2;
+      const by = rB.top - ctnRect.top + rB.height/2;
+
+      // Create smooth cubic bezier path
+      const dx = Math.abs(bx-ax);
+      const dy = Math.abs(by-ay);
+      const curv = Math.min(160, Math.max(40, (dx+dy)/6));
+      const path = document.createElementNS(SVG_NS,'path');
+      const d = `M ${ax} ${ay} C ${ax} ${ay+curv} ${bx} ${by-curv} ${bx} ${by}`;
+      path.setAttribute('d', d);
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke','#6b7280');
+      path.setAttribute('stroke-width','2.2');
+      path.setAttribute('opacity','0.9');
+      svg.appendChild(path);
+
+      // endpoint circle for clarity
+      const circ = document.createElementNS(SVG_NS,'circle');
+      circ.setAttribute('cx', bx);
+      circ.setAttribute('cy', by);
+      circ.setAttribute('r', 3.5);
+      circ.setAttribute('fill','#06b6d4');
+      svg.appendChild(circ);
+    });
+  }
+
+  /*************************************************************************
+   * Auto-layout: simple force-directed layout + collision resolution
+   * - works iteratively on node positions (in pixels)
+   *************************************************************************/
+  function autoLayout(iterations=500){
+    // build simulation nodes with positions & sizes
+    const simNodes = nodesData.map(n => {
+      const el = document.getElementById('node-'+n.id);
+      const r = el.getBoundingClientRect();
+      const ctnRect = container.getBoundingClientRect();
+      return {
+        id: n.id,
+        el,
+        x: parseFloat(el.style.left) || (n.x||100),
+        y: parseFloat(el.style.top) || (n.y||100),
+        w: r.width,
+        h: r.height,
+        fx: null, fy: null
+      };
+    });
+
+    // map id->index
+    const idx = {};
+    simNodes.forEach((s,i)=> idx[s.id]=i);
+
+    // edge list as index pairs
+    const edges = connections.map(([a,b]) => [idx[a], idx[b]]).filter(e=> e[0]!==undefined && e[1]!==undefined);
+
+    const k = Math.sqrt((container.clientWidth * container.clientHeight) / Math.max(1, simNodes.length));
+    const repulsion = k * 1.6;
+    const attraction = 0.02 * k;
+
+    for(let it=0; it<iterations; it++){
+      // apply repulsive forces between every pair
+      for(let i=0;i<simNodes.length;i++){
+        const ni = simNodes[i];
+        ni.vx = ni.vx || 0; ni.vy = ni.vy || 0;
+      }
+      for(let i=0;i<simNodes.length;i++){
+        for(let j=i+1;j<simNodes.length;j++){
+          const a = simNodes[i], b = simNodes[j];
+          let dx = a.x - b.x, dy = a.y - b.y;
+          let dist = Math.hypot(dx,dy) + 0.01;
+          let force = repulsion * ( (a.w + a.h + b.w + b.h) / 4 ) / (dist * dist);
+          let fx = (dx / dist) * force;
+          let fy = (dy / dist) * force;
+          a.vx += fx; a.vy += fy;
+          b.vx -= fx; b.vy -= fy;
         }
-        
-        // Controles
-        function resetZoom() {
-            const container = document.querySelector('.container');
-            container.scrollLeft = 800;
-            container.scrollTop = 0;
+      }
+      // attractive forces along edges
+      edges.forEach(([i,j])=>{
+        const a = simNodes[i], b = simNodes[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let dist = Math.hypot(dx,dy) + 0.01;
+        let desired = Math.max(120, (a.w + b.w + a.h + b.h)/4);
+        let f = (dist - desired) * attraction;
+        let fx = (dx / dist) * f;
+        let fy = (dy / dist) * f;
+        a.vx += fx; a.vy += fy;
+        b.vx -= fx; b.vy -= fy;
+      });
+      // integrate velocities & limit max step
+      simNodes.forEach(s=>{
+        const stepLimit = 25;
+        s.x += Math.max(-stepLimit, Math.min(stepLimit, s.vx));
+        s.y += Math.max(-stepLimit, Math.min(stepLimit, s.vy));
+        // small damping
+        s.vx *= 0.75; s.vy *= 0.75;
+        // keep inside container bounds
+        s.x = Math.max(8, Math.min(container.clientWidth - s.w - 8, s.x));
+        s.y = Math.max(8, Math.min(container.clientHeight - s.h - 8, s.y));
+      });
+      // collision resolution (separate overlapping boxes)
+      for(let a=0;a<simNodes.length;a++){
+        for(let b=a+1;b<simNodes.length;b++){
+          const A = simNodes[a], B = simNodes[b];
+          const overlapX = (A.w/2 + B.w/2) - Math.abs((A.x + A.w/2) - (B.x + B.w/2));
+          const overlapY = (A.h/2 + B.h/2) - Math.abs((A.y + A.h/2) - (B.y + B.h/2));
+          if (overlapX > 0 && overlapY > 0) {
+            // push them apart proportionally
+            const dx = (A.x + A.w/2) - (B.x + B.w/2) || (Math.random()-0.5);
+            const dy = (A.y + A.h/2) - (B.y + B.h/2) || (Math.random()-0.5);
+            const dist = Math.hypot(dx,dy) || 0.1;
+            const pushX = (overlapX/2) * (dx/dist);
+            const pushY = (overlapY/2) * (dy/dist);
+            A.x += pushX; A.y += pushY;
+            B.x -= pushX; B.y -= pushY;
+            // clamp to container
+            A.x = Math.max(8, Math.min(container.clientWidth - A.w - 8, A.x));
+            A.y = Math.max(8, Math.min(container.clientHeight - A.h - 8, A.y));
+            B.x = Math.max(8, Math.min(container.clientWidth - B.w - 8, B.x));
+            B.y = Math.max(8, Math.min(container.clientHeight - B.h - 8, B.y));
+          }
         }
-        
-        function toggleConnections() {
-            connectionsVisible = !connectionsVisible;
-            connections.forEach(line => {
-                line.style.display = connectionsVisible ? 'block' : 'none';
-            });
-        }
-        
-        // Inicialización
-        document.addEventListener('DOMContentLoaded', () => {
-            createConnections();
-            resetZoom();
-        });
-    </script>
+      }
+    } // end iterations
+
+    // write back positions to DOM
+    simNodes.forEach(s=>{
+      s.el.style.left = Math.round(s.x) + 'px';
+      s.el.style.top = Math.round(s.y) + 'px';
+    });
+
+    // after layout, redraw connections
+    drawConnections(true);
+  }
+
+  /*************************************************************************
+   * Drag helper for nodes (updates connections while dragging)
+   *************************************************************************/
+  function makeDraggable(el){
+    el.addEventListener('pointerdown', (e)=>{
+      el.setPointerCapture(e.pointerId);
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const origLeft = parseFloat(el.style.left || 0);
+      const origTop = parseFloat(el.style.top || 0);
+      const onMove = (ev)=>{
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        el.style.left = (origLeft + dx) + 'px';
+        el.style.top = (origTop + dy) + 'px';
+        // live update lines
+        drawConnections(true);
+      };
+      const onUp = (ev)=>{
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        el.releasePointerCapture && el.releasePointerCapture(e.pointerId);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    });
+  }
+
+  /*************************************************************************
+   * Controls
+   *************************************************************************/
+  let connectionsVisible = true;
+  document.getElementById('toggleConnBtn').addEventListener('click', ()=>{
+    connectionsVisible = !connectionsVisible;
+    document.getElementById('toggleConnBtn').textContent = connectionsVisible ? 'Ocultar conexiones' : 'Mostrar conexiones';
+    drawConnections(connectionsVisible);
+  });
+
+  document.getElementById('autoLayoutBtn').addEventListener('click', ()=>{
+    // ensure container is large enough
+    expandContainerIfNeeded();
+    // run layout
+    autoLayout(450);
+    // scroll center to view
+    centerMap();
+  });
+
+  const initialPositions = {};
+  document.getElementById('resetLayoutBtn').addEventListener('click', ()=>{
+    // restore initial recorded positions
+    Object.keys(initialPositions).forEach(id=>{
+      const el = document.getElementById(id);
+      if(el){
+        el.style.left = initialPositions[id].left;
+        el.style.top = initialPositions[id].top;
+      }
+    });
+    drawConnections(connectionsVisible);
+    centerMap();
+  });
+
+  document.getElementById('centerBtn').addEventListener('click', ()=> centerMap());
+
+  document.getElementById('printBtn').addEventListener('click', ()=>{
+    // For a full-page PDF, open print dialog. The print CSS hides controls & legend.
+    window.print();
+  });
+
+  function centerMap(){
+    // center the mapContainer inside .canvas-wrap
+    const wrap = document.querySelector('.canvas-wrap');
+    const rect = container.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    wrap.scrollLeft = Math.max(0, (rect.width - wrapRect.width)/2);
+    wrap.scrollTop = Math.max(0, (rect.height - wrapRect.height)/6);
+  }
+
+  function expandContainerIfNeeded(){
+    // ensure there's room so layout won't push elements out of bounds
+    // expand container size to max of nodes current positions + margin
+    const maxX = Math.max(...nodesData.map(n => (n.x||0))) + 800;
+    const maxY = Math.max(...nodesData.map(n => (n.y||0))) + 600;
+    container.style.minWidth = Math.max(container.clientWidth, maxX) + 'px';
+    container.style.minHeight = Math.max(container.clientHeight, maxY) + 'px';
+  }
+
+  /*************************************************************************
+   * Init
+   *************************************************************************/
+  createNodes();
+
+  // save initial positions
+  nodesData.forEach(n=>{
+    const el = document.getElementById('node-'+n.id);
+    initialPositions[el.id] = { left: el.style.left, top: el.style.top };
+  });
+
+  // draw initial connections once DOM is settled
+  window.addEventListener('load', ()=> {
+    // enlarge container a bit for layout room
+    expandContainerIfNeeded();
+    drawConnections(connectionsVisible);
+    // optionally auto organize shortly after load for nice layout
+    setTimeout(()=>{ /* don't auto-run by default to let user see original */ }, 400);
+    // center
+    centerMap();
+  });
+
+  // redraw on resize or scroll (keeps SVG aligned)
+  window.addEventListener('resize', ()=> drawConnections(connectionsVisible));
+  document.querySelector('.canvas-wrap').addEventListener('scroll', ()=> drawConnections(connectionsVisible));
+
+  </script>
 </body>
 </html>

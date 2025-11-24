@@ -5,453 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TiendaVibe - Tu Tienda Virtual</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             min-height: 100vh;
         }
-
-        /* Header */
         header {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255,255,255,0.95);
             backdrop-filter: blur(10px);
             padding: 1rem 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: sticky; top: 0; z-index:1000;
         }
-
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
+        nav { display:flex; justify-content:space-between; align-items:center; max-width:1400px; margin:0 auto; }
+        .logo { font-size:1.8rem; font-weight:bold;
+            background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
         }
+        .nav-links { display:flex; gap:2rem; list-style:none; }
+        .nav-links a { text-decoration:none; color:#333; font-weight:500; transition:color .3s; }
+        .nav-links a:hover { color:#f093fb; }
 
-        .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: #333;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: #f093fb;
-        }
-
-        /* Barra de búsqueda */
-        .search-container {
-            max-width: 600px;
-            margin: 2rem auto;
-            position: relative;
-        }
-
+        /* Search */
+        .search-container { max-width:600px; margin:2rem auto; position:relative; }
         .search-bar {
-            width: 100%;
-            padding: 1rem 3rem 1rem 1.5rem;
-            border: none;
-            border-radius: 50px;
-            font-size: 1rem;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s;
+            width:100%; padding:1rem 3rem 1rem 1.5rem; border:none; border-radius:50px; font-size:1rem;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15); transition:all .3s;
         }
-
-        .search-bar:focus {
-            outline: none;
-            box-shadow: 0 8px 40px rgba(240, 147, 251, 0.4);
-            transform: scale(1.02);
-        }
-
+        .search-bar:focus { outline:none; box-shadow:0 8px 40px rgba(240,147,251,0.4); transform:scale(1.02); }
         .search-btn {
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border: none;
-            color: white;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1.2rem;
-            transition: all 0.3s;
-        }
-
-        .search-btn:hover {
-            transform: translateY(-50%) scale(1.1);
+            position:absolute; right:5px; top:50%; transform:translateY(-50%);
+            background: linear-gradient(135deg,#f093fb 0%,#f5576c 100%);
+            border:none; color:white; width:45px; height:45px; border-radius:50%; cursor:pointer; font-size:1.2rem;
         }
 
         .cart-icon {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 0.7rem 1.5rem;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: transform 0.3s;
+            background: linear-gradient(135deg,#f093fb 0%,#f5576c 100%);
+            color:white; padding:.7rem 1.5rem; border-radius:25px; cursor:pointer; transition:transform .3s;
         }
+        .cart-icon:hover { transform:scale(1.05); }
 
-        .cart-icon:hover {
-            transform: scale(1.05);
-        }
+        /* Layout */
+        .container { max-width:1400px; margin:2rem auto; padding:0 2rem; }
 
-        /* Container Principal */
-        .container {
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-        }
-
-        /* Carrusel */
+        /* Carousel */
         .carousel-section {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 3rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+            border:1px solid rgba(255,255,255,0.2); border-radius:20px; padding:2rem; margin-bottom:3rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
         }
-
-        .carousel-title {
-            text-align: center;
-            font-size: 2rem;
-            color: white;
-            margin-bottom: 2rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .carousel-container {
-            position: relative;
-            overflow: hidden;
-            border-radius: 15px;
-        }
-
-        .carousel {
-            display: flex;
-            transition: transform 0.5s ease-in-out;
-        }
-
-        .carousel-item {
-            min-width: 100%;
-            position: relative;
-        }
-
-        .carousel-item img {
-            display: block; /* fix */
-            width: 100%;
-            height: 400px;
-            object-fit: cover;
-            border-radius: 15px;
-        }
-
+        .carousel-title { text-align:center; font-size:2rem; color:white; margin-bottom:2rem; text-shadow:2px 2px 4px rgba(0,0,0,0.2); }
+        .carousel-container { position:relative; overflow:hidden; border-radius:15px; }
+        .carousel { display:flex; transition:transform .5s ease-in-out; }
+        .carousel-item { min-width:100%; position:relative; }
+        .carousel-item img { display:block; width:100%; height:400px; object-fit:cover; border-radius:15px; }
         .carousel-caption {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(240, 147, 251, 0.95);
-            backdrop-filter: blur(10px);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 10px;
+            position:absolute; bottom:20px; left:20px; background: rgba(240,147,251,0.95); backdrop-filter: blur(10px);
+            color:white; padding:1rem 2rem; border-radius:10px;
         }
-
-        .carousel-caption h3 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .carousel-caption p {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
         .carousel-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.9);
-            border: none;
-            font-size: 2rem;
-            padding: 1rem;
-            cursor: pointer;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            z-index: 10;
+            position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.9); border:none;
+            font-size:2rem; padding:1rem; cursor:pointer; border-radius:50%; width:50px; height:50px; z-index:10;
+            display:flex; align-items:center; justify-content:center; transition:all .3s;
         }
+        .carousel-btn:hover { background:#764ba2; color:white; }
+        .carousel-btn.prev { left:20px; } .carousel-btn.next { right:20px; }
+        .carousel-dots { display:flex; justify-content:center; gap:10px; margin-top:1rem; }
+        .dot { width:12px; height:12px; border-radius:50%; background:#ddd; cursor:pointer; transition:all .3s; }
+        .dot.active { background:#f093fb; width:30px; border-radius:6px; }
 
-        .carousel-btn:hover {
-            background: #764ba2;
-            color: white;
-        }
-
-        .carousel-btn.prev {
-            left: 20px;
-        }
-
-        .carousel-btn.next {
-            right: 20px;
-        }
-
-        .carousel-dots {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 1rem;
-        }
-
-        .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #ddd;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .dot.active {
-            background: #f093fb;
-            width: 30px;
-            border-radius: 6px;
-        }
-
-        /* Grid de Productos */
-        .products-section {
-            margin-top: 3rem;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            color: white;
-            margin-bottom: 2rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
+        /* Products grid */
+        .products-section { margin-top:3rem; }
+        .section-title { text-align:center; font-size:2.5rem; color:white; margin-bottom:2rem; text-shadow:2px 2px 4px rgba(0,0,0,0.2); }
+        .products-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:2rem; margin-bottom:3rem; }
         .product-card {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-            transition: transform 0.3s, box-shadow 0.3s;
-            cursor: pointer;
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.3);
+            border-radius:15px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.12); transition:transform .3s, box-shadow .3s;
+            cursor:pointer;
         }
+        .product-card:hover { transform:translateY(-10px); box-shadow:0 15px 40px rgba(240,147,251,0.4); background: rgba(255,255,255,0.25); }
+        .product-image { display:block; width:100%; height:250px; object-fit:cover; background:#f5f5f5; }
+        .product-image.contain { object-fit:contain; background:#fff; }
+        .product-info { padding:1.5rem; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); }
+        .product-title { font-size:1.2rem; color:#333; margin-bottom:.5rem; }
+        .product-price { font-size:1.5rem; color:#f093fb; font-weight:bold; margin-bottom:1rem; }
+        .product-btn { width:100%; padding:.8rem; background: linear-gradient(135deg,#f093fb 0%,#f5576c 100%); color:white; border:none; border-radius:8px; font-size:1rem; cursor:pointer; transition:transform .3s; font-weight:600; }
+        .product-btn:hover { transform:scale(1.05); }
+        .attribution { font-size:.75rem; color:#666; margin-top:8px; }
+        .attribution a { color:inherit; text-decoration:underline; }
 
-        .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 40px rgba(240, 147, 251, 0.4);
-            background: rgba(255, 255, 255, 0.25);
-        }
-
-        .product-image {
-            display: block; /* fix */
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-            background: #f5f5f5;
-        }
-
-        /* para logos SVG que no queremos recortar */
-        .product-image.contain {
-            object-fit: contain;
-            background: #fff;
-        }
-
-        .product-info {
-            padding: 1.5rem;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-        }
-
-        .product-title {
-            font-size: 1.2rem;
-            color: #333;
-            margin-bottom: 0.5rem;
-        }
-
-        .product-price {
-            font-size: 1.5rem;
-            color: #f093fb;
-            font-weight: bold;
-            margin-bottom: 1rem;
-        }
-
-        .product-btn {
-            width: 100%;
-            padding: 0.8rem;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: transform 0.3s;
-            font-weight: 600;
-        }
-
-        .product-btn:hover {
-            transform: scale(1.05);
-        }
-
-        /* attribution pequeño */
-        .attribution {
-            font-size: 0.75rem;
-            color: #666;
-            margin-top: 8px;
-        }
-        .attribution a { color: inherit; text-decoration: underline; }
-
-        /* Flecha Ver Más */
-        .load-more {
-            text-align: center;
-            margin: 3rem 0;
-        }
-
+        .load-more { text-align:center; margin:3rem 0; }
         .load-more-btn {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border:2px solid rgba(255,255,255,0.4);
+            color:white; padding:1rem 2rem; border-radius:50px; font-size:1.1rem; cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-weight:600;
         }
+        .load-more-btn:hover { background: rgba(255,255,255,0.3); transform:translateY(5px); border-color:#f093fb; }
+        .arrow-down { font-size:1.5rem; animation:bounce 2s infinite; }
+        @keyframes bounce { 0%,20%,50%,80%,100%{transform:translateY(0);} 40%{transform:translateY(10px);} 60%{transform:translateY(5px);} }
 
-        .load-more-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(5px);
-            border-color: #f093fb;
-        }
+        footer { background: rgba(255,255,255,0.95); padding:2rem; text-align:center; margin-top:3rem; }
+        .footer-content { max-width:1400px; margin:0 auto; }
+        .footer-links { display:flex; justify-content:center; gap:2rem; margin-bottom:1rem; flex-wrap:wrap; }
+        .footer-links a { color:#f093fb; text-decoration:none; font-weight:500; }
+        .footer-links a:hover { color:#f5576c; }
 
-        .arrow-down {
-            font-size: 1.5rem;
-            animation: bounce 2s infinite;
-        }
-
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-                transform: translateY(0);
-            }
-            40% {
-                transform: translateY(10px);
-            }
-            60% {
-                transform: translateY(5px);
-            }
-        }
-
-        /* Footer */
-        footer {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 2rem;
-            text-align: center;
-            margin-top: 3rem;
-        }
-
-        .footer-content {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .footer-links a {
-            color: #f093fb;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .footer-links a:hover {
-            color: #f5576c;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-
-            .carousel-item img {
-                height: 250px;
-            }
-
-            .carousel-caption {
-                padding: 0.5rem 1rem;
-            }
-
-            .carousel-caption h3 {
-                font-size: 1rem;
-            }
-
-            .carousel-caption p {
-                font-size: 0.9rem;
-            }
-
-            .carousel-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1.5rem;
-            }
-
-            .section-title {
-                font-size: 1.8rem;
-            }
-
-            .products-grid {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 1.5rem;
-            }
+        @media (max-width:768px){
+            .nav-links{display:none;}
+            .carousel-item img{height:250px;}
+            .carousel-btn{width:40px;height:40px;font-size:1.5rem;}
+            .section-title{font-size:1.8rem;}
+            .products-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.5rem;}
         }
     </style>
 </head>
@@ -470,187 +135,200 @@
     </header>
 
     <div class="container">
-        <!-- Barra de Búsqueda -->
+        <!-- Search -->
         <div class="search-container">
-            <input type="text" class="search-bar" placeholder="🔍 Buscar productos..." id="searchInput">
+            <input id="searchInput" class="search-bar" type="text" placeholder="🔍 Buscar productos...">
             <button class="search-btn" onclick="searchProducts()">🔎</button>
         </div>
 
-        <!-- Carrusel de Productos Destacados -->
+        <!-- Carousel -->
         <section class="carousel-section">
             <h2 class="carousel-title">✨ Productos Destacados</h2>
             <div class="carousel-container">
                 <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
                 <div class="carousel">
-                    <!-- URLs directas a archivos en Wikimedia (no apuntan a páginas HTML) -->
+                    <!-- Usé imágenes directas (archivos .jpg/.png) -->
                     <div class="carousel-item">
-                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/8/8a/The_Dark_Knight_%282008%29_poster.jpg" alt="The Dark Knight">
+                        <!-- Batman comic: Dark Knight Returns (cómic) - si quieres otra portada dime -->
+                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/a/ae/Batman_TDR_cover.jpg" alt="Batman: The Dark Knight (cómic)">
                         <div class="carousel-caption">
                             <h3>Batman: The Dark Knight</h3>
                             <p>$24.99</p>
                         </div>
                     </div>
+
                     <div class="carousel-item">
-                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/0/0c/Amazing_Fantasy_15.jpg" alt="Amazing Fantasy #15">
+                        <!-- Spider-Man: Amazing Fantasy #15 (directo: proporcionado por ti) -->
+                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/3/35/Amazing_Fantasy_15.jpg" alt="Amazing Fantasy #15">
                         <div class="carousel-caption">
                             <h3>Spider-Man: Amazing Fantasy</h3>
                             <p>$29.99</p>
                         </div>
                     </div>
+
                     <div class="carousel-item">
-                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/it/7/7c/Iron_Man_Extremis.jpg" alt="Iron Man Extremis">
+                        <!-- Superman: elección de portada de cómic (Man of Steel cómic-portada) -->
+                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/1/11/ManofSteel_1.jpg" alt="Superman: Man of Steel (cómic)">
                         <div class="carousel-caption">
-                            <h3>Iron Man: Extremis</h3>
-                            <p>$26.99</p>
+                            <h3>Superman: Man of Steel</h3>
+                            <p>$27.99</p>
                         </div>
                     </div>
+
                     <div class="carousel-item">
-                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/7/7f/Avengers_Endgame_poster.jpg" alt="Avengers Endgame">
+                        <!-- Avengers (cómic): portada clásica - archivo directo -->
+                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/3/35/Avengers_1_1963.jpg" alt="Avengers #1">
                         <div class="carousel-caption">
-                            <h3>Avengers: Endgame Edition</h3>
+                            <h3>Avengers Edition</h3>
                             <p>$34.99</p>
                         </div>
                     </div>
                 </div>
                 <button class="carousel-btn next" onclick="moveCarousel(1)">›</button>
             </div>
-            <div class="carousel-dots" id="carouselDots"></div>
+            <div id="carouselDots" class="carousel-dots"></div>
         </section>
 
-        <!-- Grid de Productos -->
-        <section class="products-section" id="productos">
+        <!-- Grid de productos (todas las src son enlaces directos a imágenes) -->
+        <section id="productos" class="products-section">
             <h2 class="section-title">🌟 Todos Nuestros Productos</h2>
             <div class="products-grid">
-                <!-- Productos con imágenes enlazadas desde Wikimedia (URLs directas) -->
+                <!-- Batman: si prefieres otra portada de cómic me dices -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/8/8a/The_Dark_Knight_%282008%29_poster.jpg" alt="Batman" class="product-image">
+                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/a/ae/Batman_TDR_cover.jpg" alt="Batman" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">Batman: The Dark Knight</h3>
                         <p class="product-price">$24.99</p>
                         <button class="product-btn" onclick="addToCart('Batman: The Dark Knight')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/The_Dark_Knight_(film)" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa (archivo).</p>
                     </div>
                 </div>
 
+                <!-- Spider-Man (link exacto que me diste) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/0/0c/Amazing_Fantasy_15.jpg" alt="Spider-Man" class="product-image">
+                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/3/35/Amazing_Fantasy_15.jpg" alt="Spider-Man" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">Spider-Man: Amazing Fantasy</h3>
                         <p class="product-price">$29.99</p>
                         <button class="product-btn" onclick="addToCart('Spider-Man: Amazing Fantasy')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Amazing_Fantasy" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
 
+                <!-- Superman (portada cómic directa) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/5/55/Man_of_Steel_2013_poster.jpg" alt="Superman: Man of Steel" class="product-image">
+                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/1/11/ManofSteel_1.jpg" alt="Superman" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">Superman: Man of Steel</h3>
                         <p class="product-price">$27.99</p>
                         <button class="product-btn" onclick="addToCart('Superman: Man of Steel')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Man_of_Steel_(film)" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
 
+                <!-- Avengers (cómic) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/7/7f/Avengers_Endgame_poster.jpg" alt="Avengers" class="product-image">
+                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/3/35/Avengers_1_1963.jpg" alt="Avengers" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Avengers: Endgame Edition</h3>
+                        <h3 class="product-title">Avengers: Classic</h3>
                         <p class="product-price">$34.99</p>
-                        <button class="product-btn" onclick="addToCart('Avengers: Endgame Edition')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Avengers:_Endgame" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
-                    </div>
-                </div>
-                
-                <!-- Más productos: portadas / logos desde Wikimedia -->
-                <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/8/83/WonderWoman1984.png" alt="Wonder Woman 1984" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Wonder Woman: 1984</h3>
-                        <p class="product-price">$22.99</p>
-                        <button class="product-btn" onclick="addToCart('Wonder Woman: 1984')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Wonder_Woman_1984" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <button class="product-btn" onclick="addToCart('Avengers: Classic')">Agregar al Carrito</button>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
 
+                <!-- Wonder Woman (cómic portada, no película) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/it/7/7c/Iron_Man_Extremis.jpg" alt="Iron Man Extremis" class="product-image">
+                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/6/64/Wonder_Woman_1.jpg" alt="Wonder Woman (cómic)" class="product-image">
+                    <div class="product-info">
+                        <h3 class="product-title">Wonder Woman (Comic)</h3>
+                        <p class="product-price">$22.99</p>
+                        <button class="product-btn" onclick="addToCart('Wonder Woman (Comic)')">Agregar al Carrito</button>
+                        <p class="attribution">Fuente: imagen directa.</p>
+                    </div>
+                </div>
+
+                <!-- Iron Man: Extremis (comic) -->
+                <div class="product-card">
+                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/it/7/7c/Iron_Man_Extremis.jpg" alt="Iron Man: Extremis" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">Iron Man: Extremis</h3>
                         <p class="product-price">$26.99</p>
                         <button class="product-btn" onclick="addToCart('Iron Man: Extremis')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Extremis_(comics)" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
 
+                <!-- Joker: The Killing Joke (cómic) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/6/64/Killing_Joke.jpg" alt="The Killing Joke" class="product-image">
+                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/6/64/Killing_Joke.jpg" alt="Killing Joke" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">Joker: Killing Joke</h3>
                         <p class="product-price">$28.99</p>
                         <button class="product-btn" onclick="addToCart('Joker: Killing Joke')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/The_Killing_Joke" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
 
+                <!-- Flash: Flashpoint (cómic) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/it/6/68/Flashpoint_1.jpg" alt="Flashpoint" class="product-image">
+                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/it/6/68/Flashpoint_1.jpg" alt="Flashpoint #1" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">The Flash: Flashpoint</h3>
                         <p class="product-price">$25.99</p>
                         <button class="product-btn" onclick="addToCart('The Flash: Flashpoint')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Flashpoint" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
 
+                <!-- X-Men: Days of Future Past (título/comic) -->
                 <div class="product-card">
                     <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/2/2f/X-Men_Days_of_Future_Past_Title.png" alt="X-Men: Days of Future Past" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">X-Men: Days of Future Past</h3>
                         <p class="product-price">$31.99</p>
                         <button class="product-btn" onclick="addToCart('X-Men: Days of Future Past')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Days_of_Future_Past" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
 
+                <!-- Aquaman: Throne of Atlantis (comic portada directa) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/8/8f/Aquaman_%282018%29_poster.jpg" alt="Aquaman" class="product-image">
+                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/8/8f/Aquaman_Throne_of_Atlantis.jpg" alt="Aquaman: Throne of Atlantis" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">Aquaman: Throne of Atlantis</h3>
                         <p class="product-price">$23.99</p>
                         <button class="product-btn" onclick="addToCart('Aquaman: Throne of Atlantis')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Aquaman_(film)" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
 
+                <!-- Captain America: Civil War (comic logo) -->
                 <div class="product-card">
                     <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Captain_America_Civil_War_logo.svg" alt="Captain America - Civil War" class="product-image contain" style="height:250px;">
                     <div class="product-info">
                         <h3 class="product-title">Captain America: Civil War</h3>
                         <p class="product-price">$30.99</p>
                         <button class="product-btn" onclick="addToCart('Captain America: Civil War')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Captain_America:_Civil_War" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
 
+                <!-- Green Lantern: Rebirth (logo) -->
                 <div class="product-card">
                     <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Green_lantern.svg" alt="Green Lantern" class="product-image contain" style="height:250px;">
                     <div class="product-info">
                         <h3 class="product-title">Green Lantern: Rebirth</h3>
                         <p class="product-price">$24.99</p>
                         <button class="product-btn" onclick="addToCart('Green Lantern: Rebirth')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: <a href="https://en.wikipedia.org/wiki/Green_Lantern:_Rebirth" target="_blank" rel="noopener">Wikipedia / Commons</a></p>
+                        <p class="attribution">Fuente: imagen directa.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Botón Ver Más -->
         <div class="load-more">
-            <button class="load-more-btn" onclick="loadMore()">
-                Ver más productos
-                <span class="arrow-down">↓</span>
-            </button>
+            <button class="load-more-btn" onclick="loadMore()">Ver más productos <span class="arrow-down">↓</span></button>
         </div>
     </div>
 
@@ -671,86 +349,57 @@
         let cartCount = 0;
         const totalSlides = 4;
 
-        // Inicializar dots del carrusel
-        function initDots() {
+        function initDots(){
             const dotsContainer = document.getElementById('carouselDots');
-            for (let i = 0; i < totalSlides; i++) {
+            for(let i=0;i<totalSlides;i++){
                 const dot = document.createElement('div');
-                dot.className = 'dot';
-                if (i === 0) dot.classList.add('active');
-                dot.onclick = () => goToSlide(i);
+                dot.className='dot';
+                if(i===0) dot.classList.add('active');
+                dot.onclick = ()=>goToSlide(i);
                 dotsContainer.appendChild(dot);
             }
         }
 
-        // Mover carrusel
-        function moveCarousel(direction) {
+        function moveCarousel(direction){
             currentSlide += direction;
-            if (currentSlide < 0) currentSlide = totalSlides - 1;
-            if (currentSlide >= totalSlides) currentSlide = 0;
+            if(currentSlide < 0) currentSlide = totalSlides - 1;
+            if(currentSlide >= totalSlides) currentSlide = 0;
             updateCarousel();
         }
 
-        // Ir a slide específico
-        function goToSlide(index) {
-            currentSlide = index;
-            updateCarousel();
-        }
+        function goToSlide(index){ currentSlide = index; updateCarousel(); }
 
-        // Actualizar posición del carrusel
-        function updateCarousel() {
+        function updateCarousel(){
             const carousel = document.querySelector('.carousel');
             carousel.style.transform = `translateX(-${currentSlide * 100}%)`;
-            
-            // Actualizar dots
             const dots = document.querySelectorAll('.dot');
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index === currentSlide);
-            });
+            dots.forEach((dot, idx)=> dot.classList.toggle('active', idx === currentSlide));
         }
 
-        // Auto-play del carrusel
-        setInterval(() => {
-            moveCarousel(1);
-        }, 5000);
+        setInterval(()=> moveCarousel(1), 5000);
 
-        // Agregar al carrito
-        function addToCart(productName) {
+        function addToCart(productName){
             cartCount++;
             document.querySelector('.cart-icon').textContent = `🛒 Carrito (${cartCount})`;
-            
-            // Animación visual
             const cartIcon = document.querySelector('.cart-icon');
             cartIcon.style.transform = 'scale(1.2)';
-            setTimeout(() => {
-                cartIcon.style.transform = 'scale(1)';
-            }, 200);
-            
+            setTimeout(()=> cartIcon.style.transform = 'scale(1)', 200);
             alert(`¡${productName} agregado al carrito!`);
         }
 
-        // Buscar productos
-        function searchProducts() {
+        function searchProducts(){
             const searchTerm = document.getElementById('searchInput').value;
-            if (searchTerm.trim()) {
+            if(searchTerm.trim()){
                 alert(`Buscando: "${searchTerm}"\n\n¡Próximamente implementaremos la búsqueda real!`);
             }
         }
 
-        // Presionar Enter para buscar
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchProducts();
-            }
+        document.getElementById('searchInput').addEventListener('keypress', function(e){
+            if(e.key === 'Enter') searchProducts();
         });
 
-        // Cargar más productos
-        function loadMore() {
-            alert('¡Cargando más productos!\n\nAquí se cargarían más productos de tu catálogo.');
-            // Aquí podrías agregar lógica para cargar más productos dinámicamente
-        }
+        function loadMore(){ alert('¡Cargando más productos!'); }
 
-        // Inicializar
         initDots();
     </script>
 </body>

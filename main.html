@@ -100,20 +100,16 @@
             font-size:1.2rem;
             transition:all .3s;
             box-shadow: 0 4px 15px rgba(75, 0, 130, 0.5);
+            display:flex;
+            align-items:center;
+            justify-content:center;
         }
         .search-btn:hover { 
             transform:translateY(-50%) scale(1.05); 
             box-shadow: 0 6px 20px rgba(75, 0, 130, 0.7);
         }
-        /* Quitar emoji duplicado en el botón de búsqueda */
-.search-btn::before {
-    content: '🔎';
-    color: #ffffff;        /* color blanco */
-    filter: none;          /* quitar filtros que no afectan al texto */
-    display: inline-block; /* evitar problemas de line-height */
-    font-size: 1.05em;     /* ajusta tamaño si hace falta */
-}
 
+        /* removed previous ::before emoji rules to avoid duplicates */
 
         .cart-icon {
             background: linear-gradient(135deg, #4B0082 0%, #7B2CBF 100%);
@@ -158,16 +154,6 @@
             text-transform: uppercase;
             letter-spacing: 2px;
         }
-        /* Quitar emoji duplicado en el título */
-.carousel-title::before {
-    content: '✨';
-    color: #ffffff;        /* color blanco */
-    filter: none;
-    margin-right: 0.4rem;  /* espacio entre emoji y texto */
-    display: inline-block;
-    font-size: 1.05em;
-}
-
         .carousel-container { position:relative; overflow:hidden; border-radius:8px; }
         .carousel { display:flex; transition:transform .5s ease-in-out; }
         .carousel-item { min-width:100%; position:relative; }
@@ -256,10 +242,6 @@
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 3px;
-        }
-        .section-title::before {
-            content: '🌟 ';
-            filter: grayscale(100%) brightness(0) invert(1);
         }
         .products-grid { 
             display:grid; 
@@ -405,6 +387,33 @@
             .products-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.5rem;}
             .product-image{height:320px;}
         }
+
+        /* ------------------------- */
+        /* ICONS: white SVGs via data-URI to ensure white color and avoid emoji color fonts */
+        /* search button icon */
+        .search-btn::before{
+          content: "";
+          display:inline-block;
+          width:18px;
+          height:18px;
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23ffffff' d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zM10 14a4 4 0 110-8 4 4 0 010 8z'/></svg>");
+          background-size: contain;
+          background-repeat: no-repeat;
+        }
+
+        /* title sparkle icon */
+        .carousel-title::before{
+          content: "";
+          display:inline-block;
+          width:26px;
+          height:26px;
+          margin-right:.5rem;
+          vertical-align: middle;
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><g fill='%23ffffff'><path d='M12 2l1.5 4.5L18 8l-4.5 1.5L12 14 10.5 9.5 6 8l4.5-1.5z'/><path d='M4 14l.8 2.4L8 17l-2.4 1.2L4 20l-.8-1.8L1 17l2.2-1.2z' opacity='0.0'/></g></svg>");
+          background-size: contain;
+          background-repeat: no-repeat;
+        }
+
     </style>
 </head>
 <body>
@@ -423,12 +432,14 @@
 
     <div class="container">
         <div class="search-container">
+            <!-- removed literal emoji from button and added aria-label -->
             <input id="searchInput" class="search-bar" type="text" placeholder="🔍 Buscar cómics...">
-            <button class="search-btn" onclick="searchProducts()">🔎</button>
+            <button class="search-btn" onclick="searchProducts()" aria-label="Buscar"></button>
         </div>
 
         <section class="carousel-section">
-            <h2 class="carousel-title">✨ Destacados</h2>
+            <!-- removed literal emoji from title -->
+            <h2 class="carousel-title">Destacados</h2>
             <div class="carousel-container">
                 <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
                 <div class="carousel">
@@ -658,6 +669,4 @@
     </script>
 </body>
 </html>
-
-
 

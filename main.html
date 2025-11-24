@@ -105,10 +105,13 @@
             transform:translateY(-50%) scale(1.05); 
             box-shadow: 0 6px 20px rgba(75, 0, 130, 0.7);
         }
-        .search-btn::before {
-            content: '🔎';
-            filter: grayscale(100%) brightness(0) invert(1);
-        }
+        /* Quitar emoji duplicado en el botón de búsqueda */
+.search-btn::before {
+    content: '';
+    /* puedes dejar el filter si lo usas para otros estilos, o eliminar esta línea */
+    filter: none;
+}
+
 
         .cart-icon {
             background: linear-gradient(135deg, #4B0082 0%, #7B2CBF 100%);
@@ -153,10 +156,12 @@
             text-transform: uppercase;
             letter-spacing: 2px;
         }
-        .carousel-title::before {
-            content: '✨ ';
-            filter: grayscale(100%) brightness(0) invert(1);
-        }
+        /* Quitar emoji duplicado en el título */
+.carousel-title::before {
+    content: '';
+    filter: none;
+}
+
         .carousel-container { position:relative; overflow:hidden; border-radius:8px; }
         .carousel { display:flex; transition:transform .5s ease-in-out; }
         .carousel-item { min-width:100%; position:relative; }
@@ -647,4 +652,5 @@
     </script>
 </body>
 </html>
+
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TiendaVibe - Tu Tienda Virtual</title>
+    <title>TiendaVibe - Comics DC & Marvel</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -27,7 +27,6 @@
         .nav-links a { text-decoration:none; color:#333; font-weight:500; transition:color .3s; }
         .nav-links a:hover { color:#f093fb; }
 
-        /* Search */
         .search-container { max-width:600px; margin:2rem auto; position:relative; }
         .search-bar {
             width:100%; padding:1rem 3rem 1rem 1.5rem; border:none; border-radius:50px; font-size:1rem;
@@ -39,7 +38,9 @@
             position:absolute; right:5px; top:50%; transform:translateY(-50%);
             background: linear-gradient(135deg,#f093fb 0%,#f5576c 100%);
             border:none; color:white; width:45px; height:45px; border-radius:50%; cursor:pointer; font-size:1.2rem;
+            transition:all .3s;
         }
+        .search-btn:hover { transform:translateY(-50%) scale(1.1); }
 
         .cart-icon {
             background: linear-gradient(135deg,#f093fb 0%,#f5576c 100%);
@@ -47,10 +48,8 @@
         }
         .cart-icon:hover { transform:scale(1.05); }
 
-        /* Layout */
         .container { max-width:1400px; margin:2rem auto; padding:0 2rem; }
 
-        /* Carousel */
         .carousel-section {
             background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
             border:1px solid rgba(255,255,255,0.2); border-radius:20px; padding:2rem; margin-bottom:3rem;
@@ -60,11 +59,13 @@
         .carousel-container { position:relative; overflow:hidden; border-radius:15px; }
         .carousel { display:flex; transition:transform .5s ease-in-out; }
         .carousel-item { min-width:100%; position:relative; }
-        .carousel-item img { display:block; width:100%; height:400px; object-fit:cover; border-radius:15px; }
+        .carousel-item img { display:block; width:100%; height:400px; object-fit:contain; border-radius:15px; background:#1a1a1a; }
         .carousel-caption {
             position:absolute; bottom:20px; left:20px; background: rgba(240,147,251,0.95); backdrop-filter: blur(10px);
             color:white; padding:1rem 2rem; border-radius:10px;
         }
+        .carousel-caption h3 { font-size:1.5rem; margin-bottom:.5rem; }
+        .carousel-caption p { font-size:1.2rem; font-weight:bold; }
         .carousel-btn {
             position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.9); border:none;
             font-size:2rem; padding:1rem; cursor:pointer; border-radius:50%; width:50px; height:50px; z-index:10;
@@ -76,7 +77,6 @@
         .dot { width:12px; height:12px; border-radius:50%; background:#ddd; cursor:pointer; transition:all .3s; }
         .dot.active { background:#f093fb; width:30px; border-radius:6px; }
 
-        /* Products grid */
         .products-section { margin-top:3rem; }
         .section-title { text-align:center; font-size:2.5rem; color:white; margin-bottom:2rem; text-shadow:2px 2px 4px rgba(0,0,0,0.2); }
         .products-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:2rem; margin-bottom:3rem; }
@@ -86,20 +86,17 @@
             cursor:pointer;
         }
         .product-card:hover { transform:translateY(-10px); box-shadow:0 15px 40px rgba(240,147,251,0.4); background: rgba(255,255,255,0.25); }
-        .product-image { display:block; width:100%; height:250px; object-fit:cover; background:#f5f5f5; }
-        .product-image.contain { object-fit:contain; background:#fff; }
+        .product-image { display:block; width:100%; height:350px; object-fit:contain; background:#1a1a1a; }
         .product-info { padding:1.5rem; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); }
         .product-title { font-size:1.2rem; color:#333; margin-bottom:.5rem; }
         .product-price { font-size:1.5rem; color:#f093fb; font-weight:bold; margin-bottom:1rem; }
         .product-btn { width:100%; padding:.8rem; background: linear-gradient(135deg,#f093fb 0%,#f5576c 100%); color:white; border:none; border-radius:8px; font-size:1rem; cursor:pointer; transition:transform .3s; font-weight:600; }
         .product-btn:hover { transform:scale(1.05); }
-        .attribution { font-size:.75rem; color:#666; margin-top:8px; }
-        .attribution a { color:inherit; text-decoration:underline; }
 
         .load-more { text-align:center; margin:3rem 0; }
         .load-more-btn {
             background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border:2px solid rgba(255,255,255,0.4);
-            color:white; padding:1rem 2rem; border-radius:50px; font-size:1.1rem; cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-weight:600;
+            color:white; padding:1rem 2rem; border-radius:50px; font-size:1.1rem; cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-weight:600; transition:all .3s;
         }
         .load-more-btn:hover { background: rgba(255,255,255,0.3); transform:translateY(5px); border-color:#f093fb; }
         .arrow-down { font-size:1.5rem; animation:bounce 2s infinite; }
@@ -117,13 +114,14 @@
             .carousel-btn{width:40px;height:40px;font-size:1.5rem;}
             .section-title{font-size:1.8rem;}
             .products-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.5rem;}
+            .product-image{height:300px;}
         }
     </style>
 </head>
 <body>
     <header>
         <nav>
-            <div class="logo">🛍️ TiendaVibe</div>
+            <div class="logo">🦸 ComicVibe</div>
             <ul class="nav-links">
                 <li><a href="#inicio">Inicio</a></li>
                 <li><a href="#productos">Productos</a></li>
@@ -135,51 +133,41 @@
     </header>
 
     <div class="container">
-        <!-- Search -->
         <div class="search-container">
-            <input id="searchInput" class="search-bar" type="text" placeholder="🔍 Buscar productos...">
+            <input id="searchInput" class="search-bar" type="text" placeholder="🔍 Buscar cómics...">
             <button class="search-btn" onclick="searchProducts()">🔎</button>
         </div>
 
-        <!-- Carousel -->
         <section class="carousel-section">
-            <h2 class="carousel-title">✨ Productos Destacados</h2>
+            <h2 class="carousel-title">✨ Cómics Destacados</h2>
             <div class="carousel-container">
                 <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
                 <div class="carousel">
-                    <!-- Usé imágenes directas (archivos .jpg/.png) -->
                     <div class="carousel-item">
-                        <!-- Batman comic: Dark Knight Returns (cómic) - si quieres otra portada dime -->
-                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/a/ae/Batman_TDR_cover.jpg" alt="Batman: The Dark Knight (cómic)">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/7/77/Dark_Knight.jpg" alt="Batman: The Dark Knight Returns">
                         <div class="carousel-caption">
-                            <h3>Batman: The Dark Knight</h3>
+                            <h3>Batman: The Dark Knight Returns</h3>
                             <p>$24.99</p>
                         </div>
                     </div>
-
                     <div class="carousel-item">
-                        <!-- Spider-Man: Amazing Fantasy #15 (directo: proporcionado por ti) -->
-                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/3/35/Amazing_Fantasy_15.jpg" alt="Amazing Fantasy #15">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/b/b9/Amazing_Fantasy_15.jpg" alt="Spider-Man: Amazing Fantasy #15">
                         <div class="carousel-caption">
-                            <h3>Spider-Man: Amazing Fantasy</h3>
+                            <h3>Spider-Man: Amazing Fantasy #15</h3>
                             <p>$29.99</p>
                         </div>
                     </div>
-
                     <div class="carousel-item">
-                        <!-- Superman: elección de portada de cómic (Man of Steel cómic-portada) -->
-                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/1/11/ManofSteel_1.jpg" alt="Superman: Man of Steel (cómic)">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/e/e0/Action_Comics_1.jpg" alt="Superman: Action Comics #1">
                         <div class="carousel-caption">
-                            <h3>Superman: Man of Steel</h3>
+                            <h3>Superman: Action Comics #1</h3>
                             <p>$27.99</p>
                         </div>
                     </div>
-
                     <div class="carousel-item">
-                        <!-- Avengers (cómic): portada clásica - archivo directo -->
-                        <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/3/35/Avengers_1_1963.jpg" alt="Avengers #1">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/3/3e/Avengers_vol_1_1.jpg" alt="Avengers #1">
                         <div class="carousel-caption">
-                            <h3>Avengers Edition</h3>
+                            <h3>The Avengers #1</h3>
                             <p>$34.99</p>
                         </div>
                     </div>
@@ -189,146 +177,121 @@
             <div id="carouselDots" class="carousel-dots"></div>
         </section>
 
-        <!-- Grid de productos (todas las src son enlaces directos a imágenes) -->
         <section id="productos" class="products-section">
-            <h2 class="section-title">🌟 Todos Nuestros Productos</h2>
+            <h2 class="section-title">🌟 Todos Nuestros Cómics</h2>
             <div class="products-grid">
-                <!-- Batman: si prefieres otra portada de cómic me dices -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/a/ae/Batman_TDR_cover.jpg" alt="Batman" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/7/77/Dark_Knight.jpg" alt="Batman" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Batman: The Dark Knight</h3>
+                        <h3 class="product-title">Batman: The Dark Knight Returns</h3>
                         <p class="product-price">$24.99</p>
-                        <button class="product-btn" onclick="addToCart('Batman: The Dark Knight')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa (archivo).</p>
+                        <button class="product-btn" onclick="addToCart('Batman: The Dark Knight Returns')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Spider-Man (link exacto que me diste) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/3/35/Amazing_Fantasy_15.jpg" alt="Spider-Man" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/b/b9/Amazing_Fantasy_15.jpg" alt="Spider-Man" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Spider-Man: Amazing Fantasy</h3>
+                        <h3 class="product-title">Spider-Man: Amazing Fantasy #15</h3>
                         <p class="product-price">$29.99</p>
-                        <button class="product-btn" onclick="addToCart('Spider-Man: Amazing Fantasy')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('Spider-Man: Amazing Fantasy #15')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Superman (portada cómic directa) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/1/11/ManofSteel_1.jpg" alt="Superman" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/e/e0/Action_Comics_1.jpg" alt="Superman" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Superman: Man of Steel</h3>
+                        <h3 class="product-title">Superman: Action Comics #1</h3>
                         <p class="product-price">$27.99</p>
-                        <button class="product-btn" onclick="addToCart('Superman: Man of Steel')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('Superman: Action Comics #1')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Avengers (cómic) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/3/35/Avengers_1_1963.jpg" alt="Avengers" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/3/3e/Avengers_vol_1_1.jpg" alt="Avengers" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Avengers: Classic</h3>
+                        <h3 class="product-title">The Avengers #1</h3>
                         <p class="product-price">$34.99</p>
-                        <button class="product-btn" onclick="addToCart('Avengers: Classic')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('The Avengers #1')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Wonder Woman (cómic portada, no película) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/6/64/Wonder_Woman_1.jpg" alt="Wonder Woman (cómic)" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/9/9d/Sensation_Comics_1.jpg" alt="Wonder Woman" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Wonder Woman (Comic)</h3>
+                        <h3 class="product-title">Wonder Woman: Sensation Comics #1</h3>
                         <p class="product-price">$22.99</p>
-                        <button class="product-btn" onclick="addToCart('Wonder Woman (Comic)')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('Wonder Woman: Sensation Comics #1')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Iron Man: Extremis (comic) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/it/7/7c/Iron_Man_Extremis.jpg" alt="Iron Man: Extremis" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/5/53/TalesofSuspense39.jpg" alt="Iron Man" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Iron Man: Extremis</h3>
+                        <h3 class="product-title">Iron Man: Tales of Suspense #39</h3>
                         <p class="product-price">$26.99</p>
-                        <button class="product-btn" onclick="addToCart('Iron Man: Extremis')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('Iron Man: Tales of Suspense #39')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Joker: The Killing Joke (cómic) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/6/64/Killing_Joke.jpg" alt="Killing Joke" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/6/64/Killing_Joke.jpg" alt="Joker" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Joker: Killing Joke</h3>
+                        <h3 class="product-title">Batman: The Killing Joke</h3>
                         <p class="product-price">$28.99</p>
-                        <button class="product-btn" onclick="addToCart('Joker: Killing Joke')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('Batman: The Killing Joke')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Flash: Flashpoint (cómic) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/it/6/68/Flashpoint_1.jpg" alt="Flashpoint #1" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/e/e4/Flash_Comics_1.jpg" alt="The Flash" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">The Flash: Flashpoint</h3>
+                        <h3 class="product-title">The Flash: Flash Comics #1</h3>
                         <p class="product-price">$25.99</p>
-                        <button class="product-btn" onclick="addToCart('The Flash: Flashpoint')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('The Flash: Flash Comics #1')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- X-Men: Days of Future Past (título/comic) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/2/2f/X-Men_Days_of_Future_Past_Title.png" alt="X-Men: Days of Future Past" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/4/4c/Giant-Size_X-Men_1.jpg" alt="X-Men" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">X-Men: Days of Future Past</h3>
+                        <h3 class="product-title">X-Men: Giant-Size X-Men #1</h3>
                         <p class="product-price">$31.99</p>
-                        <button class="product-btn" onclick="addToCart('X-Men: Days of Future Past')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('X-Men: Giant-Size X-Men #1')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Aquaman: Throne of Atlantis (comic portada directa) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/en/8/8f/Aquaman_Throne_of_Atlantis.jpg" alt="Aquaman: Throne of Atlantis" class="product-image">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/a/a5/Detective_Comics_27.jpg" alt="Batman Detective" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Aquaman: Throne of Atlantis</h3>
+                        <h3 class="product-title">Batman: Detective Comics #27</h3>
                         <p class="product-price">$23.99</p>
-                        <button class="product-btn" onclick="addToCart('Aquaman: Throne of Atlantis')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('Batman: Detective Comics #27')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Captain America: Civil War (comic logo) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Captain_America_Civil_War_logo.svg" alt="Captain America - Civil War" class="product-image contain" style="height:250px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/3/37/Captain_America_Comics_1.jpg" alt="Captain America" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Captain America: Civil War</h3>
+                        <h3 class="product-title">Captain America Comics #1</h3>
                         <p class="product-price">$30.99</p>
-                        <button class="product-btn" onclick="addToCart('Captain America: Civil War')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('Captain America Comics #1')">Agregar al Carrito</button>
                     </div>
                 </div>
 
-                <!-- Green Lantern: Rebirth (logo) -->
                 <div class="product-card">
-                    <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Green_lantern.svg" alt="Green Lantern" class="product-image contain" style="height:250px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/f/f6/Showcase_4.jpg" alt="Green Lantern Flash" class="product-image">
                     <div class="product-info">
-                        <h3 class="product-title">Green Lantern: Rebirth</h3>
+                        <h3 class="product-title">The Flash: Showcase #4</h3>
                         <p class="product-price">$24.99</p>
-                        <button class="product-btn" onclick="addToCart('Green Lantern: Rebirth')">Agregar al Carrito</button>
-                        <p class="attribution">Fuente: imagen directa.</p>
+                        <button class="product-btn" onclick="addToCart('The Flash: Showcase #4')">Agregar al Carrito</button>
                     </div>
                 </div>
             </div>
         </section>
 
         <div class="load-more">
-            <button class="load-more-btn" onclick="loadMore()">Ver más productos <span class="arrow-down">↓</span></button>
+            <button class="load-more-btn" onclick="loadMore()">Ver más cómics <span class="arrow-down">↓</span></button>
         </div>
     </div>
 
@@ -340,7 +303,7 @@
                 <a href="#privacidad">Privacidad</a>
                 <a href="#contacto">Contacto</a>
             </div>
-            <p>&copy; 2025 TiendaVibe. Todos los derechos reservados.</p>
+            <p>&copy; 2025 ComicVibe. Todos los derechos reservados.</p>
         </div>
     </footer>
 
@@ -398,7 +361,9 @@
             if(e.key === 'Enter') searchProducts();
         });
 
-        function loadMore(){ alert('¡Cargando más productos!'); }
+        function loadMore(){ 
+            alert('¡Cargando más cómics!\n\nAquí aparecerían más títulos clásicos de DC y Marvel.');
+        }
 
         initDots();
     </script>

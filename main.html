@@ -1,717 +1,176 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TiendaVibe - Tu Tienda Virtual</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-            min-height: 100vh;
-        }
-
-        /* Header */
-        header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: #333;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: #f093fb;
-        }
-
-        /* Barra de búsqueda */
-        .search-container {
-            max-width: 600px;
-            margin: 2rem auto;
-            position: relative;
-        }
-
-        .search-bar {
-            width: 100%;
-            padding: 1rem 3rem 1rem 1.5rem;
-            border: none;
-            border-radius: 50px;
-            font-size: 1rem;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s;
-        }
-
-        .search-bar:focus {
-            outline: none;
-            box-shadow: 0 8px 40px rgba(240, 147, 251, 0.4);
-            transform: scale(1.02);
-        }
-
-        .search-btn {
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border: none;
-            color: white;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1.2rem;
-            transition: all 0.3s;
-        }
-
-        .search-btn:hover {
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .cart-icon {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 0.7rem 1.5rem;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: transform 0.3s;
-        }
-
-        .cart-icon:hover {
-            transform: scale(1.05);
-        }
-
-        /* Container Principal */
-        .container {
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-        }
-
-        /* Carrusel */
-        .carousel-section {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 3rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        .carousel-title {
-            text-align: center;
-            font-size: 2rem;
-            color: white;
-            margin-bottom: 2rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .carousel-container {
-            position: relative;
-            overflow: hidden;
-            border-radius: 15px;
-        }
-
-        .carousel {
-            display: flex;
-            transition: transform 0.5s ease-in-out;
-        }
-
-        .carousel-item {
-            min-width: 100%;
-            position: relative;
-        }
-
-        .carousel-item img {
-            width: 100%;
-            height: 400px;
-            object-fit: cover;
-            border-radius: 15px;
-        }
-
-        .carousel-caption {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(240, 147, 251, 0.95);
-            backdrop-filter: blur(10px);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 10px;
-        }
-
-        .carousel-caption h3 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .carousel-caption p {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
-        .carousel-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.9);
-            border: none;
-            font-size: 2rem;
-            padding: 1rem;
-            cursor: pointer;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            z-index: 10;
-        }
-
-        .carousel-btn:hover {
-            background: #764ba2;
-            color: white;
-        }
-
-        .carousel-btn.prev {
-            left: 20px;
-        }
-
-        .carousel-btn.next {
-            right: 20px;
-        }
-
-        .carousel-dots {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 1rem;
-        }
-
-        .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #ddd;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .dot.active {
-            background: #f093fb;
-            width: 30px;
-            border-radius: 6px;
-        }
-
-        /* Grid de Productos */
-        .products-section {
-            margin-top: 3rem;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            color: white;
-            margin-bottom: 2rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .product-card {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-            transition: transform 0.3s, box-shadow 0.3s;
-            cursor: pointer;
-        }
-
-        .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 40px rgba(240, 147, 251, 0.4);
-            background: rgba(255, 255, 255, 0.25);
-        }
-
-        .product-image {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-        }
-
-        .product-info {
-            padding: 1.5rem;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-        }
-
-        .product-title {
-            font-size: 1.2rem;
-            color: #333;
-            margin-bottom: 0.5rem;
-        }
-
-        .product-price {
-            font-size: 1.5rem;
-            color: #f093fb;
-            font-weight: bold;
-            margin-bottom: 1rem;
-        }
-
-        .product-btn {
-            width: 100%;
-            padding: 0.8rem;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: transform 0.3s;
-            font-weight: 600;
-        }
-
-        .product-btn:hover {
-            transform: scale(1.05);
-        }
-
-        /* Flecha Ver Más */
-        .load-more {
-            text-align: center;
-            margin: 3rem 0;
-        }
-
-        .load-more-btn {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-        }
-
-        .load-more-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(5px);
-            border-color: #f093fb;
-        }
-
-        .arrow-down {
-            font-size: 1.5rem;
-            animation: bounce 2s infinite;
-        }
-
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-                transform: translateY(0);
-            }
-            40% {
-                transform: translateY(10px);
-            }
-            60% {
-                transform: translateY(5px);
-            }
-        }
-
-        /* Footer */
-        footer {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 2rem;
-            text-align: center;
-            margin-top: 3rem;
-        }
-
-        .footer-content {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .footer-links a {
-            color: #f093fb;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .footer-links a:hover {
-            color: #f5576c;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-
-            .carousel-item img {
-                height: 250px;
-            }
-
-            .carousel-caption {
-                padding: 0.5rem 1rem;
-            }
-
-            .carousel-caption h3 {
-                font-size: 1rem;
-            }
-
-            .carousel-caption p {
-                font-size: 0.9rem;
-            }
-
-            .carousel-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1.5rem;
-            }
-
-            .section-title {
-                font-size: 1.8rem;
-            }
-
-            .products-grid {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 1.5rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <nav>
-            <div class="logo">🛍️ TiendaVibe</div>
-            <ul class="nav-links">
-                <li><a href="#inicio">Inicio</a></li>
-                <li><a href="#productos">Productos</a></li>
-                <li><a href="#ofertas">Ofertas</a></li>
-                <li><a href="#contacto">Contacto</a></li>
-            </ul>
-            <div class="cart-icon">🛒 Carrito (0)</div>
-        </nav>
-    </header>
-
-    <div class="container">
-        <!-- Barra de Búsqueda -->
-        <div class="search-container">
-            <input type="text" class="search-bar" placeholder="🔍 Buscar productos..." id="searchInput">
-            <button class="search-btn" onclick="searchProducts()">🔎</button>
+<!-- REEMPLAZADO: se envolvieron las imágenes con enlaces a sus páginas de portada en Commons/Wikipedia -->
+<!-- Carrusel: -->
+<div class="carousel">
+    <div class="carousel-item">
+        <a href="https://commons.wikimedia.org/wiki/File:The_Dark_Knight_Batman.jpg" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=1200&h=400&fit=crop" alt="Batman">
+        </a>
+        <div class="carousel-caption">
+            <h3>Batman: The Dark Knight</h3>
+            <p>$24.99</p>
         </div>
+    </div>
+    <div class="carousel-item">
+        <a href="https://commons.wikimedia.org/wiki/File:Amazing_Fantasy_15.jpg" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1608889335941-32ac5f2041b9?w=1200&h=400&fit=crop" alt="Spider-Man">
+        </a>
+        <div class="carousel-caption">
+            <h3>Spider-Man: Amazing Fantasy</h3>
+            <p>$29.99</p>
+        </div>
+    </div>
+    <div class="carousel-item">
+        <a href="https://en.wikipedia.org/wiki/Man_of_Steel_(comics)" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1620912189213-96b8e495e859?w=1200&h=400&fit=crop" alt="Superman">
+        </a>
+        <div class="carousel-caption">
+            <h3>Superman: Man of Steel</h3>
+            <p>$27.99</p>
+        </div>
+    </div>
+    <div class="carousel-item">
+        <a href="https://commons.wikimedia.org/wiki/Category:Avengers:_Endgame" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1531259683007-016a7b628fc3?w=1200&h=400&fit=crop" alt="Avengers">
+        </a>
+        <div class="carousel-caption">
+            <h3>Avengers: Endgame Edition</h3>
+            <p>$34.99</p>
+        </div>
+    </div>
+</div>
 
-        <!-- Carrusel de Productos Destacados -->
-        <section class="carousel-section">
-            <h2 class="carousel-title">✨ Productos Destacados</h2>
-            <div class="carousel-container">
-                <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
-                <div class="carousel">
-                    <div class="carousel-item">
-                        <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=1200&h=400&fit=crop" alt="Batman">
-                        <div class="carousel-caption">
-                            <h3>Batman: The Dark Knight</h3>
-                            <p>$24.99</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <img src="https://images.unsplash.com/photo-1608889335941-32ac5f2041b9?w=1200&h=400&fit=crop" alt="Spider-Man">
-                        <div class="carousel-caption">
-                            <h3>Spider-Man: Amazing Fantasy</h3>
-                            <p>$29.99</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <img src="https://images.unsplash.com/photo-1620912189213-96b8e495e859?w=1200&h=400&fit=crop" alt="Superman">
-                        <div class="carousel-caption">
-                            <h3>Superman: Man of Steel</h3>
-                            <p>$27.99</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <img src="https://images.unsplash.com/photo-1531259683007-016a7b628fc3?w=1200&h=400&fit=crop" alt="Avengers">
-                        <div class="carousel-caption">
-                            <h3>Avengers: Endgame Edition</h3>
-                            <p>$34.99</p>
-                        </div>
-                    </div>
-                </div>
-                <button class="carousel-btn next" onclick="moveCarousel(1)">›</button>
-            </div>
-            <div class="carousel-dots" id="carouselDots"></div>
-        </section>
-
-        <!-- Grid de Productos -->
-        <section class="products-section" id="productos">
-            <h2 class="section-title">🌟 Todos Nuestros Productos</h2>
-            <div class="products-grid">
-                <!-- Productos Destacados del Carrusel -->
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400&h=250&fit=crop" alt="Batman" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Batman: The Dark Knight</h3>
-                        <p class="product-price">$24.99</p>
-                        <button class="product-btn" onclick="addToCart('Batman: The Dark Knight')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1608889335941-32ac5f2041b9?w=400&h=250&fit=crop" alt="Spider-Man" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Spider-Man: Amazing Fantasy</h3>
-                        <p class="product-price">$29.99</p>
-                        <button class="product-btn" onclick="addToCart('Spider-Man: Amazing Fantasy')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1620912189213-96b8e495e859?w=400&h=250&fit=crop" alt="Superman" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Superman: Man of Steel</h3>
-                        <p class="product-price">$27.99</p>
-                        <button class="product-btn" onclick="addToCart('Superman: Man of Steel')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1531259683007-016a7b628fc3?w=400&h=250&fit=crop" alt="Avengers" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Avengers: Endgame Edition</h3>
-                        <p class="product-price">$34.99</p>
-                        <button class="product-btn" onclick="addToCart('Avengers: Endgame Edition')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                
-                <!-- Más productos de cómics -->
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1608889476561-6242cfdbf622?w=400&h=250&fit=crop" alt="Wonder Woman" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Wonder Woman: 1984</h3>
-                        <p class="product-price">$22.99</p>
-                        <button class="product-btn" onclick="addToCart('Wonder Woman: 1984')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1635805737707-575885ab0820?w=400&h=250&fit=crop" alt="Iron Man" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Iron Man: Extremis</h3>
-                        <p class="product-price">$26.99</p>
-                        <button class="product-btn" onclick="addToCart('Iron Man: Extremis')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400&h=250&fit=crop&flip=h" alt="Joker" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Joker: Killing Joke</h3>
-                        <p class="product-price">$28.99</p>
-                        <button class="product-btn" onclick="addToCart('Joker: Killing Joke')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400&h=250&fit=crop&sat=-100" alt="The Flash" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">The Flash: Flashpoint</h3>
-                        <p class="product-price">$25.99</p>
-                        <button class="product-btn" onclick="addToCart('The Flash: Flashpoint')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=400&h=250&fit=crop" alt="X-Men" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">X-Men: Days of Future Past</h3>
-                        <p class="product-price">$31.99</p>
-                        <button class="product-btn" onclick="addToCart('X-Men: Days of Future Past')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1612036782143-f7f3bcabd56a?w=400&h=250&fit=crop" alt="Aquaman" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Aquaman: Throne of Atlantis</h3>
-                        <p class="product-price">$23.99</p>
-                        <button class="product-btn" onclick="addToCart('Aquaman: Throne of Atlantis')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1620912189213-96b8e495e859?w=400&h=250&fit=crop&flip=h" alt="Captain America" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Captain America: Civil War</h3>
-                        <p class="product-price">$30.99</p>
-                        <button class="product-btn" onclick="addToCart('Captain America: Civil War')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400&h=250&fit=crop&brightness=0.8" alt="Green Lantern" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Green Lantern: Rebirth</h3>
-                        <p class="product-price">$24.99</p>
-                        <button class="product-btn" onclick="addToCart('Green Lantern: Rebirth')">Agregar al Carrito</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Botón Ver Más -->
-        <div class="load-more">
-            <button class="load-more-btn" onclick="loadMore()">
-                Ver más productos
-                <span class="arrow-down">↓</span>
-            </button>
+<!-- Grid de Productos: cada .product-image envuelto en <a href="..."> -->
+<div class="products-grid">
+    <div class="product-card">
+        <a href="https://commons.wikimedia.org/wiki/File:The_Dark_Knight_Batman.jpg" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400&h=250&fit=crop" alt="Batman" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Batman: The Dark Knight</h3>
+            <p class="product-price">$24.99</p>
+            <button class="product-btn" onclick="addToCart('Batman: The Dark Knight')">Agregar al Carrito</button>
         </div>
     </div>
 
-    <footer>
-        <div class="footer-content">
-            <div class="footer-links">
-                <a href="#sobre">Sobre Nosotros</a>
-                <a href="#terminos">Términos</a>
-                <a href="#privacidad">Privacidad</a>
-                <a href="#contacto">Contacto</a>
-            </div>
-            <p>&copy; 2025 TiendaVibe. Todos los derechos reservados.</p>
+    <div class="product-card">
+        <a href="https://commons.wikimedia.org/wiki/File:Amazing_Fantasy_15.jpg" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1608889335941-32ac5f2041b9?w=400&h=250&fit=crop" alt="Spider-Man" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Spider-Man: Amazing Fantasy</h3>
+            <p class="product-price">$29.99</p>
+            <button class="product-btn" onclick="addToCart('Spider-Man: Amazing Fantasy')">Agregar al Carrito</button>
         </div>
-    </footer>
+    </div>
 
-    <script>
-        let currentSlide = 0;
-        let cartCount = 0;
-        const totalSlides = 4;
+    <div class="product-card">
+        <a href="https://en.wikipedia.org/wiki/Man_of_Steel_(comics)" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1620912189213-96b8e495e859?w=400&h=250&fit=crop" alt="Superman" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Superman: Man of Steel</h3>
+            <p class="product-price">$27.99</p>
+            <button class="product-btn" onclick="addToCart('Superman: Man of Steel')">Agregar al Carrito</button>
+        </div>
+    </div>
 
-        // Inicializar dots del carrusel
-        function initDots() {
-            const dotsContainer = document.getElementById('carouselDots');
-            for (let i = 0; i < totalSlides; i++) {
-                const dot = document.createElement('div');
-                dot.className = 'dot';
-                if (i === 0) dot.classList.add('active');
-                dot.onclick = () => goToSlide(i);
-                dotsContainer.appendChild(dot);
-            }
-        }
+    <div class="product-card">
+        <a href="https://commons.wikimedia.org/wiki/Category:Avengers:_Endgame" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1531259683007-016a7b628fc3?w=400&h=250&fit=crop" alt="Avengers" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Avengers: Endgame Edition</h3>
+            <p class="product-price">$34.99</p>
+            <button class="product-btn" onclick="addToCart('Avengers: Endgame Edition')">Agregar al Carrito</button>
+        </div>
+    </div>
 
-        // Mover carrusel
-        function moveCarousel(direction) {
-            currentSlide += direction;
-            if (currentSlide < 0) currentSlide = totalSlides - 1;
-            if (currentSlide >= totalSlides) currentSlide = 0;
-            updateCarousel();
-        }
+    <!-- Resto de productos: mismo patrón (envoltura con <a href="...">) -->
+    <div class="product-card">
+        <a href="https://en.wikipedia.org/wiki/Wonder_Woman_(film)" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1608889476561-6242cfdbf622?w=400&h=250&fit=crop" alt="Wonder Woman" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Wonder Woman: 1984</h3>
+            <p class="product-price">$22.99</p>
+            <button class="product-btn" onclick="addToCart('Wonder Woman: 1984')">Agregar al Carrito</button>
+        </div>
+    </div>
 
-        // Ir a slide específico
-        function goToSlide(index) {
-            currentSlide = index;
-            updateCarousel();
-        }
+    <div class="product-card">
+        <a href="https://en.wikipedia.org/wiki/Extremis_(comics)" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1635805737707-575885ab0820?w=400&h=250&fit=crop" alt="Iron Man" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Iron Man: Extremis</h3>
+            <p class="product-price">$26.99</p>
+            <button class="product-btn" onclick="addToCart('Iron Man: Extremis')">Agregar al Carrito</button>
+        </div>
+    </div>
 
-        // Actualizar posición del carrusel
-        function updateCarousel() {
-            const carousel = document.querySelector('.carousel');
-            carousel.style.transform = `translateX(-${currentSlide * 100}%)`;
-            
-            // Actualizar dots
-            const dots = document.querySelectorAll('.dot');
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index === currentSlide);
-            });
-        }
+    <div class="product-card">
+        <a href="https://en.wikipedia.org/wiki/The_Killing_Joke" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400&h=250&fit=crop&flip=h" alt="Joker" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Joker: Killing Joke</h3>
+            <p class="product-price">$28.99</p>
+            <button class="product-btn" onclick="addToCart('Joker: Killing Joke')">Agregar al Carrito</button>
+        </div>
+    </div>
 
-        // Auto-play del carrusel
-        setInterval(() => {
-            moveCarousel(1);
-        }, 5000);
+    <div class="product-card">
+        <a href="https://en.wikipedia.org/wiki/Flashpoint" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400&h=250&fit=crop&sat=-100" alt="The Flash" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">The Flash: Flashpoint</h3>
+            <p class="product-price">$25.99</p>
+            <button class="product-btn" onclick="addToCart('The Flash: Flashpoint')">Agregar al Carrito</button>
+        </div>
+    </div>
 
-        // Agregar al carrito
-        function addToCart(productName) {
-            cartCount++;
-            document.querySelector('.cart-icon').textContent = `🛒 Carrito (${cartCount})`;
-            
-            // Animación visual
-            const cartIcon = document.querySelector('.cart-icon');
-            cartIcon.style.transform = 'scale(1.2)';
-            setTimeout(() => {
-                cartIcon.style.transform = 'scale(1)';
-            }, 200);
-            
-            alert(`¡${productName} agregado al carrito!`);
-        }
+    <div class="product-card">
+        <a href="https://en.wikipedia.org/wiki/Days_of_Future_Past" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=400&h=250&fit=crop" alt="X-Men" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">X-Men: Days of Future Past</h3>
+            <p class="product-price">$31.99</p>
+            <button class="product-btn" onclick="addToCart('X-Men: Days of Future Past')">Agregar al Carrito</button>
+        </div>
+    </div>
 
-        // Buscar productos
-        function searchProducts() {
-            const searchTerm = document.getElementById('searchInput').value;
-            if (searchTerm.trim()) {
-                alert(`Buscando: "${searchTerm}"\n\n¡Próximamente implementaremos la búsqueda real!`);
-            }
-        }
+    <div class="product-card">
+        <a href="https://en.wikipedia.org/wiki/Throne_of_Atlantis" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1612036782143-f7f3bcabd56a?w=400&h=250&fit=crop" alt="Aquaman" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Aquaman: Throne of Atlantis</h3>
+            <p class="product-price">$23.99</p>
+            <button class="product-btn" onclick="addToCart('Aquaman: Throne of Atlantis')">Agregar al Carrito</button>
+        </div>
+    </div>
 
-        // Presionar Enter para buscar
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchProducts();
-            }
-        });
+    <div class="product-card">
+        <a href="https://en.wikipedia.org/wiki/Civil_War_(comics)" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1620912189213-96b8e495e859?w=400&h=250&fit=crop&flip=h" alt="Captain America" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Captain America: Civil War</h3>
+            <p class="product-price">$30.99</p>
+            <button class="product-btn" onclick="addToCart('Captain America: Civil War')">Agregar al Carrito</button>
+        </div>
+    </div>
 
-        // Cargar más productos
-        function loadMore() {
-            alert('¡Cargando más productos!\n\nAquí se cargarían más productos de tu catálogo.');
-            // Aquí podrías agregar lógica para cargar más productos dinámicamente
-        }
-
-        // Inicializar
-        initDots();
-    </script>
-</body>
-</html>
+    <div class="product-card">
+        <a href="https://en.wikipedia.org/wiki/Green_Lantern:_Rebirth" target="_blank" rel="noopener">
+            <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400&h=250&fit=crop&brightness=0.8" alt="Green Lantern" class="product-image">
+        </a>
+        <div class="product-info">
+            <h3 class="product-title">Green Lantern: Rebirth</h3>
+            <p class="product-price">$24.99</p>
+            <button class="product-btn" onclick="addToCart('Green Lantern: Rebirth')">Agregar al Carrito</button>
+        </div>
+    </div>
+</div>

@@ -107,9 +107,11 @@
         }
         /* Quitar emoji duplicado en el botón de búsqueda */
 .search-btn::before {
-    content: '';
-    /* puedes dejar el filter si lo usas para otros estilos, o eliminar esta línea */
-    filter: none;
+    content: '🔎';
+    color: #ffffff;        /* color blanco */
+    filter: none;          /* quitar filtros que no afectan al texto */
+    display: inline-block; /* evitar problemas de line-height */
+    font-size: 1.05em;     /* ajusta tamaño si hace falta */
 }
 
 
@@ -158,8 +160,12 @@
         }
         /* Quitar emoji duplicado en el título */
 .carousel-title::before {
-    content: '';
+    content: '✨';
+    color: #ffffff;        /* color blanco */
     filter: none;
+    margin-right: 0.4rem;  /* espacio entre emoji y texto */
+    display: inline-block;
+    font-size: 1.05em;
 }
 
         .carousel-container { position:relative; overflow:hidden; border-radius:8px; }
@@ -652,5 +658,6 @@
     </script>
 </body>
 </html>
+
 
 

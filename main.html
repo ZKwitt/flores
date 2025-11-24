@@ -465,40 +465,38 @@
             <div class="carousel-container">
                 <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
                 <div class="carousel">
-                    <!-- Usé imágenes de Wikipedia / Wikimedia Commons para estas portadas -->
-                    <div class="carousel-item">
-                        <!-- The Dark Knight: usé póster (Wikipedia) -->
-                        <img src="https://upload.wikimedia.org/wikipedia/en/8/8a/The_Dark_Knight_%282008%29_poster.jpg" alt="The Dark Knight">
-                        <div class="carousel-caption">
-                            <h3>Batman: The Dark Knight</h3>
-                            <p>$24.99</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <!-- Amazing Fantasy #15 (Amazing debut de Spider-Man) -->
-                        <img src="https://upload.wikimedia.org/wikipedia/en/0/0c/Amazing_Fantasy_15.jpg" alt="Amazing Fantasy #15">
-                        <div class="carousel-caption">
-                            <h3>Spider-Man: Amazing Fantasy</h3>
-                            <p>$29.99</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <!-- Iron Man: Extremis (portada subida en Wikipedia/Commons) -->
-                        <img src="https://upload.wikimedia.org/wikipedia/it/7/7c/Iron_Man_Extremis.jpg" alt="Iron Man Extremis">
-                        <div class="carousel-caption">
-                            <h3>Iron Man: Extremis</h3>
-                            <p>$26.99</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <!-- Avengers: Endgame (póster en Commons / Wikipedia) -->
-                        <img src="https://upload.wikimedia.org/wikipedia/en/7/7f/Avengers_Endgame_poster.jpg" alt="Avengers Endgame">
-                        <div class="carousel-caption">
-                            <h3>Avengers: Endgame Edition</h3>
-                            <p>$34.99</p>
-                        </div>
-                    </div>
-                </div>
+    <div class="carousel-item">
+        <img src="https://upload.wikimedia.org/wikipedia/en/8/8a/The_Dark_Knight_%282008%29_poster.jpg" alt="The Dark Knight">
+        <div class="carousel-caption">
+            <h3>Batman: The Dark Knight</h3>
+            <p>$24.99</p>
+        </div>
+    </div>
+
+    <div class="carousel-item">
+        <img src="https://upload.wikimedia.org/wikipedia/en/0/0c/Amazing_Fantasy_15.jpg" alt="Amazing Fantasy #15">
+        <div class="carousel-caption">
+            <h3>Spider-Man: Amazing Fantasy</h3>
+            <p>$29.99</p>
+        </div>
+    </div>
+
+    <div class="carousel-item">
+        <img src="https://upload.wikimedia.org/wikipedia/it/7/7c/Iron_Man_Extremis.jpg" alt="Iron Man: Extremis">
+        <div class="carousel-caption">
+            <h3>Iron Man: Extremis</h3>
+            <p>$26.99</p>
+        </div>
+    </div>
+
+    <div class="carousel-item">
+        <img src="https://upload.wikimedia.org/wikipedia/en/7/7f/Avengers_Endgame_poster.jpg" alt="Avengers Endgame">
+        <div class="carousel-caption">
+            <h3>Avengers: Endgame Edition</h3>
+            <p>$34.99</p>
+        </div>
+    </div>
+</div>
                 <button class="carousel-btn next" onclick="moveCarousel(1)">›</button>
             </div>
             <div class="carousel-dots" id="carouselDots"></div>
@@ -508,98 +506,61 @@
         <section class="products-section" id="productos">
             <h2 class="section-title">🌟 Todos Nuestros Productos</h2>
             <div class="products-grid">
-                <!-- Productos con imágenes enlazadas desde Wikipedia / Commons -->
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/0/0c/Amazing_Fantasy_15.jpg" alt="Batman" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Batman: The Dark Knight</h3>
-                        <p class="product-price">$24.99</p>
-                        <button class="product-btn" onclick="addToCart('Batman: The Dark Knight')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/0/0c/Amazing_Fantasy_15.jpg" alt="Spider-Man" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Spider-Man: Amazing Fantasy</h3>
-                        <p class="product-price">$29.99</p>
-                        <button class="product-btn" onclick="addToCart('Spider-Man: Amazing Fantasy')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/8/8a/The_Dark_Knight_%282008%29_poster.jpg" alt="Superman" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Superman: Man of Steel</h3>
-                        <p class="product-price">$27.99</p>
-                        <button class="product-btn" onclick="addToCart('Superman: Man of Steel')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/7/7f/Avengers_Endgame_poster.jpg" alt="Avengers" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Avengers: Endgame Edition</h3>
-                        <p class="product-price">$34.99</p>
-                        <button class="product-btn" onclick="addToCart('Avengers: Endgame Edition')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                
-                <!-- Más productos: varias portadas de Wikipedia/Commons -->
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/83/WonderWoman1984.png" alt="Wonder Woman" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Wonder Woman: 1984</h3>
-                        <p class="product-price">$22.99</p>
-                        <button class="product-btn" onclick="addToCart('Wonder Woman: 1984')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/it/7/7c/Iron_Man_Extremis.jpg" alt="Iron Man" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Iron Man: Extremis</h3>
-                        <p class="product-price">$26.99</p>
-                        <button class="product-btn" onclick="addToCart('Iron Man: Extremis')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <!-- Joker: portada (Wikipedia - fair use thumbnail en la página del cómic) -->
-                    <img src="https://upload.wikimedia.org/wikipedia/en/6/64/Killing_Joke.jpg" alt="Joker" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Joker: Killing Joke</h3>
-                        <p class="product-price">$28.99</p>
-                        <button class="product-btn" onclick="addToCart('Joker: Killing Joke')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/it/6/68/Flashpoint_1.jpg" alt="The Flash" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">The Flash: Flashpoint</h3>
-                        <p class="product-price">$25.99</p>
-                        <button class="product-btn" onclick="addToCart('The Flash: Flashpoint')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/X-Men_Days_of_Future_Past_Title.png" alt="X-Men" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">X-Men: Days of Future Past</h3>
-                        <p class="product-price">$31.99</p>
-                        <button class="product-btn" onclick="addToCart('X-Men: Days of Future Past')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Captain_America_Civil_War_logo.svg" alt="Captain America" class="product-image" style="height:250px; object-fit:contain; background: #fff;">
-                    <div class="product-info">
-                        <h3 class="product-title">Captain America: Civil War</h3>
-                        <p class="product-price">$30.99</p>
-                        <button class="product-btn" onclick="addToCart('Captain America: Civil War')">Agregar al Carrito</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Green_lantern.svg" alt="Green Lantern" class="product-image" style="height:250px; object-fit:contain; background: #fff;">
-                    <div class="product-info">
-                        <h3 class="product-title">Green Lantern: Rebirth</h3>
-                        <p class="product-price">$24.99</p>
-                        <button class="product-btn" onclick="addToCart('Green Lantern: Rebirth')">Agregar al Carrito</button>
-                    </div>
-                </div>
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/en/8/8a/The_Dark_Knight_%282008%29_poster.jpg" alt="Batman" class="product-image">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/en/0/0c/Amazing_Fantasy_15.jpg" alt="Spider-Man" class="product-image">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/en/5/55/Man_of_Steel_2013_poster.jpg" alt="Superman: Man of Steel" class="product-image">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/en/7/7f/Avengers_Endgame_poster.jpg" alt="Avengers" class="product-image">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/8/83/WonderWoman1984.png" alt="Wonder Woman" class="product-image">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/it/7/7c/Iron_Man_Extremis.jpg" alt="Iron Man" class="product-image">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/en/6/64/Killing_Joke.jpg" alt="Joker" class="product-image">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/it/6/68/Flashpoint_1.jpg" alt="Flashpoint" class="product-image">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/X-Men_Days_of_Future_Past_Title.png" alt="X-Men" class="product-image">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Captain_America_Civil_War_logo.svg" alt="Captain America" class="product-image contain" style="height:250px;">
+        <div class="product-info">...</div>
+    </div>
+
+    <div class="product-card">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Green_lantern.svg" alt="Green Lantern" class="product-image contain" style="height:250px;">
+        <div class="product-info">...</div>
+    </div>
+</div>
             </div>
         </section>
 
@@ -713,3 +674,4 @@
     </script>
 </body>
 </html>
+

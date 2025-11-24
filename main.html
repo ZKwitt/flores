@@ -8,127 +8,405 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background: #0a0a0a;
             min-height: 100vh;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(75, 0, 130, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(75, 0, 130, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(75, 0, 130, 0.08) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
         }
         header {
-            background: rgba(255,255,255,0.95);
+            background: rgba(15, 15, 15, 0.95);
             backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            position: sticky; top: 0; z-index:1000;
+            padding: 1.2rem 2rem;
+            box-shadow: 0 2px 30px rgba(75, 0, 130, 0.4);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 2px solid rgba(75, 0, 130, 0.5);
         }
-        nav { display:flex; justify-content:space-between; align-items:center; max-width:1400px; margin:0 auto; }
-        .logo { font-size:1.8rem; font-weight:bold;
-            background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+        nav { display:flex; justify-content:space-between; align-items:center; max-width:1400px; margin:0 auto; position: relative; z-index: 1; }
+        .logo { 
+            font-size:2rem; 
+            font-weight:900;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(75, 0, 130, 0.8);
         }
-        .nav-links { display:flex; gap:2rem; list-style:none; }
-        .nav-links a { text-decoration:none; color:#333; font-weight:500; transition:color .3s; }
-        .nav-links a:hover { color:#f093fb; }
-
-        .search-container { max-width:600px; margin:2rem auto; position:relative; }
-        .search-bar {
-            width:100%; padding:1rem 3rem 1rem 1.5rem; border:none; border-radius:50px; font-size:1rem;
-            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.15); transition:all .3s;
+        .logo::before {
+            content: '🦸';
+            filter: grayscale(100%) brightness(0) invert(1);
+            margin-right: 0.5rem;
         }
-        .search-bar:focus { outline:none; box-shadow:0 8px 40px rgba(240,147,251,0.4); transform:scale(1.02); }
-        .search-btn {
-            position:absolute; right:5px; top:50%; transform:translateY(-50%);
-            background: linear-gradient(135deg,#f093fb 0%,#f5576c 100%);
-            border:none; color:white; width:45px; height:45px; border-radius:50%; cursor:pointer; font-size:1.2rem;
+        .nav-links { display:flex; gap:2.5rem; list-style:none; }
+        .nav-links a { 
+            text-decoration:none; 
+            color:#fff; 
+            font-weight:600; 
             transition:all .3s;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
         }
-        .search-btn:hover { transform:translateY(-50%) scale(1.1); }
+        .nav-links a:hover { 
+            color:#7B2CBF; 
+            text-shadow: 0 0 10px rgba(75, 0, 130, 0.8);
+        }
+
+        .search-container { max-width:600px; margin:2.5rem auto; position:relative; z-index: 1; }
+        .search-bar {
+            width:100%; 
+            padding:1rem 3rem 1rem 1.5rem; 
+            border:2px solid rgba(75, 0, 130, 0.4); 
+            border-radius:8px; 
+            font-size:1rem;
+            background: rgba(20, 20, 20, 0.9); 
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition:all .3s;
+            color: #fff;
+        }
+        .search-bar::placeholder { color: rgba(255, 255, 255, 0.5); }
+        .search-bar:focus { 
+            outline:none; 
+            border-color: #7B2CBF;
+            box-shadow:0 4px 30px rgba(75, 0, 130, 0.5); 
+            transform:translateY(-2px);
+        }
+        .search-btn {
+            position:absolute; 
+            right:8px; 
+            top:50%; 
+            transform:translateY(-50%);
+            background: linear-gradient(135deg, #4B0082 0%, #7B2CBF 100%);
+            border:none; 
+            color:white; 
+            width:42px; 
+            height:42px; 
+            border-radius:6px; 
+            cursor:pointer; 
+            font-size:1.2rem;
+            transition:all .3s;
+            box-shadow: 0 4px 15px rgba(75, 0, 130, 0.5);
+        }
+        .search-btn:hover { 
+            transform:translateY(-50%) scale(1.05); 
+            box-shadow: 0 6px 20px rgba(75, 0, 130, 0.7);
+        }
+        .search-btn::before {
+            content: '🔎';
+            filter: grayscale(100%) brightness(0) invert(1);
+        }
 
         .cart-icon {
-            background: linear-gradient(135deg,#f093fb 0%,#f5576c 100%);
-            color:white; padding:.7rem 1.5rem; border-radius:25px; cursor:pointer; transition:transform .3s;
+            background: linear-gradient(135deg, #4B0082 0%, #7B2CBF 100%);
+            color:white; 
+            padding:.8rem 1.8rem; 
+            border-radius:6px; 
+            cursor:pointer; 
+            transition:all .3s;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(75, 0, 130, 0.5);
         }
-        .cart-icon:hover { transform:scale(1.05); }
+        .cart-icon:hover { 
+            transform:translateY(-2px); 
+            box-shadow: 0 6px 20px rgba(75, 0, 130, 0.7);
+        }
+        .cart-icon::before {
+            content: '🛒 ';
+            filter: grayscale(100%) brightness(0) invert(1);
+        }
 
-        .container { max-width:1400px; margin:2rem auto; padding:0 2rem; }
+        .container { max-width:1400px; margin:2rem auto; padding:0 2rem; position: relative; z-index: 1; }
 
         .carousel-section {
-            background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
-            border:1px solid rgba(255,255,255,0.2); border-radius:20px; padding:2rem; margin-bottom:3rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            background: rgba(20, 20, 20, 0.6); 
+            backdrop-filter: blur(10px);
+            border:2px solid rgba(75, 0, 130, 0.3); 
+            border-radius:12px; 
+            padding:2.5rem; 
+            margin-bottom:3rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
-        .carousel-title { text-align:center; font-size:2rem; color:white; margin-bottom:2rem; text-shadow:2px 2px 4px rgba(0,0,0,0.2); }
-        .carousel-container { position:relative; overflow:hidden; border-radius:15px; }
+        .carousel-title { 
+            text-align:center; 
+            font-size:2.2rem; 
+            color:#fff; 
+            margin-bottom:2rem; 
+            text-shadow:0 0 20px rgba(75, 0, 130, 0.8);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .carousel-title::before {
+            content: '✨ ';
+            filter: grayscale(100%) brightness(0) invert(1);
+        }
+        .carousel-container { position:relative; overflow:hidden; border-radius:8px; }
         .carousel { display:flex; transition:transform .5s ease-in-out; }
         .carousel-item { min-width:100%; position:relative; }
-        .carousel-item img { display:block; width:100%; height:400px; object-fit:contain; border-radius:15px; background:#1a1a1a; }
+        .carousel-item img { 
+            display:block; 
+            width:100%; 
+            height:450px; 
+            object-fit:contain; 
+            border-radius:8px; 
+            background:#0f0f0f;
+            border: 2px solid rgba(75, 0, 130, 0.3);
+        }
         .carousel-caption {
-            position:absolute; bottom:20px; left:20px; background: rgba(240,147,251,0.95); backdrop-filter: blur(10px);
-            color:white; padding:1rem 2rem; border-radius:10px;
+            position:absolute; 
+            bottom:25px; 
+            left:25px; 
+            background: rgba(15, 15, 15, 0.95); 
+            backdrop-filter: blur(10px);
+            color:white; 
+            padding:1.2rem 2rem; 
+            border-radius:8px;
+            border: 2px solid rgba(75, 0, 130, 0.6);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
         }
-        .carousel-caption h3 { font-size:1.5rem; margin-bottom:.5rem; }
-        .carousel-caption p { font-size:1.2rem; font-weight:bold; }
+        .carousel-caption h3 { 
+            font-size:1.6rem; 
+            margin-bottom:.5rem;
+            font-weight: 800;
+            text-shadow: 0 0 10px rgba(75, 0, 130, 0.8);
+        }
+        .carousel-caption p { 
+            font-size:1.3rem; 
+            font-weight:bold;
+            color: #9D4EDD;
+        }
         .carousel-btn {
-            position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.9); border:none;
-            font-size:2rem; padding:1rem; cursor:pointer; border-radius:50%; width:50px; height:50px; z-index:10;
-            display:flex; align-items:center; justify-content:center; transition:all .3s;
+            position:absolute; 
+            top:50%; 
+            transform:translateY(-50%); 
+            background:rgba(20, 20, 20, 0.9); 
+            border:2px solid rgba(75, 0, 130, 0.4);
+            font-size:2rem; 
+            padding:1rem; 
+            cursor:pointer; 
+            border-radius:6px; 
+            width:50px; 
+            height:50px; 
+            z-index:10;
+            display:flex; 
+            align-items:center; 
+            justify-content:center; 
+            transition:all .3s;
+            color: #fff;
         }
-        .carousel-btn:hover { background:#764ba2; color:white; }
-        .carousel-btn.prev { left:20px; } .carousel-btn.next { right:20px; }
-        .carousel-dots { display:flex; justify-content:center; gap:10px; margin-top:1rem; }
-        .dot { width:12px; height:12px; border-radius:50%; background:#ddd; cursor:pointer; transition:all .3s; }
-        .dot.active { background:#f093fb; width:30px; border-radius:6px; }
+        .carousel-btn:hover { 
+            background:#7B2CBF; 
+            border-color: #7B2CBF;
+            box-shadow: 0 4px 20px rgba(75, 0, 130, 0.7);
+        }
+        .carousel-btn.prev { left:20px; } 
+        .carousel-btn.next { right:20px; }
+        .carousel-dots { display:flex; justify-content:center; gap:10px; margin-top:1.5rem; }
+        .dot { 
+            width:10px; 
+            height:10px; 
+            border-radius:2px; 
+            background:rgba(255, 255, 255, 0.3); 
+            cursor:pointer; 
+            transition:all .3s;
+            border: 1px solid rgba(75, 0, 130, 0.4);
+        }
+        .dot.active { 
+            background:#7B2CBF; 
+            width:35px; 
+            border-radius:2px;
+            box-shadow: 0 0 10px rgba(75, 0, 130, 0.8);
+        }
 
         .products-section { margin-top:3rem; }
-        .section-title { text-align:center; font-size:2.5rem; color:white; margin-bottom:2rem; text-shadow:2px 2px 4px rgba(0,0,0,0.2); }
-        .products-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:2rem; margin-bottom:3rem; }
+        .section-title { 
+            text-align:center; 
+            font-size:2.5rem; 
+            color:#fff; 
+            margin-bottom:2.5rem; 
+            text-shadow:0 0 20px rgba(75, 0, 130, 0.8);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        .section-title::before {
+            content: '🌟 ';
+            filter: grayscale(100%) brightness(0) invert(1);
+        }
+        .products-grid { 
+            display:grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); 
+            gap:2rem; 
+            margin-bottom:3rem; 
+        }
         .product-card {
-            background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.3);
-            border-radius:15px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.12); transition:transform .3s, box-shadow .3s;
+            background: rgba(20, 20, 20, 0.7); 
+            backdrop-filter: blur(10px); 
+            border:2px solid rgba(75, 0, 130, 0.3);
+            border-radius:10px; 
+            overflow:hidden; 
+            box-shadow:0 8px 32px rgba(0, 0, 0, 0.6); 
+            transition:all .3s;
             cursor:pointer;
         }
-        .product-card:hover { transform:translateY(-10px); box-shadow:0 15px 40px rgba(240,147,251,0.4); background: rgba(255,255,255,0.25); }
-        .product-image { display:block; width:100%; height:350px; object-fit:contain; background:#1a1a1a; }
-        .product-info { padding:1.5rem; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); }
-        .product-title { font-size:1.2rem; color:#333; margin-bottom:.5rem; }
-        .product-price { font-size:1.5rem; color:#f093fb; font-weight:bold; margin-bottom:1rem; }
-        .product-btn { width:100%; padding:.8rem; background: linear-gradient(135deg,#f093fb 0%,#f5576c 100%); color:white; border:none; border-radius:8px; font-size:1rem; cursor:pointer; transition:transform .3s; font-weight:600; }
-        .product-btn:hover { transform:scale(1.05); }
+        .product-card:hover { 
+            transform:translateY(-8px); 
+            box-shadow:0 12px 40px rgba(75, 0, 130, 0.5); 
+            border-color: #7B2CBF;
+        }
+        .product-image { 
+            display:block; 
+            width:100%; 
+            height:380px; 
+            object-fit:contain; 
+            background:#0f0f0f;
+            transition: transform .3s;
+        }
+        .product-card:hover .product-image {
+            transform: scale(1.05);
+        }
+        .product-info { 
+            padding:1.5rem; 
+            background: rgba(15, 15, 15, 0.95); 
+            backdrop-filter: blur(10px); 
+        }
+        .product-title { 
+            font-size:1.15rem; 
+            color:#fff; 
+            margin-bottom:.5rem;
+            font-weight: 700;
+        }
+        .product-price { 
+            font-size:1.6rem; 
+            color:#9D4EDD; 
+            font-weight:900; 
+            margin-bottom:1rem;
+            text-shadow: 0 0 10px rgba(75, 0, 130, 0.5);
+        }
+        .product-btn { 
+            width:100%; 
+            padding:.9rem; 
+            background: linear-gradient(135deg, #4B0082 0%, #7B2CBF 100%); 
+            color:white; 
+            border:none; 
+            border-radius:6px; 
+            font-size:1rem; 
+            cursor:pointer; 
+            transition:all .3s; 
+            font-weight:700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(75, 0, 130, 0.5);
+        }
+        .product-btn:hover { 
+            transform:translateY(-2px); 
+            box-shadow: 0 6px 20px rgba(75, 0, 130, 0.7);
+        }
 
         .load-more { text-align:center; margin:3rem 0; }
         .load-more-btn {
-            background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border:2px solid rgba(255,255,255,0.4);
-            color:white; padding:1rem 2rem; border-radius:50px; font-size:1.1rem; cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-weight:600; transition:all .3s;
+            background: rgba(20, 20, 20, 0.8); 
+            backdrop-filter: blur(10px); 
+            border:2px solid rgba(75, 0, 130, 0.5);
+            color:white; 
+            padding:1.2rem 2.5rem; 
+            border-radius:8px; 
+            font-size:1.1rem; 
+            cursor:pointer; 
+            display:inline-flex; 
+            align-items:center; 
+            gap:.8rem; 
+            font-weight:700; 
+            transition:all .3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        .load-more-btn:hover { background: rgba(255,255,255,0.3); transform:translateY(5px); border-color:#f093fb; }
+        .load-more-btn:hover { 
+            background: rgba(75, 0, 130, 0.3); 
+            transform:translateY(-3px); 
+            border-color:#7B2CBF;
+            box-shadow: 0 6px 20px rgba(75, 0, 130, 0.5);
+        }
         .arrow-down { font-size:1.5rem; animation:bounce 2s infinite; }
-        @keyframes bounce { 0%,20%,50%,80%,100%{transform:translateY(0);} 40%{transform:translateY(10px);} 60%{transform:translateY(5px);} }
+        @keyframes bounce { 
+            0%,20%,50%,80%,100%{transform:translateY(0);} 
+            40%{transform:translateY(10px);} 
+            60%{transform:translateY(5px);} 
+        }
 
-        footer { background: rgba(255,255,255,0.95); padding:2rem; text-align:center; margin-top:3rem; }
+        footer { 
+            background: rgba(15, 15, 15, 0.95); 
+            padding:2.5rem; 
+            text-align:center; 
+            margin-top:4rem;
+            border-top: 2px solid rgba(75, 0, 130, 0.5);
+            position: relative;
+            z-index: 1;
+        }
         .footer-content { max-width:1400px; margin:0 auto; }
-        .footer-links { display:flex; justify-content:center; gap:2rem; margin-bottom:1rem; flex-wrap:wrap; }
-        .footer-links a { color:#f093fb; text-decoration:none; font-weight:500; }
-        .footer-links a:hover { color:#f5576c; }
+        .footer-links { 
+            display:flex; 
+            justify-content:center; 
+            gap:2.5rem; 
+            margin-bottom:1.5rem; 
+            flex-wrap:wrap; 
+        }
+        .footer-links a { 
+            color:#9D4EDD; 
+            text-decoration:none; 
+            font-weight:600;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            transition: all .3s;
+        }
+        .footer-links a:hover { 
+            color:#7B2CBF;
+            text-shadow: 0 0 10px rgba(75, 0, 130, 0.8);
+        }
+        footer p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
 
         @media (max-width:768px){
             .nav-links{display:none;}
-            .carousel-item img{height:250px;}
+            .carousel-item img{height:280px;}
             .carousel-btn{width:40px;height:40px;font-size:1.5rem;}
             .section-title{font-size:1.8rem;}
             .products-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.5rem;}
-            .product-image{height:300px;}
+            .product-image{height:320px;}
         }
     </style>
 </head>
 <body>
     <header>
         <nav>
-            <div class="logo">🦸 Kukoroshop</div>
+            <div class="logo">KUKOROSHOP</div>
             <ul class="nav-links">
                 <li><a href="#inicio">Inicio</a></li>
                 <li><a href="#productos">Productos</a></li>
                 <li><a href="#ofertas">Ofertas</a></li>
                 <li><a href="#contacto">Contacto</a></li>
             </ul>
-            <div class="cart-icon">🛒 Carrito (0)</div>
+            <div class="cart-icon">Carrito (0)</div>
         </nav>
     </header>
 
@@ -139,7 +417,7 @@
         </div>
 
         <section class="carousel-section">
-            <h2 class="carousel-title">✨ Cómics Destacados</h2>
+            <h2 class="carousel-title">✨ Destacados</h2>
             <div class="carousel-container">
                 <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
                 <div class="carousel">
@@ -178,14 +456,14 @@
         </section>
 
         <section id="productos" class="products-section">
-            <h2 class="section-title">🌟 Todos Nuestros Cómics</h2>
+            <h2 class="section-title">🌟 Catálogo</h2>
             <div class="products-grid">
                 <div class="product-card">
                     <img src="https://m.media-amazon.com/images/I/71TfU3GnfML._AC_UF1000,1000_QL80_.jpg" alt="Batman" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">Batman: The Dark Knight Returns</h3>
                         <p class="product-price">$124,000</p>
-                        <button class="product-btn" onclick="addToCart('Batman: The Dark Knight Returns')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('Batman: The Dark Knight Returns')">Agregar</button>
                     </div>
                 </div>
 
@@ -194,7 +472,7 @@
                     <div class="product-info">
                         <h3 class="product-title">Spider-Man: Amazing Fantasy #15</h3>
                         <p class="product-price">$130,000</p>
-                        <button class="product-btn" onclick="addToCart('Spider-Man: Amazing Fantasy #15')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('Spider-Man: Amazing Fantasy #15')">Agregar</button>
                     </div>
                 </div>
 
@@ -203,7 +481,7 @@
                     <div class="product-info">
                         <h3 class="product-title">Superman #120</h3>
                         <p class="product-price">$127,000</p>
-                        <button class="product-btn" onclick="addToCart('Superman #120')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('Superman #120')">Agregar</button>
                     </div>
                 </div>
 
@@ -212,7 +490,7 @@
                     <div class="product-info">
                         <h3 class="product-title">The Avengers #1</h3>
                         <p class="product-price">$134,000</p>
-                        <button class="product-btn" onclick="addToCart('The Avengers #1')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('The Avengers #1')">Agregar</button>
                     </div>
                 </div>
 
@@ -221,7 +499,7 @@
                     <div class="product-info">
                         <h3 class="product-title">Absolute Wonder Woman: #1-3</h3>
                         <p class="product-price">$122,000</p>
-                        <button class="product-btn" onclick="addToCart('Absolute Wonder Woman: #1-3')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('Absolute Wonder Woman: #1-3')">Agregar</button>
                     </div>
                 </div>
 
@@ -230,7 +508,7 @@
                     <div class="product-info">
                         <h3 class="product-title">The invincible Iron Man #1</h3>
                         <p class="product-price">$126,000</p>
-                        <button class="product-btn" onclick="addToCart('The invincible Iron Man #1')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('The invincible Iron Man #1')">Agregar</button>
                     </div>
                 </div>
 
@@ -239,7 +517,7 @@
                     <div class="product-info">
                         <h3 class="product-title">Batman: The Killing Joke</h3>
                         <p class="product-price">$128,000</p>
-                        <button class="product-btn" onclick="addToCart('Batman: The Killing Joke')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('Batman: The Killing Joke')">Agregar</button>
                     </div>
                 </div>
 
@@ -248,7 +526,7 @@
                     <div class="product-info">
                         <h3 class="product-title">Flashpoint</h3>
                         <p class="product-price">$125,000</p>
-                        <button class="product-btn" onclick="addToCart('Flashpoint')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('Flashpoint')">Agregar</button>
                     </div>
                 </div>
 
@@ -257,7 +535,7 @@
                     <div class="product-info">
                         <h3 class="product-title">X-Men (2024): #1</h3>
                         <p class="product-price">$131,000</p>
-                        <button class="product-btn" onclick="addToCart('X-Men(2024): #1')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('X-Men(2024): #1')">Agregar</button>
                     </div>
                 </div>
 
@@ -266,7 +544,7 @@
                     <div class="product-info">
                         <h3 class="product-title">Batman Beyond: Hush Beyond</h3>
                         <p class="product-price">$23.99</p>
-                        <button class="product-btn" onclick="addToCart('Batman Beyond: Hush Beyond')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('Batman Beyond: Hush Beyond')">Agregar</button>
                     </div>
                 </div>
 
@@ -274,8 +552,8 @@
                     <img src="https://s3.amazonaws.com/comicgeeks/comics/covers/large-8252578.jpg" alt="Captain America" class="product-image">
                     <div class="product-info">
                         <h3 class="product-title">All New Captain America #1</h3>
-                        <p class="product-price">$130.,000</p>
-                        <button class="product-btn" onclick="addToCart('All New Captain America #1')">Agregar al Carrito</button>
+                        <p class="product-price">$130,000</p>
+                        <button class="product-btn" onclick="addToCart('All New Captain America #1')">Agregar</button>
                     </div>
                 </div>
 
@@ -284,14 +562,14 @@
                     <div class="product-info">
                         <h3 class="product-title">The Flash: Showcase #4</h3>
                         <p class="product-price">$124,000</p>
-                        <button class="product-btn" onclick="addToCart('The Flash: Showcase #4')">Agregar al Carrito</button>
+                        <button class="product-btn" onclick="addToCart('The Flash: Showcase #4')">Agregar</button>
                     </div>
                 </div>
             </div>
         </section>
 
         <div class="load-more">
-            <button class="load-more-btn" onclick="loadMore()">Ver más cómics <span class="arrow-down">↓</span></button>
+            <button class="load-more-btn" onclick="loadMore()">Ver más <span class="arrow-down">↓</span></button>
         </div>
     </div>
 
@@ -303,7 +581,7 @@
                 <a href="#privacidad">Privacidad</a>
                 <a href="#contacto">Contacto</a>
             </div>
-            <p>&copy; 2025 ComicVibe. Todos los derechos reservados.</p>
+            <p>&copy; 2025 KukoroShop. Todos los derechos reservados.</p>
         </div>
     </footer>
 
@@ -343,7 +621,7 @@
 
         function addToCart(productName){
             cartCount++;
-            document.querySelector('.cart-icon').textContent = `🛒 Carrito (${cartCount})`;
+            document.querySelector('.cart-icon').textContent = `Carrito (${cartCount})`;
             const cartIcon = document.querySelector('.cart-icon');
             cartIcon.style.transform = 'scale(1.2)';
             setTimeout(()=> cartIcon.style.transform = 'scale(1)', 200);
@@ -369,6 +647,4 @@
     </script>
 </body>
 </html>
-
-
 

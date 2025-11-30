@@ -980,40 +980,66 @@ cartPopupOverlay.addEventListener('click', (e)=>{ if(e.target === cartPopupOverl
 /* ensureCartActions: agrega (o reutiliza) botones dentro del popup para WhatsApp + Pagar tarjeta */
 function ensureCartActions(){
   if(!cartPopupOverlay) return;
-  let actions = cartPopupOverlay.querySelector('#cart-popup-actions');
-  if(actions) return; // ya creado
-  actions = document.createElement('div');
-  actions.id = 'cart-popup-actions';
-  actions.style = 'position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3000';
-  // botón cerrar (reusar)
-  const closeBtn = document.createElement('button');
-  closeBtn.innerText = 'Cerrar';
-  closeBtn.style = 'padding:10px;border-radius:8px;border:1px solid #333;background:transparent;color:#ddd';
-  closeBtn.onclick = closeCartPopup;
-  // botón whatsapp
-  const waBtn = document.createElement('button');
-  waBtn.innerText = 'Enviar por WhatsApp';
-  waBtn.style = 'padding:10px;border-radius:8px;background:#9D4EDD;color:#fff;border:none';
-  waBtn.onclick = sendToWhatsApp;
-  // botón pagar tarjeta
-  const payBtn = document.createElement('button');
-  payBtn.id = 'cart-paycard';
-  payBtn.innerText = 'Pagar con tarjeta';
-  payBtn.style = 'padding:10px;border-radius:8px;background:#3b82f6;color:#fff;border:none';
-  payBtn.onclick = openCardPaymentModal;
-  actions.appendChild(closeBtn);
-  actions.appendChild(waBtn);
-  actions.appendChild(payBtn);
-  // si el overlay contiene un elemento hijo central (pop-up), colocamos acciones dentro de él para que se vean encima
   const popupInner = cartPopupOverlay.querySelector('.cart-popup') || cartPopupOverlay.firstElementChild;
-  if(popupInner){
-    popupInner.style.position = 'relative';
-    popupInner.appendChild(actions);
+  if(!popupInner) return;
+
+  // buscar o crear fila de acciones (no absolute para evitar superposición)
+  let actionsRow = popupInner.querySelector('.cart-actions-row');
+  if(!actionsRow){
+    actionsRow = document.createElement('div');
+    actionsRow.className = 'cart-actions-row';
+    actionsRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:8px;border-top:1px solid #111';
+    popupInner.appendChild(actionsRow);
+  }
+
+  // -- Botón Cerrar (si no existe) --
+  if(!actionsRow.querySelector('.close-btn')){
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'close-btn';
+    closeBtn.innerText = 'Cerrar';
+    closeBtn.style.cssText = 'padding:8px;border-radius:8px;border:1px solid #333;background:transparent;color:#ddd';
+    closeBtn.onclick = closeCartPopup;
+    actionsRow.appendChild(closeBtn);
+  }
+
+  // -- Reusar botón WhatsApp existente si está en el DOM --
+  let existingWaBtn = popupInner.querySelector('#cart-confirm') || document.getElementById('cart-confirm');
+  if(existingWaBtn){
+    // si está en otro lugar, lo movemos a actionsRow para evitar duplicados visuales
+    if(existingWaBtn.parentElement !== actionsRow){
+      actionsRow.appendChild(existingWaBtn);
+      existingWaBtn.style.display = ''; // asegurarse visible
+      existingWaBtn.style.marginLeft = '6px';
+    }
   } else {
-    cartPopupOverlay.appendChild(actions);
+    // si no existe, creamos uno (solo entonces)
+    if(!actionsRow.querySelector('.wa-btn')){
+      const waBtn = document.createElement('button');
+      waBtn.className = 'wa-btn';
+      waBtn.innerText = 'Enviar por WhatsApp';
+      waBtn.style.cssText = 'padding:8px;border-radius:8px;background:#9D4EDD;color:#fff;border:none;margin-left:6px';
+      waBtn.onclick = sendToWhatsApp;
+      actionsRow.appendChild(waBtn);
+    }
+  }
+
+  // -- Botón Pagar con tarjeta (solo crear si no existe) --
+  if(!actionsRow.querySelector('#cart-paycard')){
+    const payBtn = document.createElement('button');
+    payBtn.id = 'cart-paycard';
+    payBtn.innerText = 'Pagar con tarjeta';
+    payBtn.style.cssText = 'padding:8px;border-radius:8px;background:#3b82f6;color:#fff;border:none;margin-left:6px';
+    payBtn.onclick = openCardPaymentModal;
+    actionsRow.appendChild(payBtn);
+  }
+
+  // eliminar duplicados antiguos si existieran (por si ya se añadieron varias veces antes)
+  const payDuplicates = popupInner.querySelectorAll('#cart-paycard');
+  if(payDuplicates.length > 1){
+    // dejar solo el primero y eliminar el resto
+    for(let i = 1; i < payDuplicates.length; i++) payDuplicates[i].remove();
   }
 }
-
 /* ---------- render dinámico de productos (similar a Marrie) ---------- */
 function renderProducts(products, sheetKey){
   if (!products || !products.length){
@@ -1464,3 +1490,4 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+

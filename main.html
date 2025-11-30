@@ -470,6 +470,7 @@
         <div id="cart-actions">
           <button id="cart-close" class="btn-small btn-ghost">Cerrar</button>
           <button id="cart-confirm" class="btn-small btn-primary">Enviar por WhatsApp</button>
+         <button id="cart-paycard" class="btn-small btn-primary" style="background:linear-gradient(135deg,#4B0082,#7B2CBF);">Pagar con tarjeta</button>
         </div>
       </div>
     </div>
@@ -976,6 +977,7 @@ cartIconBtn.addEventListener('click', openCartPopup);
 cartCloseBtn.addEventListener('click', closeCartPopup);
 cartConfirmBtn.addEventListener('click', sendToWhatsApp);
 cartPopupOverlay.addEventListener('click', (e)=>{ if(e.target === cartPopupOverlay) closeCartPopup(); });
+document.getElementById('cart-paycard').addEventListener('click', openCardPaymentModal);
 
 /* ensureCartActions: agrega (o reutiliza) botones dentro del popup para WhatsApp + Pagar tarjeta */
 function ensureCartActions(){
@@ -1464,3 +1466,4 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+

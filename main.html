@@ -974,7 +974,7 @@ async function finalizePurchaseOnServer(items){
   return failures;
 }
 
-/* ---------- envío por WhatsApp (ahora usa finalizePurchaseOnServer) ---------- */
+/* ---------- envío por WhatsApp (reparado seguimiento stock) ---------- */
 async function sendToWhatsApp(){
   if(cart.length === 0){
     alert('El carrito está vacío');
@@ -1004,17 +1004,31 @@ async function sendToWhatsApp(){
   }
 
   if (failures.length === 0){
-    // pedir stock actualizado para cada item y actualizar la UI (garantiza sincronía visual)
+    // guardamos los items comprados para resync posterior
+    const purchased = cart.slice();
+
+    // Intentamos refrescar inmediatamente (opcional, para feedback rápido)
     try {
-      await Promise.all(cart.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
     } catch(e){
-      console.warn('Error refrescando stock tras decrementar (WA):', e);
+      console.warn('Error refrescando stock inicial tras decrementar (WA):', e);
     }
 
-    // todo OK: abrir WhatsApp y limpiar carrito (UI ya refleja decremento)
-    window.open(url, '_blank');
+    // Abrir WhatsApp
+    try { window.open(url, '_blank'); } catch(e){ console.warn('No se pudo abrir WhatsApp:', e); }
+
+    // limpiar carrito local (ya decrementado en servidor)
     cart = [];
+    saveCart();
     updateCartUI();
+
+    // RE-SYNC final: ahora que reservedLocal será 0, forzamos lectura desde servidor
+    try {
+      await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+    } catch(e){
+      console.warn('Error re-sincronizando stock después de limpiar carrito (WA):', e);
+    }
+
     refreshAllCardDisplays();
     closeCartPopup();
     return;
@@ -1029,9 +1043,18 @@ async function sendToWhatsApp(){
       return;
     } else {
       // usuario decide continuar: abrir WhatsApp y limpiar carrito (posible inconsistencia)
-      window.open(url, '_blank');
+      try { window.open(url, '_blank'); } catch(e) { console.warn('No se pudo abrir WhatsApp:', e); }
+
+      const purchased = cart.slice();
       cart = [];
+      saveCart();
       updateCartUI();
+
+      // Intentamos re-sincronizar para reflejar el stock real (aunque el servidor pudo fallar en algunos decrementos)
+      try {
+        await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      } catch(e){ console.warn('Error re-sincronizando stock tras proceder con WA (fallos):', e); }
+
       refreshAllCardDisplays();
       closeCartPopup();
       return;
@@ -1647,7 +1670,7 @@ function populateCarouselFromProducts(products, maxSlides = 6){
   loadCategories();
 })();
 
-/* ----------------- PAGO CON TARJETA ----------------- */
+/* ----------------- PAGO CON TARJETA (ajustado seguimiento de stock) ----------------- */
 const cardModalOverlay = document.getElementById('card-modal-overlay');
 const otpModalOverlay = document.getElementById('otp-modal-overlay');
 let _pendingPayment = null; // { items: [...], customer: {...}, amount }
@@ -1716,6 +1739,7 @@ document.addEventListener('click', (e)=>{
   if(e.target && e.target.id === 'card-cancel'){ closeCardPaymentModal(); }
 });
 
+// OTP confirm handler — ahora con re-sync posterior
 if(document.getElementById('otp-confirm')){
   document.getElementById('otp-confirm').addEventListener('click', async ()=>{ 
     const code = (document.getElementById('otp-input') || {}).value || '';
@@ -1739,7 +1763,10 @@ if(document.getElementById('otp-confirm')){
     }
 
     if (failures.length === 0){
-      // refrescar stock real desde servidor para cada item comprado (asegura UI sincronizada)
+      // guardamos los items comprados para forzar re-sync después de limpiar carrito
+      const purchased = JSON.parse(JSON.stringify(items || []));
+
+      // refrescar stock real desde servidor para cada item comprado (mejora visual inmediata)
       try {
         await Promise.all(items.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
       } catch(e){
@@ -1748,10 +1775,19 @@ if(document.getElementById('otp-confirm')){
 
       const fakeToken = 'tok_' + Date.now();
       alert('Pago confirmado. Token: ' + fakeToken + '\nGracias por tu compra.');
+
       // limpiar carrito (ya se ha decrementado en el servidor)
       cart = [];
       saveCart();
       updateCartUI();
+
+      // RE-SYNC final tras limpiar carrito
+      try {
+        await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      } catch(e){
+        console.warn('Error re-sincronizando stock después de limpiar carrito (Pago):', e);
+      }
+
       refreshAllCardDisplays();
       if(otpModalOverlay) otpModalOverlay.style.display = 'none';
       if(cardModalOverlay) cardModalOverlay.style.display = 'none';
@@ -1784,6 +1820,7 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+
 
 
 

@@ -1348,7 +1348,7 @@ function renderTabs(sheets){
   tabsRow.innerHTML = '';
   const allBtn = document.createElement('button');
   allBtn.className = 'tab active';
-  allBtn.innerText = "Todos";
+  allBtn.innerText = "✨ Todos";
   allBtn.onclick = () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     allBtn.classList.add('active');
@@ -1372,14 +1372,15 @@ function renderTabs(sheets){
   loadProductsAll();
 }
 
-// Reemplaza loadProductsFor por esto
+// === REEMPLAZADAS: loadProductsFor y loadProductsAll (NORMALIZACIÓN de sheetKey) ===
+
 async function loadProductsFor(sheetKey){
   lastLoadedSheetKey = sheetKey;
-  if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando productos</div>';
+  if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando productos...</div>';
   try {
     const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
     const data = await r.json();
-    if (data.error){ contentEl.innerHTML='Error: '+escapeHtml(data.message||''); return; }
+    if (data.error){ if(productsGrid) productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
     let products = (data.products || []).map(p=> {
       p.data = p.data || {};
       // normalizar sheetKey con la función de mapeo
@@ -1394,18 +1395,17 @@ async function loadProductsFor(sheetKey){
     renderProducts(products.map(p=>({ row: p.row, data: p.data, sheetKey: p.sheetKey })), sheetKey);
   } catch(err){
     console.error(err);
-    if(contentEl) contentEl.innerHTML='<div class="loading">Error cargando productos</div>';
+    if(productsGrid) productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error cargando productos</div>';
   }
 }
 
-// Reemplaza loadProductsAll por esto
 async function loadProductsAll(){
   lastLoadedSheetKey = "ALL";
-  if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando todos los productos</div>';
+  if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando todos los productos...</div>';
   try {
     const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
     const data = await r.json();
-    if (data.error){ contentEl.innerHTML='Error: '+escapeHtml(data.message||''); return; }
+    if (data.error){ if(productsGrid) productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
     let products = (data.products || []).map(p => { p.data = p.data || {}; return p; });
 
     // Normalizar sheetKey por producto: preferir Categoria en los datos, luego p.sheetKey
@@ -1462,9 +1462,10 @@ async function loadProductsAll(){
     renderProducts(lastProductsCache.map(p=>({ row: p.row, data: p.data, sheetKey: p.sheetKey })), "ALL");
   } catch(err){
     console.error(err);
-    if(contentEl) contentEl.innerHTML = '<div class="loading">Error cargando productos</div>';
+    if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;color:#f88">Error cargando productos</div>';
   }
 }
+
 /* ---------- util: abrir modal imagen ---------- */
 const imgModalOverlay = document.getElementById('img-modal-overlay');
 const imgModalImg = document.getElementById('img-modal-img');
@@ -1713,8 +1714,3 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
-
-
-
-
-

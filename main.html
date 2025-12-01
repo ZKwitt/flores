@@ -474,29 +474,50 @@
       </div>
     </div>
 <script>
-/********** CONFIG: cambia esto por tu worker/API **********/
-const API_URL = "https://a.thepersonmrt.workers.dev/";
-
-/* ------------------ estado local ------------------ */
-const tabsRow = document.getElementById('tabsRow');
-const productsGrid = document.getElementById('productsGrid');
+const API_URL = "https://d.thepersonmrt.workers.dev/"; // tu worker
+const tabsEl = document.getElementById('tabs');
+const contentEl = document.getElementById('content');
 let lastProductsCache = [];
-let availableSheetKeys = [];
 let lastLoadedSheetKey = null;
+let availableSheetKeys = [];
 
-/* ---------- carrito ---------- */
-const WHATSAPP_NUMBER = '573207378992';
-let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
+(function initDecorAndUi(){
+  const emojis = ['💄','💋','🌸','✨','🩷','🌺'];
+  const count = 14;
+  const container = document.createElement('div');
+  container.className = 'emoji-bg';
+  for(let i=0;i<count;i++){
+    const s = document.createElement('span');
+    s.className = 'emoji';
+    s.textContent = emojis[i % emojis.length];
+    s.style.fontSize = (Math.round((Math.random()*36)+20)) + 'px';
+    s.style.left = (Math.random()*100) + '%';
+    s.style.top = (Math.random()*100) + '%';
+    s.style.opacity = (Math.random()*0.06) + 0.03;
+    s.style.animationDuration = (18 + Math.random()*32) + 's';
+    s.style.animationDelay = (-Math.random()*20) + 's';
+    s.style.transform = 'translate3d(0,0,0)';
+    s.style.zIndex = '0';
+    container.appendChild(s);
+  }
+  document.body.appendChild(container);
 
-const cartIconBtn = document.getElementById('cart-icon-btn');
-const cartPopupOverlay = document.getElementById('cart-popup-overlay');
-const cartItemsContainer = document.getElementById('cart-items-container');
-const cartTotalEl = document.getElementById('cart-total');
-const cartCloseBtn = document.getElementById('cart-close');
-const cartConfirmBtn = document.getElementById('cart-confirm');
+  document.addEventListener('click', function(e){
+    if(e.target.matches('.tab')){
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      e.target.classList.add('active');
+    }
+    if(e.target.matches('.small')) e.target.classList.toggle('selected');
+  });
 
-function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
-function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
+  const cartClose = document.getElementById('cart-close');
+  if(cartClose) cartClose.setAttribute('aria-label','Cerrar carrito');
+  document.addEventListener('keydown', function(e){ if(e.key === 'Tab') document.documentElement.classList.add('kbd'); });
+  window.addEventListener('resize', function(){
+    const els = document.querySelectorAll('.emoji-bg .emoji');
+    els.forEach(el => { if(Math.random() < 0.35){ el.style.left = (Math.random()*100) + '%'; el.style.top = (Math.random()*100) + '%'; } });
+  });
+})();
 
 /* ---------- utilidades ---------- */
 function firstKeyValue(obj, keys){
@@ -533,327 +554,21 @@ function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-/* ---------- utils: modales automáticos (sin cambios funcionales) ---------- */
-(function ensureModalsExist(){
-  if(!document.getElementById('img-modal-overlay')){
-    const overlay = document.createElement('div');
-    overlay.id = 'img-modal-overlay';
-    overlay.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);z-index:12000';
-    overlay.innerHTML = '<img id="img-modal-img" src=\"\" alt=\"\" style=\"max-width:92%;max-height:92%\" /><button id=\"img-modal-close\" style=\"position:fixed;top:18px;right:18px;padding:8px;border-radius:8px;\">Cerrar</button>';
-    document.body.appendChild(overlay);
-  }
-  if(!document.getElementById('card-modal-overlay')){
-    const div = document.createElement('div');
-    div.id = 'card-modal-overlay';
-    div.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:20000';
-    div.innerHTML = `
-      <div id="card-modal" style="background:#0b0b0b;padding:16px;border-radius:12px;width:520px;max-width:96%;color:#eee">
-        <h3>Pagar con tarjeta</h3>
-        <div id="card-errors" style="color:#f66;margin-bottom:8px"></div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <label>Nombre completo<input id="card-name" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
-          <label>Correo<input id="card-email" type="email" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
-          <label>Teléfono<input id="card-phone" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
-          <label>Dirección<textarea id="card-address" rows="2" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff"></textarea></label>
-          <hr style="border:none;border-top:1px solid #222" />
-          <label>Número de tarjeta<input id="card-number" placeholder="4242 4242 4242 4242" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
-          <div style="display:flex;gap:8px">
-            <label style="flex:1">MM/AA<input id="card-exp" placeholder="08/28" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
-            <label style="width:120px">CVV<input id="card-cvv" placeholder="123" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
-          </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end">
-            <button id="card-cancel" style="padding:8px;border-radius:6px;background:transparent;border:1px solid #333;color:#ddd">Cancelar</button>
-            <button id="card-submit" style="padding:8px;border-radius:6px;background:#9D4EDD;color:#fff">Pagar ahora</button>
-          </div>
-          <div style="font-size:0.85rem;color:#aaa">En producción integra Stripe/Adyen y nunca almacenes CVV.</div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(div);
-  }
-  if(!document.getElementById('otp-modal-overlay')){
-    const o = document.createElement('div');
-    o.id = 'otp-modal-overlay';
-    o.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:21000';
-    o.innerHTML = `
-      <div style="background:#0b0b0b;padding:16px;border-radius:12px;width:360px;color:#eee">
-        <h4>3D Secure — Código OTP</h4>
-        <p style="color:#aaa">Ingresa el código OTP (para pruebas usa <strong>123456</strong>).</p>
-        <input id="otp-input" placeholder="Código OTP" style="padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff;width:100%" />
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-          <button id="otp-cancel" style="padding:8px;border-radius:6px;background:transparent;border:1px solid #333;color:#ddd">Cancelar</button>
-          <button id="otp-confirm" style="padding:8px;border-radius:6px;background:#9D4EDD;color:#fff">Confirmar</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(o);
-  }
-  if(!document.getElementById('info-modal-overlay')){
-    const im = document.createElement('div');
-    im.id = 'info-modal-overlay';
-    im.setAttribute('aria-hidden','true');
-    im.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);z-index:20010;padding:20px';
-    im.innerHTML = `
-      <div id="info-modal" role="dialog" aria-modal="true" aria-label="Información" style="max-width:800px;width:100%;max-height:90vh;overflow:auto;background:linear-gradient(135deg,#0f0f10 0%,#161216 100%);border-radius:12px;padding:20px;color:#fff;border:1px solid rgba(255,255,255,0.04);box-shadow:0 30px 60px rgba(0,0,0,0.6)">
-        <button id="info-modal-close" style="float:right;background:transparent;border:none;color:#fff;font-weight:800;cursor:pointer;font-size:1.2rem">×</button>
-        <div id="info-modal-content" style="clear:both;padding-top:8px"></div>
-        <div style="margin-top:12px;text-align:right">
-          <button id="info-modal-close-bottom" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#fff">Cerrar</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(im);
-  }
-})();
+/* ---------- carrito ---------- */
+const WHATSAPP_NUMBER = '573207378992';
+let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
 
-/* ---------- lazy loading ---------- */
-const lazyObserver = (function(){
-  if (typeof IntersectionObserver === 'undefined') return null;
-  return new IntersectionObserver((entries, obs) => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      const img = entry.target;
-      const src = img.dataset && img.dataset.src;
-      if (src) {
-        img.src = src;
-        delete img.dataset.src;
-      }
-      obs.unobserve(img);
-    });
-  }, {
-    rootMargin: '300px 0px',
-    threshold: 0.01
-  });
-})();
-function observeLazyImages(rootEl) {
-  if (!lazyObserver) return;
-  const imgs = (rootEl || document).querySelectorAll('img[data-src]');
-  imgs.forEach(img => { if (document.contains(img)) lazyObserver.observe(img); });
-}
+const cartBtn = document.getElementById('cart-btn');
+const cartCountEl = document.getElementById('cart-count');
+const cartSummaryEl = document.getElementById('cart-summary');
+const cartOverlay = document.getElementById('cart-popup-overlay');
+const cartItemsContainer = document.getElementById('cart-items-container');
+const cartTotalEl = document.getElementById('cart-total');
+const cartCloseBtn = document.getElementById('cart-close');
+const cartConfirmBtn = document.getElementById('cart-confirm');
 
-/* ---------- makeImgEl ---------- */
-function makeImgEl(raw, alt, className){
-  const img = document.createElement('img');
-  img.alt = alt || '';
-  img.className = className || '';
-  img.loading = 'lazy';
-  try {
-    img.src = raw ? (API_URL + 'image-proxy?url=' + encodeURIComponent(raw)) : '';
-    img.dataset.src = raw ? (API_URL + 'image-proxy?url=' + encodeURIComponent(raw)) : '';
-  } catch(e) {
-    img.src = '';
-  }
-  img.style.maxHeight = '380px';
-  img.style.width = 'auto';
-  img.style.objectFit = 'contain';
-  img.onerror = () => { img.remove(); };
-  return img;
-}
-
-/* ---------------- STOCK helpers y normalización ---------------- */
-
-/** Normaliza la clave única del producto para evitar colisiones */
-function normalizeProductKey(sheetKey, row){
-  return `${String(sheetKey||'').trim().toLowerCase()}::${String(row)}`;
-}
-
-/** Busca coincidencia en availableSheetKeys */
-function mapToAvailableSheetKey(input){
-  if(!input) return null;
-  const s = String(input).trim();
-  if(availableSheetKeys && availableSheetKeys.length){
-    const found = availableSheetKeys.find(k => String(k).toLowerCase() === s.toLowerCase());
-    if(found) return found;
-  }
-  return s || null;
-}
-
-/** Intenta leer stock real del servidor */
-async function fetchServerStock(sheetKeyRaw, row){
-  try {
-    const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
-    if(!mappedKey) return null;
-    const resp = await fetch(API_URL + '?sheetKey=' + encodeURIComponent(mappedKey), { cache: 'no-store' });
-    if(!resp.ok) return null;
-    const json = await resp.json().catch(()=>null);
-    if(!json || !Array.isArray(json.products)) return null;
-    const found = json.products.find(p => String(p.row) === String(row));
-    if(!found) return null;
-    const stockVal = firstKeyValue(found.data || {}, ['stock','cantidad','Stock']) || found.data && (found.data.Stock || found.data.cantidad) || 0;
-    return Number(stockVal || 0);
-  } catch (err) {
-    console.warn('fetchServerStock error', err);
-    return null;
-  }
-}
-
-/* ---------- IMPORTANT: updated decrement to apply newStock immediately and update cache ---------- */
-/**
- * updateStockOnServer_decrement:
- *  - tries atomic request with qty (if worker supports)
- *  - fallback: N parallel requests
- *  - returns { ok: boolean, newStock: number|undefined }
- */
-async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
-  if(!qty || qty <= 0) return { ok: false, newStock: undefined };
-  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw);
-  if(!mappedKey){
-    console.warn('updateStockOnServer_decrement: sheetKey no reconocido:', sheetKeyRaw);
-    return { ok: false, newStock: undefined };
-  }
-
-  console.log('[decrement] intentando', { mappedKey, row, qty });
-
-  const applyNewStockToDOMAndCache = (newStock) => {
-    // actualizar DOM
-    const pk = normalizeProductKey(mappedKey, row);
-    document.querySelectorAll('.product-card').forEach(card=>{
-      if(card.dataset.productKey === pk){
-        const reservedLocal = getReservedQty(mappedKey, row);
-        card.dataset.serverStock = String(newStock);
-        card.dataset.origStock = String(Math.max(0, Number(newStock) + Number(reservedLocal || 0)));
-      }
-    });
-    refreshCardStockDisplay(mappedKey, row);
-    // actualizar cache local (lastProductsCache)
-    if (Array.isArray(lastProductsCache)){
-      const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
-      if(p){
-        p.data = p.data || {};
-        p.data.Stock = Number(newStock);
-        p.data.stock = Number(newStock);
-      }
-    }
-  };
-
-  try {
-    // Intento atómico con qty (muchos workers lo aceptan)
-    const respAtomic = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'decrement', sheetKey: mappedKey, row: String(row), qty: Number(qty) })
-    }).catch(()=>null);
-
-    if(respAtomic){
-      const txt = await respAtomic.text().catch(()=>null);
-      let json = null;
-      try { json = txt ? JSON.parse(txt) : null; } catch(e){ json = null; }
-      console.log('[decrement] respuesta atómica', { ok: respAtomic.ok, status: respAtomic.status, json, txt });
-      if(respAtomic.ok && json && !json.error && (json.newStock !== undefined)){
-        const ns = Number(json.newStock);
-        applyNewStockToDOMAndCache(ns);
-        return { ok: true, newStock: ns };
-      }
-    }
-
-    // Fallback: N requests en paralelo (más rápido que secuencial)
-    const promises = [];
-    for(let i=0;i<qty;i++){
-      promises.push(
-        fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'decrement', sheetKey: mappedKey, row: String(row) })
-        })
-        .then(async r => {
-          const txt = await r.text().catch(()=>null);
-          let j = null;
-          try { j = txt ? JSON.parse(txt) : null; } catch(e){ j = null; }
-          return { ok: r.ok, json: j, status: r.status, txt };
-        })
-        .catch(err => ({ ok: false, err }))
-      );
-    }
-
-    const results = await Promise.all(promises);
-    console.log('[decrement] resultados paralelo', results);
-    let successCount = 0;
-    let lastNewStock;
-    for(const res of results){
-      if(res && res.ok && res.json && !res.json.error){
-        successCount++;
-        if(res.json.newStock !== undefined) lastNewStock = Number(res.json.newStock);
-      }
-    }
-
-    if(lastNewStock !== undefined){
-      applyNewStockToDOMAndCache(lastNewStock);
-      return { ok: successCount === qty, newStock: lastNewStock };
-    } else {
-      if(successCount > 0){
-        // forzar refresco desde servidor para asegurar consistencia
-        await refreshStockFromServerForItem(mappedKey, row);
-      }
-    }
-
-    return { ok: successCount === qty, newStock: undefined };
-  } catch (err){
-    console.warn('updateStockOnServer_decrement fallo:', err);
-    return { ok: false, newStock: undefined };
-  }
-}
-
-/**
- * set stock en servidor y aplicar newStock a DOM si worker devuelve newStock
- */
-async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
-  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
-  try {
-    const resp = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'set', sheetKey: mappedKey, row: String(row), value: String(newStock) })
-    });
-
-    const text = await resp.text().catch(()=>null);
-    let json = null;
-    try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
-
-    console.log('[set] response', { mappedKey, row, newStock, ok: resp.ok, json, text });
-
-    if(resp.ok && json && !json.error){
-      const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : Number(newStock);
-      const pk = normalizeProductKey(mappedKey, row);
-      document.querySelectorAll('.product-card').forEach(card=>{
-        if(card.dataset.productKey === pk){
-          const reservedLocal = getReservedQty(mappedKey, row);
-          card.dataset.serverStock = String(confirmedStock);
-          card.dataset.origStock = String(Math.max(0, confirmedStock + Number(reservedLocal || 0)));
-        }
-      });
-      refreshCardStockDisplay(mappedKey, row);
-      return true;
-    } else {
-      console.warn('updateStockOnServer_set: respuesta no OK', resp.status, text);
-      return false;
-    }
-  } catch (err) {
-    console.warn('updateStockOnServer_set fallo:', err);
-    return false;
-  }
-}
-
-/**
- * Aumentar stock en servidor usando fetchServerStock + set (útil cuando removemos items del carrito)
- */
-async function updateStockOnServer_increaseViaSet(sheetKeyRaw, row, delta){
-  if(!delta || delta <= 0) return;
-  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
-  if(!mappedKey){
-    console.warn('updateStockOnServer_increaseViaSet: sheetKey inválido', sheetKeyRaw);
-    return;
-  }
-  try {
-    const serverStock = await fetchServerStock(mappedKey, row);
-    const baseStock = (serverStock !== null && serverStock !== undefined) ? Number(serverStock) : Number(getOriginalStock(mappedKey, row) || 0);
-    const newStock = Math.max(0, baseStock + Number(delta));
-    await updateStockOnServer_set(mappedKey, row, newStock);
-  } catch (err){
-    console.warn('updateStockOnServer_increaseViaSet error', err);
-  }
-}
-
-/* ---------- stock / UI helpers ---------- */
+function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
+function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
 
 function findProductInCache(sheetKey, row){
   if(!Array.isArray(lastProductsCache)) return null;
@@ -865,8 +580,11 @@ function findProductInCache(sheetKey, row){
 }
 
 function getOriginalStock(sheetKey, row){
-  const pk = normalizeProductKey(sheetKey, row);
-  const card = Array.from(document.querySelectorAll('.product-card')).find(c => c.dataset.productKey === pk);
+  const card = Array.from(document.querySelectorAll('.card')).find(c => {
+    const sk = (c.dataset.sheetKey || '').toString().trim().toLowerCase();
+    const rrow = (c.dataset.row || '').toString();
+    return sk === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
+  });
   if (card){
     if(card.dataset.serverStock !== undefined && card.dataset.serverStock !== '') return Number(card.dataset.serverStock || 0);
     if(card.dataset.origStock !== undefined && card.dataset.origStock !== '') return Number(card.dataset.origStock || 0);
@@ -877,7 +595,6 @@ function getOriginalStock(sheetKey, row){
     const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0;
     return Number(stock || 0);
   }
-  // último recurso: buscar por row en cache (no ideal)
   const p2 = (Array.isArray(lastProductsCache) && lastProductsCache.find(pp=>String(pp.row)===String(row))) || null;
   if(p2){
     const d = p2.data || {};
@@ -891,53 +608,19 @@ function getReservedQty(sheetKey, row){
   return cart.filter(i => (i.sheetKey||'').toString().trim().toLowerCase() === (sheetKey||'').toString().trim().toLowerCase() && String(i.row) === String(row)).reduce((s,i)=>s+Number(i.qty||0), 0);
 }
 
-/**
- * Refresca stock de servidor para un item: actualiza DOM y cache
- */
-async function refreshStockFromServerForItem(sheetKeyRaw, row){
-  try {
-    const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
-    const serverStock = await fetchServerStock(mappedKey, row);
-    if (serverStock === null || serverStock === undefined) return;
-
-    const pk = normalizeProductKey(mappedKey, row);
-
-    document.querySelectorAll('.product-card').forEach(card => {
-      if(card.dataset.productKey === pk){
-        const reservedLocal = getReservedQty(mappedKey, row);
-        card.dataset.serverStock = String(Number(serverStock));
-        card.dataset.origStock = String(Math.max(0, Number(serverStock) + Number(reservedLocal || 0)));
-      }
-    });
-
-    if (Array.isArray(lastProductsCache)){
-      const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
-      if (p){
-        p.data = p.data || {};
-        p.data.Stock = Number(serverStock);
-        p.data.stock = Number(serverStock);
-      }
-    }
-
-    refreshCardStockDisplay(mappedKey, row);
-  } catch (err){
-    console.warn('refreshStockFromServerForItem error', err);
-  }
-}
-
-/**
- * Actualiza la UI de stock en tarjeta(s) que correspondan a sheetKey::row
- */
 function refreshCardStockDisplay(sheetKey, row){
-  const pk = normalizeProductKey(sheetKey, row);
-  const cards = Array.from(document.querySelectorAll('.product-card')).filter(c => c.dataset.productKey === pk);
+  const cards = Array.from(document.querySelectorAll('.card')).filter(c => {
+    const sk = (c.dataset.sheetKey || '').toString().trim().toLowerCase();
+    const rrow = (c.dataset.row || '').toString();
+    return sk === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
+  });
   const origStock = getOriginalStock(sheetKey, row);
   const reserved = getReservedQty(sheetKey, row);
   const avail = Math.max(0, origStock - reserved);
   cards.forEach(card => {
     const stockSpan = card.querySelector('.stockval');
     if(stockSpan) stockSpan.innerText = avail;
-    const orderBtn = card.querySelector('.product-btn');
+    const orderBtn = card.querySelector('.order');
     if(avail <= 0){
       card.classList.add('out');
       card.style.opacity = '0.45';
@@ -950,78 +633,223 @@ function refreshCardStockDisplay(sheetKey, row){
   });
 }
 
-/**
- * Finaliza compra: paraleliza el decrement para cada item (qty por item).
- * Devuelve array de items que fallaron.
- * Ahora recoge newStock cuando la función de decrement lo devuelve y actualiza cache/local.
- */
+function updateCartUI(){
+  const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
+  const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
+  if(cartCountEl) cartCountEl.innerText = count;
+  if(cartSummaryEl) cartSummaryEl.innerText = count > 0 ? 'Carrito' : 'Carrito vacío';
+  if(cartBtn) cartBtn.style.display = count > 0 ? 'flex' : 'none';
+  if(cartBtn) cartBtn.title = count ? `${count} item(s) — Total $ ${Number(total).toLocaleString('de-DE')}` : 'Carrito vacío';
+  saveCart();
+}
+
+/* ---------- sync stock con servidor (cache-bust y reconciliación) ---------- */
+function mapToAvailableSheetKey(input){
+  if(!input) return null;
+  const s = String(input).trim();
+  if(availableSheetKeys && availableSheetKeys.length){
+    const found = availableSheetKeys.find(k => String(k).toLowerCase() === s.toLowerCase());
+    if(found) return found;
+  }
+  return s || null;
+}
+
+async function fetchServerStock(sheetKeyRaw, row){
+  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
+  if(!mappedKey) return null;
+  const resp = await fetch(API_URL + '?sheetKey=' + encodeURIComponent(mappedKey) + '&_=' + Date.now(), { cache: 'no-store' });
+  if(!resp.ok) return null;
+  const json = await resp.json().catch(()=>null);
+  if(!json || !Array.isArray(json.products)) return null;
+  const found = json.products.find(p => String(p.row) === String(row));
+  if(!found) return null;
+  const stockVal = firstKeyValue(found.data || {}, ['stock','cantidad','Stock']) || found.data && (found.data.Stock || found.data.cantidad) || 0;
+  return Number(stockVal || 0);
+}
+
+async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
+  if(!qty || qty <= 0) return { ok:false, newStock: undefined };
+  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw);
+  if(!mappedKey) return { ok:false, newStock: undefined };
+
+  // intento atómico con qty
+  const respAtomic = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'decrement', sheetKey: mappedKey, row: String(row), qty: Number(qty) })
+  }).catch(()=>null);
+
+  if(respAtomic && respAtomic.ok){
+    const txt = await respAtomic.text().catch(()=>null);
+    let json = null;
+    try { json = txt ? JSON.parse(txt) : null; } catch(e){ json = null; }
+    if(json && !json.error && (json.newStock !== undefined)){
+      const ns = Number(json.newStock);
+      const reservedLocal = getReservedQty(mappedKey, row);
+      document.querySelectorAll('.card').forEach(card=>{
+        if(card.dataset.sheetKey && card.dataset.row && normalize(card.dataset.sheetKey) === normalize(mappedKey) && String(card.dataset.row) === String(row)){
+          card.dataset.serverStock = String(ns);
+          card.dataset.origStock = String(Math.max(0, ns + reservedLocal));
+        }
+      });
+      if (Array.isArray(lastProductsCache)){
+        const p = lastProductsCache.find(pp => String(pp.row) === String(row) && normalize(pp.sheetKey) === normalize(mappedKey));
+        if(p){ p.data = p.data || {}; p.data.Stock = Number(ns); }
+      }
+      refreshCardStockDisplay(mappedKey, row);
+      return { ok:true, newStock: ns };
+    }
+  }
+
+  // fallback: N requests en paralelo
+  const promises = [];
+  for(let i=0;i<qty;i++){
+    promises.push(
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'decrement', sheetKey: mappedKey, row: String(row) })
+      }).then(async r => {
+        const txt = await r.text().catch(()=>null);
+        let j = null;
+        try { j = txt ? JSON.parse(txt) : null; } catch(e){ j = null; }
+        return { ok: r.ok, json: j };
+      }).catch(()=>({ ok:false }))
+    );
+  }
+  const results = await Promise.all(promises);
+  let successCount = 0;
+  let lastNewStock;
+  results.forEach(res => {
+    if(res && res.ok && res.json && !res.json.error){
+      successCount++;
+      if(res.json.newStock !== undefined) lastNewStock = Number(res.json.newStock);
+    }
+  });
+
+  if(lastNewStock !== undefined){
+    const ns = lastNewStock;
+    const reservedLocal = getReservedQty(mappedKey, row);
+    document.querySelectorAll('.card').forEach(card=>{
+      if(card.dataset.sheetKey && normalize(card.dataset.sheetKey) === normalize(mappedKey) && String(card.dataset.row) === String(row)){
+        card.dataset.serverStock = String(ns);
+        card.dataset.origStock = String(Math.max(0, ns + reservedLocal));
+      }
+    });
+    if (Array.isArray(lastProductsCache)){
+      const p = lastProductsCache.find(pp => String(pp.row) === String(row) && normalize(pp.sheetKey) === normalize(mappedKey));
+      if(p){ p.data = p.data || {}; p.data.Stock = Number(ns); }
+    }
+    refreshCardStockDisplay(mappedKey, row);
+  } else if(successCount > 0){
+    // partial success -> force refresh from server to reconcile
+    await refreshStockFromServerForItem(mappedKey, row);
+  }
+
+  return { ok: successCount === qty, newStock: lastNewStock };
+}
+
+async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
+  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
+  const resp = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'set', sheetKey: mappedKey, row: String(row), value: String(newStock) })
+  }).catch(()=>null);
+
+  if(!resp) return false;
+  const txt = await resp.text().catch(()=>null);
+  let json = null;
+  try { json = txt ? JSON.parse(txt) : null; } catch(e){ json = null; }
+  if(resp.ok && json && !json.error){
+    const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : Number(newStock);
+    const reservedLocal = getReservedQty(mappedKey, row);
+    document.querySelectorAll('.card').forEach(card=>{
+      if(card.dataset.sheetKey && normalize(card.dataset.sheetKey) === normalize(mappedKey) && String(card.dataset.row) === String(row)){
+        card.dataset.serverStock = String(confirmedStock);
+        card.dataset.origStock = String(Math.max(0, confirmedStock + reservedLocal));
+      }
+    });
+    refreshCardStockDisplay(mappedKey, row);
+    return true;
+  }
+  return false;
+}
+
+async function updateStockOnServer_increaseViaSet(sheetKeyRaw, row, delta){
+  if(!delta || delta <= 0) return;
+  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
+  const serverStock = await fetchServerStock(mappedKey, row);
+  const baseStock = (serverStock !== null && serverStock !== undefined) ? Number(serverStock) : Number(getOriginalStock(mappedKey, row) || 0);
+  const newStock = Math.max(0, baseStock + Number(delta));
+  await updateStockOnServer_set(mappedKey, row, newStock);
+}
+
+/* ---------- helpers ---------- */
+function normalize(s){ return (s||'').toString().trim().toLowerCase(); }
+
+async function refreshStockFromServerForItem(sheetKeyRaw, row){
+  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
+  const serverStock = await fetchServerStock(mappedKey, row);
+  if (serverStock === null || serverStock === undefined) return;
+  const pk = normalize(mappedKey);
+  const reservedLocal = getReservedQty(mappedKey, row);
+  document.querySelectorAll('.card').forEach(card => {
+    if(card.dataset.sheetKey && normalize(card.dataset.sheetKey) === pk && String(card.dataset.row) === String(row)){
+      card.dataset.serverStock = String(Number(serverStock));
+      card.dataset.origStock = String(Math.max(0, Number(serverStock) + reservedLocal));
+    }
+  });
+  if (Array.isArray(lastProductsCache)){
+    const p = lastProductsCache.find(pp => String(pp.row) === String(row) && normalize(pp.sheetKey) === pk);
+    if (p){ p.data = p.data || {}; p.data.Stock = Number(serverStock); }
+  }
+  refreshCardStockDisplay(mappedKey, row);
+}
+
+/* ---------- finalizar compra (decrement paralelos por item) ---------- */
 async function finalizePurchaseOnServer(items){
   const failures = [];
   if(!Array.isArray(items) || items.length === 0) return failures;
 
-  console.log('[finalizePurchaseOnServer] items', items.map(i=>({sheetKey:i.sheetKey, row:i.row, qty:i.qty})));
-
-  // Lanzamos decrements y recogemos newStock si el worker lo devuelve
   const promises = items.map(async (it) => {
     const qty = Number(it.qty || 0);
-    if(!qty) return { ok: true, item: it, newStock: undefined };
-    try {
-      const res = await updateStockOnServer_decrement(it.sheetKey, it.row, qty);
-      return { ok: !!res.ok, item: it, newStock: res.newStock };
-    } catch (err){
-      console.warn('finalizePurchaseOnServer item error', it, err);
-      return { ok: false, item: it, newStock: undefined };
-    }
+    if(!qty) return { ok: true, item: it };
+    const res = await updateStockOnServer_decrement(it.sheetKey, it.row, qty);
+    return { ok: !!res.ok, item: it, newStock: res.newStock };
   });
 
   const results = await Promise.all(promises);
-  console.log('[finalizePurchaseOnServer] results', results);
 
-  // aplicar actualizaciones en cache/local ya se hizo dentro de updateStockOnServer_decrement
+  // aplicar newStock si viene (ya aplicado dentro de decrement), y forzar refresh si no vino newStock
+  const toRefresh = [];
   results.forEach(r => {
     if(!r.ok) failures.push(r.item);
+    if(r.ok && r.newStock === undefined) toRefresh.push(r.item);
   });
 
-  // Forzar refresco visual final (por si queda alguna tarjeta duplicada)
-  try {
-    results.forEach(r => {
-      if(r.ok){
-        // si tenemos newStock lo aplicamos también (ya aplicado por la función), si no, intentamos refrescar desde servidor
-        if(r.newStock === undefined){
-          refreshStockFromServerForItem(r.item.sheetKey, r.item.row).catch(()=>{});
-        }
-      }
-    });
-  } catch(e){ console.warn('finalizePurchaseOnServer post-refresh error', e); }
+  if(toRefresh.length) {
+    await Promise.all(toRefresh.map(it => refreshStockFromServerForItem(it.sheetKey, it.row)));
+  }
 
   return failures;
 }
 
-/* ---------- updateCartUI ---------- */
-function updateCartUI(){
-  const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
-  const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
-  if(cartIconBtn) cartIconBtn.innerText = `Carrito (${count})`;
-  saveCart();
-}
-
-/* ---------- add / remove cart ---------- */
-async function addToCartFromCard(card, qty){
+/* ---------- add/remove carrito y envíos ---------- */
+async function addToCart(card, qty){
   const rawSheetKey = (card && card.dataset.sheetKey) || lastLoadedSheetKey || 'UNKNOWN';
   const sheetKey = mapToAvailableSheetKey(rawSheetKey) || rawSheetKey;
   const row = card && card.dataset.row;
-  const name = card?.querySelector('.product-title')?.innerText || 'Sin nombre';
-  const priceRaw = card?.dataset.price !== undefined ? card.dataset.price : (card?.querySelector('.product-price')?.innerText || '');
+  const name = card?.querySelector('.name')?.innerText || 'Sin nombre';
+  const priceRaw = card?.dataset.price !== undefined ? card.dataset.price : (card?.querySelector('.price')?.innerText || '');
   const priceNum = parsePriceNumber(priceRaw);
   const origStock = getOriginalStock(sheetKey, row);
   const reserved = getReservedQty(sheetKey,row);
   const available = Math.max(0, origStock - reserved);
-
   if(qty > available){
     alert('No hay suficiente stock disponible.');
     return;
   }
-
   const key = `${sheetKey}::${row}`;
   const existing = cart.find(i=>cartItemKey(i) === key);
   if(existing){
@@ -1029,290 +857,288 @@ async function addToCartFromCard(card, qty){
   } else {
     cart.push({ sheetKey, row, name, price: priceRaw, _priceNum: priceNum, qty });
   }
-
   refreshCardStockDisplay(sheetKey,row);
   updateCartUI();
-
-  // No decrementar al añadir: se decreta al confirmar pago o enviar WA.
-  if(cartIconBtn){
-    cartIconBtn.style.transform = 'scale(1.12)';
-    setTimeout(()=> cartIconBtn.style.transform = '', 200);
-  }
+  // intentar decrementar en servidor; si devuelve newStock se aplica inmediatamente
+  updateStockOnServer_decrement(sheetKey, row, qty).catch(()=>{});
 }
 
 function removeFromCart(idx){
   if(idx >= 0 && idx < cart.length){
     const item = cart[idx];
-    const sheetKey = item.sheetKey;
-    const row = item.row;
     const removedQty = Number(item.qty || 0);
-
     cart.splice(idx, 1);
-    refreshCardStockDisplay(sheetKey, row);
+    refreshCardStockDisplay(item.sheetKey, item.row);
     updateCartUI();
-    openCartPopup();
-
-    // No restauramos inmediatamente en servidor aquí (optamos por reconciliar por set si necesario)
-    // Si deseas aumentar stock en servidor cuando se elimina del carrito, llamar updateStockOnServer_increaseViaSet(sheetKey, row, removedQty)
+    updateStockOnServer_increaseViaSet(item.sheetKey, item.row, removedQty).catch(()=>{});
   }
 }
 
-/* ---------- envío por WhatsApp (usa finalizePurchaseOnServer) ---------- */
-async function sendToWhatsApp(){
-  if(cart.length === 0){
-    alert('El carrito está vacío');
-    return;
-  }
-
-  let message = '*Nuevo Pedido - WyvernStore*\n\n';
+function sendToWhatsApp(){
+  if(cart.length === 0){ alert('El carrito está vacío'); return; }
+  let message = '*Nuevo Pedido - Marrie*\n\n';
   let total = 0;
   cart.forEach(item => {
     const itemTotal = parsePriceNumber(item._priceNum !== undefined ? item._priceNum : item.price) * Number(item.qty||0);
     total += itemTotal;
-    message += `*${item.name}*\n`;
-    message += `   Cantidad: ${item.qty}\n`;
-    message += `   Precio: ${Number(itemTotal).toLocaleString('de-DE')}\n\n`;
+    message += `*${item.name}*\n   Cantidad: ${item.qty}\n   Precio: ${Number(itemTotal).toLocaleString('de-DE')}\n\n`;
   });
   message += `*TOTAL: ${Number(total).toLocaleString('de-DE')}*\n\n`;
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 
-  let failures = [];
-  try {
-    failures = await finalizePurchaseOnServer(cart);
-  } catch (e){
-    console.warn('Error finalizando decrements antes de WhatsApp', e);
-    failures = cart.slice();
-  }
-
-  if (failures.length === 0){
-    const purchased = cart.slice();
-
-    try {
-      await Promise.all(cart.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
-    } catch(e){
-      console.warn('Error refrescando stock tras decrementar (WA):', e);
-    }
-
-    window.open(url, '_blank');
-
-    cart = [];
-    updateCartUI();
-
-    try {
-      await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
-    } catch(e){
-      console.warn('Error re-sincronizando stock después de limpiar carrito (WA):', e);
-    }
-
-    refreshAllCardDisplays();
-    closeCartPopup();
-    return;
-  } else {
-    const proceed = confirm('No fue posible actualizar el stock en el servidor para algunos productos. ¿Deseas continuar y enviar el pedido por WhatsApp de todas maneras? (Si no, la página re-sincronizará el stock)');
-    if (!proceed){
-      try {
-        await Promise.all(failures.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
-      } catch(e){ console.warn('Error al refrescar stock tras fallo WhatsApp', e); }
-      return;
-    } else {
+  finalizePurchaseOnServer(cart).then(async (failures) => {
+    if (failures.length === 0){
+      // refrescar stocks para los items comprados (asegurar consistencia)
+      await Promise.all(cart.map(it => refreshStockFromServerForItem(it.sheetKey, it.row)));
       window.open(url, '_blank');
       cart = [];
       updateCartUI();
-      refreshAllCardDisplays();
+      document.querySelectorAll('.card').forEach(card => refreshCardStockDisplay(card.dataset.sheetKey, card.dataset.row));
       closeCartPopup();
-      return;
+    } else {
+      const proceed = confirm('No fue posible actualizar el stock en el servidor para algunos productos. ¿Deseas continuar y enviar el pedido por WhatsApp de todas maneras?');
+      if (proceed){
+        window.open(url, '_blank');
+        cart = [];
+        updateCartUI();
+        document.querySelectorAll('.card').forEach(card => refreshCardStockDisplay(card.dataset.sheetKey, card.dataset.row));
+        closeCartPopup();
+      } else {
+        await Promise.all(failures.map(it => refreshStockFromServerForItem(it.sheetKey, it.row)));
+      }
     }
-  }
+  }).catch(() => {
+    // en caso de error general, abrir WA y vaciar carrito (comportamiento previo)
+    window.open(url, '_blank');
+    cart = [];
+    updateCartUI();
+    document.querySelectorAll('.card').forEach(card => refreshCardStockDisplay(card.dataset.sheetKey, card.dataset.row));
+    closeCartPopup();
+  });
 }
 
-/* ---------- carrito popup y acciones ---------- */
+/* ---------- UI carrito ---------- */
 function openCartPopup(){
+  let html = '';
   if(cart.length === 0){
-    if(cartItemsContainer) cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
-    if(cartTotalEl) cartTotalEl.innerHTML = '';
-    ensureCartActions();
-    if(cartPopupOverlay){ cartPopupOverlay.style.display = 'flex'; cartPopupOverlay.setAttribute('aria-hidden','false'); }
+    cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
+    cartTotalEl.innerHTML = '';
+    cartOverlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     return;
   }
-  let html = '';
   cart.forEach((item, idx) => {
     const itemTotal = parsePriceNumber(item._priceNum !== undefined ? item._priceNum : item.price) * Number(item.qty||0);
     html += `
-      <div class="cart-item" style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #111">
-        <div style="flex:1">
-          <div style="font-weight:800">${escapeHtml(item.name)}</div>
-          <div style="font-size:0.9rem;color:#aaa">x${item.qty} — ${Number(itemTotal).toLocaleString('de-DE')}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-          <button style="background:transparent;border:none;color:#f66;cursor:pointer;font-weight:800" onclick="removeFromCart(${idx})">✕</button>
-        </div>
+      <div class="cart-item">
+        <span class="cart-item-name">${escapeHtml(item.name)}</span>
+        <span class="cart-item-qty">x${item.qty}</span>
+        <span class="cart-item-price">${Number(itemTotal).toLocaleString('de-DE')}</span>
+        <button class="cart-item-remove" onclick="removeFromCart(${idx})">✕</button>
       </div>
     `;
   });
-  if(cartItemsContainer) cartItemsContainer.innerHTML = html;
+  cartItemsContainer.innerHTML = html || '<p style="text-align:center;color:#999">Carrito vacío</p>';
   const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
-  if(cartTotalEl) cartTotalEl.innerHTML = `💰 Total: <span style="color:#9D4EDD">${Number(total).toLocaleString('de-DE')}</span>`;
-  ensureCartActions();
-  if(cartPopupOverlay){ cartPopupOverlay.style.display = 'flex'; cartPopupOverlay.setAttribute('aria-hidden','false'); }
+  cartTotalEl.innerHTML = `💰 Total: <span style="color:var(--primary)">${Number(total).toLocaleString('de-DE')}</span>`;
+  cartOverlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 }
-function closeCartPopup(){ if(cartPopupOverlay){ cartPopupOverlay.style.display = 'none'; cartPopupOverlay.setAttribute('aria-hidden','true'); } document.body.style.overflow = ''; }
+function closeCartPopup(){ cartOverlay.style.display = 'none'; document.body.style.overflow = ''; }
 
-if(cartIconBtn) cartIconBtn.addEventListener('click', openCartPopup);
+if(cartBtn) cartBtn.addEventListener('click', openCartPopup);
 if(cartCloseBtn) cartCloseBtn.addEventListener('click', closeCartPopup);
 if(cartConfirmBtn) cartConfirmBtn.addEventListener('click', sendToWhatsApp);
-if(cartPopupOverlay) cartPopupOverlay.addEventListener('click', (e)=>{ if(e.target === cartPopupOverlay) closeCartPopup(); });
+window.removeFromCart = removeFromCart;
 
-function ensureCartActions(){
-  if(!cartPopupOverlay) return;
-  const popupInner = cartPopupOverlay.querySelector('.cart-popup') || cartPopupOverlay.firstElementChild;
-  if(!popupInner) return;
-  let actionsRow = popupInner.querySelector('.cart-actions-row');
-  if(!actionsRow){
-    actionsRow = document.createElement('div');
-    actionsRow.className = 'cart-actions-row';
-    actionsRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:8px;border-top:1px solid #111';
-    popupInner.appendChild(actionsRow);
-  }
-  if(!actionsRow.querySelector('.close-btn')){
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'close-btn';
-    closeBtn.innerText = 'Cerrar';
-    closeBtn.style.cssText = 'padding:8px;border-radius:8px;border:1px solid #333;background:transparent;color:#ddd';
-    closeBtn.onclick = closeCartPopup;
-    actionsRow.appendChild(closeBtn);
-  }
+/* ---------- modal imagen ---------- */
+const imgModalOverlay = document.getElementById('img-modal-overlay');
+const imgModalImg = document.getElementById('img-modal-img');
+const imgModalClose = document.getElementById('img-modal-close');
+function proxiedUrl(raw){ return API_URL + 'image-proxy?url=' + encodeURIComponent(raw); }
+function openImageModal(url, alt){
+  if(!url) return;
+  imgModalImg.src = proxiedUrl(url);
+  imgModalImg.alt = alt || '';
+  imgModalOverlay.style.display = 'flex';
+  imgModalOverlay.setAttribute('aria-hidden','false');
+  document.body.style.overflow = 'hidden';
+}
+function closeImageModal(){ imgModalOverlay.style.display = 'none'; imgModalOverlay.setAttribute('aria-hidden','true'); imgModalImg.src = ''; document.body.style.overflow = ''; }
+if(imgModalClose) imgModalClose.addEventListener('click', closeImageModal);
+if(imgModalOverlay) imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
 
-  let existingWaBtn = popupInner.querySelector('#cart-confirm') || document.getElementById('cart-confirm');
-  if(existingWaBtn){
-    if(existingWaBtn.parentElement !== actionsRow){
-      actionsRow.appendChild(existingWaBtn);
-      existingWaBtn.style.display = '';
-      existingWaBtn.style.marginLeft = '6px';
-    }
-  } else {
-    if(!actionsRow.querySelector('.wa-btn')){
-      const waBtn = document.createElement('button');
-      waBtn.className = 'wa-btn';
-      waBtn.innerText = 'Enviar por WhatsApp';
-      waBtn.style.cssText = 'padding:8px;border-radius:8px;background:#9D4EDD;color:#fff;border:none;margin-left:6px';
-      waBtn.onclick = sendToWhatsApp;
-      actionsRow.appendChild(waBtn);
-    }
-  }
-
-  if(!actionsRow.querySelector('#cart-paycard')){
-    const payBtn = document.createElement('button');
-    payBtn.id = 'cart-paycard';
-    payBtn.innerText = 'Pagar con tarjeta';
-    payBtn.style.cssText = 'padding:8px;border-radius:8px;background:#3b82f6;color:#fff;border:none;margin-left:6px';
-    payBtn.onclick = openCardPaymentModal;
-    actionsRow.appendChild(payBtn);
-  }
-
-  const payDuplicates = popupInner.querySelectorAll('#cart-paycard');
-  if(payDuplicates.length > 1){
-    for(let i = 1; i < payDuplicates.length; i++) payDuplicates[i].remove();
-  }
+/* ---------- lazy-load ---------- */
+const lazyObserver = (function(){
+  if (typeof IntersectionObserver === 'undefined') return null;
+  return new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const img = entry.target;
+      const src = img.dataset && img.dataset.src;
+      if (src) {
+        img.src = src;
+        delete img.dataset.src;
+      }
+      obs.unobserve(img);
+    });
+  }, { rootMargin: '300px 0px', threshold: 0.01 });
+})();
+function observeLazyImages(rootEl) {
+  if (!lazyObserver) return;
+  const imgs = (rootEl || document).querySelectorAll('img[data-src]');
+  imgs.forEach(img => { if (document.contains(img)) lazyObserver.observe(img); });
+}
+function makeImgEl(raw, alt, className){
+  const img = document.createElement('img');
+  img.alt = alt || '';
+  img.className = className || '';
+  if (raw) img.dataset.src = proxiedUrl(raw);
+  img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+  img.onerror = () => { img.remove(); };
+  return img;
 }
 
-/* ---------- render dinámico de productos (MEJORADO para TODOS) ---------- */
+/* ---------- render productos (chunked) ---------- */
 function renderProducts(products, sheetKey){
   if (!products || !products.length){
-    productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">No hay productos</div>';
-    populateCarouselFromProducts(lastProductsCache, 6);
+    if(contentEl) contentEl.innerHTML = '<div class="loading">No hay productos</div>';
     return;
   }
+  const CHUNK_SIZE = 20;
+  const total = products.length;
+  lastProductsCache = (products || []).map(p => ({
+    row: p.row,
+    sheetKey: (p.sheetKey || (p.data && (p.data.Categoria || p.data.categoria)) || sheetKey || 'UNKNOWN').toString(),
+    data: p.data || {}
+  }));
+  if(contentEl) contentEl.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  contentEl.appendChild(grid);
 
-  // reconstruir cache con sheetKey normalizado por producto
-  lastProductsCache = (products || []).map(p => {
-    return {
-      row: p.row,
-      sheetKey: (p.sheetKey || (p.data && (p.data.Categoria || p.data.categoria)) || '').toString(),
-      data: p.data || {}
-    };
-  });
-
-  productsGrid.innerHTML = '';
-  const frag = document.createDocumentFragment();
-
-  products.forEach((p, index) => {
+  function createCardNode(p, index){
     const d = p.data || {};
     const name = firstKeyValue(d, ['name','nombre','producto','Nombre']) || d.Nombre || 'Sin nombre';
     const price = firstKeyValue(d, ['price','precio','Precio']) || d.Precio || '';
     const stock = Number(firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0);
+    const emojiIcon = firstKeyValue(d, ['icono','Icono','icon','emoji']) || d.Icono || '🛍️';
     const imgUrl = firstKeyValue(d, ['img','Img','imagen','image','url','Imagen']) || d.Img || '';
-    const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota','Nota']) || d.descripcion || '';
+    const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota','Nota']) || d.descripcion || d.Descripcion || '';
+    const productSheetKey = mapToAvailableSheetKey(p.sheetKey || d.Categoria || sheetKey || 'UNKNOWN') || (p.sheetKey || d.Categoria || sheetKey || 'UNKNOWN');
 
-    // usar sheetKey ya normalizada (si existe), pero mapear otra vez por seguridad
-    const rawSheetKey = (p.sheetKey || d.Categoria || d.categoria || 'UNKNOWN').toString();
-    const productSheetKey = mapToAvailableSheetKey(rawSheetKey) || rawSheetKey;
-
-    const card = document.createElement('div');
-    card.className = 'product-card';
-    card.dataset.origStock = String(stock);
-    card.dataset.price = price;
-    card.dataset.row = String(p.row);
-    card.dataset.sheetKey = String(productSheetKey);
-    card.dataset.productKey = normalizeProductKey(productSheetKey, p.row);
-
-    if(d.Stock !== undefined) card.dataset.serverStock = String(Number(d.Stock || 0));
-
-    card.innerHTML = `
-      <div style="min-height:380px; display:flex; align-items:center; justify-content:center; background:#0f0f0f;">
-        <div style="width:90%;text-align:center;padding:16px;">
-          <div class="prod-img-placeholder" style="width:100%;height:300px;display:flex;align-items:center;justify-content:center;color:#888">🖼️</div>
+    const cardWrap = document.createElement('div');
+    cardWrap.className = 'card';
+    cardWrap.dataset.origStock = String(stock);
+    cardWrap.dataset.price = price;
+    cardWrap.dataset.row = String(p.row);
+    cardWrap.dataset.sheetKey = String(productSheetKey);
+    if (d.Stock !== undefined) cardWrap.dataset.serverStock = String(Number(d.Stock || 0));
+    cardWrap.dataset._imgUrl = imgUrl || '';
+    cardWrap.dataset._emoji = emojiIcon || '';
+    cardWrap.dataset._desc = description || '';
+    cardWrap.innerHTML = `
+      <div class="flip-inner">
+        <div class="face front">
+          <div style="position:relative;padding:12px;">
+            <button class="eye-toggle" aria-pressed="false" title="Ver imagen y descripción" type="button" aria-label="Ver imagen y descripción">🔍</button>
+            <div class="front-image" aria-hidden="true"><div style="padding:20px;color:#ddd;font-size:2rem">🔜</div></div>
+            <div class="meta">
+              <div class="name">${escapeHtml(name)}</div>
+              <div style="display:flex;gap:12px;align-items:center;justify-content:center;margin-top:12px">
+                <div class="price">$ ${fmtPrice(price)}</div>
+                <div class="stock">Stock: <span class="stockval">${Math.max(0, stock - getReservedQty(productSheetKey, p.row))}</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:0 16px 16px">
+            <div class="actions">
+              <button class="small minus">−</button>
+              <span class="qty">1</span>
+              <button class="small plus">+</button>
+              <button class="btn order" ${stock<=0?'disabled':''}>Pedir</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="product-info">
-        <div class="product-title">${escapeHtml(name)}</div>
-        <div><span class="product-price">${price ? ('$ ' + fmtPrice(price)) : '-'}</span></div>
-        <div style="margin-top:8px"><span class="stock-badge">Stock: <span class="stockval">${Math.max(0, stock - getReservedQty(productSheetKey, p.row))}</span></span></div>
-        <div style="margin-top:10px;color:#bbb;font-size:0.95rem;max-height:60px;overflow:hidden">${escapeHtml(String(description || 'Sin descripción'))}</div>
-
-        <div class="product-actions" style="margin-top:12px">
-          <button class="qty-btn minus">−</button>
-          <div class="qty-display">1</div>
-          <button class="qty-btn plus">+</button>
-          <button class="product-btn">Agregar</button>
+        <div class="face back" aria-hidden="true">
+          <div style="position:relative;padding:12px">
+            <button class="eye-toggle" aria-pressed="true" title="Volver" type="button" aria-label="Volver">↩</button>
+          </div>
+          <div class="back-image-wrap"><div style="padding:30px;color:#bbb;font-size:3rem">🖼️</div></div>
+          <div style="padding:12px"><div class="desc-box">Cargando...</div></div>
         </div>
       </div>
     `;
+    return cardWrap;
+  }
 
-    const placeholder = card.querySelector('.prod-img-placeholder');
-    if (imgUrl && /^https?:\/\//i.test(imgUrl)){
-      const imgEl = makeImgEl(imgUrl, name, 'product-image');
-      const wrap = document.createElement('div');
-      wrap.style.width = '100%';
-      wrap.style.height = '380px';
-      wrap.style.display = 'flex';
-      wrap.style.alignItems = 'center';
-      wrap.style.justifyContent = 'center';
-      wrap.style.background = '#0f0f0f';
-      const imgContainer = imgEl;
-      imgContainer.style.maxHeight = '380px';
-      imgContainer.style.width = 'auto';
-      wrap.appendChild(imgContainer);
-      const top = card.firstElementChild;
-      top.replaceWith(wrap);
-      observeLazyImages(card);
-      imgContainer.addEventListener('click', ()=> openImageModal(imgUrl, name));
+  function populateCardDetails(card){
+    const imgUrl = card.dataset._imgUrl || '';
+    const emojiIcon = card.dataset._emoji || '';
+    const description = card.dataset._desc || '';
+    const front = card.querySelector('.face.front');
+    const back = card.querySelector('.face.back');
+    const frontImageWrap = front.querySelector('.front-image');
+    frontImageWrap.innerHTML = '';
+    if (emojiIcon && !/^(https?:)?\/\//i.test(emojiIcon)) {
+      const span = document.createElement('div');
+      span.style.fontSize = '52px';
+      span.style.lineHeight = '1';
+      span.innerText = emojiIcon;
+      frontImageWrap.appendChild(span);
+    } else if (imgUrl) {
+      const smallImg = makeImgEl(imgUrl, card.querySelector('.name')?.innerText || '', 'product-img');
+      frontImageWrap.appendChild(smallImg);
+    } else {
+      frontImageWrap.innerHTML = '<div style="padding:18px;color:#eee;font-size:2rem">🛍️</div>';
     }
 
-    frag.appendChild(card);
-  });
+    const backImageWrap = back.querySelector('.back-image-wrap');
+    backImageWrap.innerHTML = '';
+    if (imgUrl && /^(https?:)?\/\//i.test(imgUrl)) {
+      const imgLarge = makeImgEl(imgUrl, card.querySelector('.name')?.innerText || '', 'back-image');
+      imgLarge.addEventListener('click', (e)=>{ e.stopPropagation(); openImageModal(imgUrl, card.querySelector('.name')?.innerText || ''); });
+      backImageWrap.appendChild(imgLarge);
+    } else {
+      backImageWrap.innerHTML = `<div style="padding:30px;color:#bbb;font-size:3rem">🖼️</div>`;
+    }
 
-  productsGrid.appendChild(frag);
+    const descBox = back.querySelector('.desc-box');
+    if (descBox) descBox.innerText = description || 'Sin descripción disponible';
+    observeLazyImages(card);
+  }
 
-  if (!productsGrid._hasDelegation) {
-    productsGrid.addEventListener('click', function(e){
+  let index = 0;
+  function processChunk(){
+    if (index >= total) return;
+    const start = index;
+    const frag = document.createDocumentFragment();
+    const end = Math.min(index + CHUNK_SIZE, total);
+    const appended = [];
+    for (let i = index; i < end; i++){
+      const p = products[i];
+      const node = createCardNode(p, i);
+      frag.appendChild(node);
+      appended.push(node);
+    }
+    grid.appendChild(frag);
+    const fill = () => appended.forEach(card => populateCardDetails(card));
+    if (typeof requestIdleCallback !== 'undefined') requestIdleCallback(fill, { timeout: 300 });
+    else setTimeout(fill, 80);
+    index = end;
+    if (typeof requestIdleCallback !== 'undefined') requestIdleCallback(processChunk, { timeout: 500 });
+    else setTimeout(processChunk, 50);
+  }
+  processChunk();
+
+  if (!grid._hasDelegation) {
+    grid.addEventListener('click', function(e){
       const plus = e.target.closest('.plus');
       if (plus) {
         e.preventDefault();
-        const card = plus.closest('.product-card');
+        const card = plus.closest('.card');
         if (!card) return;
-        const qtySpan = card.querySelector('.qty-display');
+        const qtySpan = card.querySelector('.qty');
         const current = Number(qtySpan?.innerText || '1');
         const orig = getOriginalStock(card.dataset.sheetKey, card.dataset.row);
         if (current < Math.max(0, orig - getReservedQty(card.dataset.sheetKey, card.dataset.row))){
@@ -1320,173 +1146,143 @@ function renderProducts(products, sheetKey){
         }
         return;
       }
-
       const minus = e.target.closest('.minus');
       if (minus) {
         e.preventDefault();
-        const card = minus.closest('.product-card');
+        const card = minus.closest('.card');
         if (!card) return;
-        const qtySpan = card.querySelector('.qty-display');
+        const qtySpan = card.querySelector('.qty');
         const current = Number(qtySpan?.innerText || '1');
         if (current > 1) qtySpan.innerText = current - 1;
         return;
       }
-
-      const orderBtn = e.target.closest('.product-btn');
+      const orderBtn = e.target.closest('.order');
       if (orderBtn) {
         e.preventDefault();
-        const card = orderBtn.closest('.product-card');
+        const card = orderBtn.closest('.card');
         if (!card) return;
-        const qty = Number(card.querySelector('.qty-display')?.innerText || '1');
-        addToCartFromCard(card, qty);
+        const qty = Number(card.querySelector('.qty')?.innerText || '1');
+        addToCart(card, qty);
         return;
       }
-
-      const img = e.target.closest('.product-image');
-      if(img){
+      const eye = e.target.closest('.eye-toggle');
+      if (eye) {
+        e.preventDefault();
+        const card = eye.closest('.card');
+        if (!card) return;
+        const inner = card.querySelector('.flip-inner');
+        if (!inner) return;
+        inner.classList.toggle('flipped');
         return;
       }
     });
-    productsGrid._hasDelegation = true;
+    grid._hasDelegation = true;
   }
 
-  // Después de renderizar, forzar sincronización con el servidor para cada card
-  (async function syncAllShownStocks(){
-    try {
-      const cards = Array.from(document.querySelectorAll('.product-card'));
-      // small delay opcional para no golpear el worker en picos si hay muchas filas
-      for (const card of cards){
-        const sk = card.dataset.sheetKey;
-        const row = card.dataset.row;
-        // pedir stock y aplicar
-        await refreshStockFromServerForItem(sk, row);
-      }
-    } catch(e){
-      console.warn('syncAllShownStocks error', e);
+  // after render, refresh shown stocks concurrently but without flooding the worker
+  (async function syncShownStocks(){
+    const cards = Array.from(document.querySelectorAll('.card'));
+    const jobs = cards.map(c => ({ sheetKey: c.dataset.sheetKey, row: c.dataset.row }));
+    // limit concurrency
+    const CONC = 6;
+    for (let i = 0; i < jobs.length; i += CONC){
+      const batch = jobs.slice(i, i+CONC);
+      await Promise.all(batch.map(j => refreshStockFromServerForItem(j.sheetKey, j.row)));
     }
   })();
-
-  populateCarouselFromProducts(products, 6);
 }
 
-function refreshAllCardDisplays(){
-  document.querySelectorAll('.product-card').forEach(card => {
-    refreshCardStockDisplay(card.dataset.sheetKey, card.dataset.row);
-  });
-}
-
-/* ---------- categorías y carga ---------- */
+/* ---------- categorías y carga (con cache-bust) ---------- */
 async function loadCategories(){
   try {
-    const r = await fetch(API_URL, {cache:'no-store'});
+    const r = await fetch(API_URL + '?_=' + Date.now(), {cache:'no-store'});
     const data = await r.json();
-    if (!data.sheets) throw new Error("Respuesta inválida: espera { sheets: [] }");
+    if (!data.sheets) throw new Error("Respuesta inválida");
     availableSheetKeys = (data.sheets || []).map(s => s.key).filter(Boolean);
-    console.log('[loadCategories] availableSheetKeys', availableSheetKeys);
     renderTabs(data.sheets);
   } catch(err){
-    if(tabsRow) tabsRow.innerHTML = '<div style="color:#f88">Error cargando categorías</div>';
-    console.error(err);
+    if(tabsEl) tabsEl.innerHTML = 'Error cargando categorías';
   }
 }
 
 function renderTabs(sheets){
-  if(!tabsRow) return;
-  tabsRow.innerHTML = '';
+  if(!tabsEl) return;
+  tabsEl.innerHTML = '';
   const allBtn = document.createElement('button');
   allBtn.className = 'tab active';
   allBtn.innerText = "✨ Todos";
   allBtn.onclick = () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     allBtn.classList.add('active');
     loadProductsAll();
   };
-  tabsRow.appendChild(allBtn);
+  tabsEl.appendChild(allBtn);
 
-  sheets.forEach((s) => {
+  sheets.forEach((s)=>{
     const btn = document.createElement('button');
     btn.className = 'tab';
     btn.innerText = s.key;
     btn.dataset.key = s.key;
-    btn.onclick = () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.onclick = ()=> {
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
       btn.classList.add('active');
       loadProductsFor(s.key);
     };
-    tabsRow.appendChild(btn);
+    tabsEl.appendChild(btn);
   });
 
   loadProductsAll();
 }
 
-/* ----------------- loadProductsFor (cache-buster) ----------------- */
+/* ---------- loadProductsFor (cache-buster) ---------- */
 async function loadProductsFor(sheetKey){
   lastLoadedSheetKey = sheetKey;
-  if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando productos...</div>';
+  if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando productos</div>';
   try {
-    // añadir bust para evitar edge-cache stale en primer load
-    const bust = Date.now();
-    const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey)+'&_='+bust, {cache:'no-store'});
+    const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey)+'&_='+Date.now(), {cache:'no-store'});
     const data = await r.json();
-    if (data.error){ if(productsGrid) productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
-    let products = (data.products || []).map(p=> {
-      p.data = p.data || {};
-      const raw = p.sheetKey || p.data.Categoria || p.data.categoria || sheetKey || 'UNKNOWN';
-      p.sheetKey = mapToAvailableSheetKey(raw) || String(raw);
-      return p;
-    });
-
-    lastProductsCache = products.map(p => ({ row: p.row, sheetKey: String(p.sheetKey), data: p.data || {} }));
-    console.log('[loadProductsFor] sheetKey mapped products sample', lastProductsCache.slice(0,6));
-    renderProducts(products.map(p=>({ row: p.row, data: p.data, sheetKey: p.sheetKey })), sheetKey);
+    if (data.error){ if(contentEl) contentEl.innerHTML='Error: '+data.message; return; }
+    const products = (data.products || []).map(p=> { if(!p.sheetKey) p.sheetKey = sheetKey; return p; });
+    lastProductsCache = products.map(p => ({ row: p.row, sheetKey: p.sheetKey, data: p.data || {} }));
+    renderProducts(products, sheetKey);
   } catch(err){
-    console.error(err);
-    if(productsGrid) productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error cargando productos</div>';
+    if(contentEl) contentEl.innerHTML='<div class="loading">Error cargando productos</div>';
   }
 }
 
-/* ----------------- loadProductsAll (cache-buster + details) ----------------- */
+/* ---------- loadProductsAll (cache-bust + detail-merge) ---------- */
 async function loadProductsAll(){
   lastLoadedSheetKey = "ALL";
-  if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando todos los productos...</div>';
+  if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando todos los productos</div>';
   try {
-    const bust = Date.now();
-    const r = await fetch(API_URL+'?all=1&_='+bust, {cache:'no-store'});
+    const r = await fetch(API_URL+'?all=1&_='+Date.now(), {cache:'no-store'});
     const data = await r.json();
-    if (data.error){ if(productsGrid) productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
-    let products = (data.products || []).map(p => { p.data = p.data || {}; return p; });
+    if (data.error){ if(contentEl) contentEl.innerHTML='Error: '+data.message; return; }
+    let products = data.products || [];
 
-    // Normalizar sheetKey por producto: preferir Categoria en los datos, luego p.sheetKey
     products.forEach(p=>{
-      const rawCat = p.data.Categoria || p.data.categoria || p.sheetKey || 'UNKNOWN';
-      p.sheetKey = mapToAvailableSheetKey(rawCat) || String(rawCat);
+      p.data = p.data || {};
+      if(!p.data.Categoria) p.data.Categoria = p.data.categoria || p.sheetKey || 'UNKNOWN';
     });
 
-    // recolectar categorías (claves ya mapeadas)
-    const cats = [...new Set(products.map(p => p.sheetKey).filter(Boolean))];
-    console.log('[loadProductsAll] cats mapped', cats);
+    const cats = [...new Set(products.map(p => (p.data && (p.data.Categoria || p.data.categoria)) ).filter(Boolean))];
 
-    // pedir detalles por categoria (usar claves mapeadas) con bust para evitar edge cached sheet data
-    const detailsPromises = cats.map(catKey => fetch(API_URL+'?sheetKey='+encodeURIComponent(catKey)+'&_='+bust, {cache:'no-store'})
-      .then(res=>res.json().catch(()=>({products:[]})))
-      .then(json => ({ cat: catKey, products: json.products || [] }))
-      .catch(()=>({cat: catKey, products:[]}))
-    );
-
+    const detailsPromises = cats.map(cat => fetch(API_URL+'?sheetKey='+encodeURIComponent(cat)+'&_='+Date.now(), {cache:'no-store'}).then(res=>res.json().catch(()=>({products:[]}))).then(json => ({ cat, products: json.products || [] })));
     const details = await Promise.all(detailsPromises);
+
     const detailMap = {};
     details.forEach(obj=>{
       const cat = obj.cat;
       (obj.products || []).forEach(pp=>{
         const key = `${cat}::${String(pp.row)}`;
-        detailMap[key] = (pp.data && Object.keys(pp.data).length) ? pp.data : pp;
+        detailMap[key] = pp.data || pp;
         if(!pp.sheetKey) pp.sheetKey = cat;
       });
     });
 
     products = products.map(p=>{
       const d = p.data || {};
-      const cat = p.sheetKey || d.Categoria || d.categoria || 'UNKNOWN';
+      const cat = d.Categoria || d.categoria || 'UNKNOWN';
       const key = `${cat}::${String(p.row)}`;
       const det = detailMap[key];
       if(det){
@@ -1496,366 +1292,23 @@ async function loadProductsAll(){
         if((det.Stock !== undefined) && (d.Stock === undefined)) d.Stock = det.Stock;
         if(!d.Categoria && det.Categoria) d.Categoria = det.Categoria;
       }
-      p.sheetKey = String(p.sheetKey || d.Categoria || cat);
+      p.sheetKey = p.sheetKey || d.Categoria || cat;
       p.data = d;
       return p;
     });
 
     lastProductsCache = products.map(p => ({ row: p.row, sheetKey: String(p.sheetKey), data: p.data || {} }));
-    console.log('[loadProductsAll] lastProductsCache sample', lastProductsCache.slice(0,8));
     renderProducts(lastProductsCache.map(p=>({ row: p.row, data: p.data, sheetKey: p.sheetKey })), "ALL");
   } catch(err){
-    console.error(err);
-    if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;color:#f88">Error cargando productos</div>';
+    if(contentEl) contentEl.innerHTML = '<div class="loading">Error cargando productos</div>';
   }
 }
 
-/* ---------- util: abrir modal imagen ---------- */
-const imgModalOverlay = document.getElementById('img-modal-overlay');
-const imgModalImg = document.getElementById('img-modal-img');
-const imgModalClose = document.getElementById('img-modal-close');
-function openImageModal(url, alt){
-  if(!url) return;
-  imgModalImg.src = url;
-  imgModalImg.alt = alt || '';
-  if(imgModalOverlay) imgModalOverlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-}
-function closeImageModal(){ if(imgModalOverlay) imgModalOverlay.style.display = 'none'; if(imgModalImg) imgModalImg.src = ''; document.body.style.overflow = ''; }
-if(imgModalClose) imgModalClose.addEventListener('click', closeImageModal);
-if(imgModalOverlay) imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
-
-/* ---------- búsqueda (simple) ---------- */
-function searchProducts(){
-  const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
-  if(!searchTerm.trim()){
-    loadProductsAll();
-    return;
-  }
-  const q = searchTerm.trim().toLowerCase();
-  const found = lastProductsCache.filter(p => {
-    const d = p.data || {};
-    return (String(firstKeyValue(d, ['name','nombre','producto','Nombre']) || '').toLowerCase().includes(q) ||
-            String(firstKeyValue(d, ['descripcion','Descripcion','description']) || '').toLowerCase().includes(q));
-  }).map(p=>({ row: p.row, data: p.data, sheetKey: p.sheetKey }));
-  renderProducts(found, lastLoadedSheetKey || 'ALL');
-}
-const searchInputEl = document.getElementById('searchInput');
-if(searchInputEl){
-  searchInputEl.addEventListener('keypress', function(e){
-    if(e.key === 'Enter') searchProducts();
-  });
-}
-
-/* ---------- carousel, populate, boot ---------- */
-function getProductImageUrl(p){
-  const d = p && p.data ? p.data : {};
-  const img = firstKeyValue(d, ['img','Img','imagen','image','url','Imagen']) || d.Img || d.imagen || d.image || '';
-  return img && /^https?:\/\//i.test(img) ? img : null;
-}
-function populateCarouselFromProducts(products, maxSlides = 6){
-  try {
-    const carouselEl = document.querySelector('.carousel');
-    const dotsContainer = document.getElementById('carouselDots');
-    if(!carouselEl) return;
-    const slides = [];
-    for (let i = 0; i < (products || []).length && slides.length < maxSlides; i++){
-      const p = products[i];
-      const img = getProductImageUrl(p);
-      if(img) slides.push({
-        img,
-        title: firstKeyValue(p.data||{}, ['name','nombre','producto','Nombre']) || (p.data && (p.data.Nombre || '')),
-        price: firstKeyValue(p.data||{}, ['price','precio','Precio']) || (p.data && p.data.Precio) || ''
-      });
-    }
-    if(!slides.length) return;
-    carouselEl.innerHTML = '';
-    slides.forEach(s => {
-      const item = document.createElement('div');
-      item.className = 'carousel-item';
-      const wrap = document.createElement('div');
-      wrap.className = 'carousel-img-wrap';
-      const imgEl = makeImgEl(s.img, s.title || 'Slide', 'carousel-img');
-      imgEl.loading = 'eager';
-      wrap.appendChild(imgEl);
-      const caption = document.createElement('div');
-      caption.className = 'carousel-caption';
-      caption.innerHTML = `<h3>${escapeHtml(s.title || '')}</h3><p>${s.price ? ('$ ' + fmtPrice(s.price)) : ''}</p>`;
-      item.appendChild(wrap);
-      item.appendChild(caption);
-      carouselEl.appendChild(item);
-      imgEl.addEventListener('click', ()=> openImageModal(s.img, s.title));
-    });
-    totalSlides = document.querySelectorAll('.carousel .carousel-item').length || 1;
-    if(typeof initDots === 'function') initDots();
-    if(typeof goToSlide === 'function') goToSlide(0);
-  } catch (err){
-    console.warn('populateCarouselFromProducts error', err);
-  }
-}
-let currentSlide = 0;
-let totalSlides = document.querySelectorAll('.carousel .carousel-item').length || 1;
-function initDots(){
-  const dotsContainer = document.getElementById('carouselDots');
-  if(!dotsContainer) return;
-  dotsContainer.innerHTML = '';
-  for(let i=0;i<totalSlides;i++){
-      const dot = document.createElement('div');
-      dot.className='dot';
-      if(i===0) dot.classList.add('active');
-      dot.onclick = ()=>goToSlide(i);
-      dotsContainer.appendChild(dot);
-  }
-}
-function moveCarousel(direction){
-  currentSlide += direction;
-  if(currentSlide < 0) currentSlide = totalSlides - 1;
-  if(currentSlide >= totalSlides) currentSlide = 0;
-  updateCarousel();
-}
-function goToSlide(index){ currentSlide = index; updateCarousel(); }
-function updateCarousel(){
-  const carousel = document.querySelector('.carousel');
-  if(!carousel) return;
-  carousel.style.transform = `translateX(-${currentSlide * 100}%)`;
-  const dots = document.querySelectorAll('.dot');
-  dots.forEach((dot, idx)=> dot.classList.toggle('active', idx === currentSlide));
-}
-setInterval(()=> moveCarousel(1), 5000);
-
-/* ---------- inicialización ---------- */
-(function(){
-  updateCartUI();
-  initDots();
-  loadCategories();
-  // inicializar manejadores del modal de información (para enlaces #sobre, #terminos, #privacidad, #contacto)
-  initInfoLinks();
-})();
-
-/* ----------------- PAGO CON TARJETA (igual que antes) ----------------- */
-const cardModalOverlay = document.getElementById('card-modal-overlay');
-const otpModalOverlay = document.getElementById('otp-modal-overlay');
-let _pendingPayment = null;
-
-function openCardPaymentModal(){
-  if(cart.length === 0){
-    alert('El carrito está vacío');
-    return;
-  }
-  const errEl = document.getElementById('card-errors'); if(errEl) errEl.innerText = '';
-  ['card-name','card-email','card-phone','card-address','card-number','card-exp','card-cvv'].forEach(id=>{
-    const el = document.getElementById(id); if(el) el.value = '';
-  });
-  if(cardModalOverlay) cardModalOverlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-}
-function closeCardPaymentModal(){ if(cardModalOverlay) cardModalOverlay.style.display = 'none'; document.body.style.overflow = ''; }
-
-function luhnCheck(num){
-  const s = String(num).replace(/\D/g,''); if(!s) return false;
-  let sum = 0; let alt = false;
-  for(let i = s.length - 1; i >= 0; i--){
-    const ch = s.charAt(i); const d = Number(ch);
-    if(Number.isNaN(d)) return false;
-    let v = d;
-    if(alt){ v = v * 2; if(v > 9) v = v - 9; }
-    sum = sum + v;
-    alt = !alt;
-  }
-  return (sum % 10) === 0;
-}
-
-function validateCardInputs(){
-  const name = document.getElementById('card-name').value.trim();
-  const email = document.getElementById('card-email').value.trim();
-  const phone = document.getElementById('card-phone').value.trim();
-  const addr = document.getElementById('card-address').value.trim();
-  const number = document.getElementById('card-number').value.replace(/\s+/g,'');
-  const exp = document.getElementById('card-exp').value.trim();
-  const cvv = document.getElementById('card-cvv').value.trim();
-
-  if(!name || !email || !phone || !addr) return 'Completa tus datos personales.';
-  if(!number || number.length < 12) return 'Número de tarjeta inválido.';
-  if(!luhnCheck(number)) return 'Número de tarjeta no pasa Luhn (tarjeta inválida de prueba).';
-  if(!exp || !/^(0[1-9]|1[0-2])\/(\d{2})$/.test(exp)) return 'Formato MM/AA inválido.';
-  const parts = exp.split('/'); const mm = Number(parts[0]); const yy = Number(parts[1]);
-  const now = new Date(); const yearFull = 2000 + yy; const expDate = new Date(yearFull, mm - 1, 1);
-  if(expDate.getFullYear() < now.getFullYear() || (expDate.getFullYear() === now.getFullYear() && (mm - 1) < now.getMonth())){ return 'La tarjeta está vencida.'; }
-  if(!cvv || cvv.length < 3) return 'CVV inválido.';
-  return null;
-}
-
-document.addEventListener('click', (e)=>{
-  if(e.target && e.target.id === 'card-submit'){ 
-    const err = validateCardInputs();
-    const errEl = document.getElementById('card-errors');
-    if(err){ if(errEl) errEl.innerText = err; return; }
-    const amount = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
-    const customer = { name: document.getElementById('card-name').value.trim(), email: document.getElementById('card-email').value.trim(), phone: document.getElementById('card-phone').value.trim(), address: document.getElementById('card-address').value.trim() };
-    _pendingPayment = { items: JSON.parse(JSON.stringify(cart)), customer, amount };
-    if(otpModalOverlay) otpModalOverlay.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  }
-  if(e.target && e.target.id === 'card-cancel'){ closeCardPaymentModal(); }
-});
-
-if(document.getElementById('otp-confirm')){
-  document.getElementById('otp-confirm').addEventListener('click', async ()=>{ 
-    const code = (document.getElementById('otp-input') || {}).value || '';
-    if(!code){ alert('Ingresa el código OTP'); return; }
-    if(code !== '123456'){
-      alert('Pago fallido: OTP incorrecto.');
-      if(otpModalOverlay) otpModalOverlay.style.display = 'none';
-      if(cardModalOverlay) cardModalOverlay.style.display = 'none';
-      document.body.style.overflow = '';
-      return;
-    }
-
-    const items = (_pendingPayment && _pendingPayment.items) || [];
-    let failures = [];
-    try {
-      failures = await finalizePurchaseOnServer(items);
-    } catch(e){
-      console.warn('Error finalizando compra en servidor', e);
-      failures = items.slice();
-    }
-
-    if (failures.length === 0){
-      try {
-        await Promise.all(items.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
-      } catch(e){
-        console.warn('Error refrescando stock tras pago:', e);
-      }
-
-      const fakeToken = 'tok_' + Date.now();
-      alert('Pago confirmado. Token: ' + fakeToken + '\nGracias por tu compra.');
-      cart = [];
-      saveCart();
-      updateCartUI();
-      refreshAllCardDisplays();
-      if(otpModalOverlay) otpModalOverlay.style.display = 'none';
-      if(cardModalOverlay) cardModalOverlay.style.display = 'none';
-      closeCartPopup();
-      document.body.style.overflow = '';
-      return;
-    } else {
-      alert('Hubo un problema actualizando el stock para algunos productos. La página se sincronizará con el stock real.');
-      try {
-        await Promise.all(failures.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
-      } catch(e){ console.warn('Error refrescando stock tras fallo', e); }
-      if(otpModalOverlay) otpModalOverlay.style.display = 'none';
-      if(cardModalOverlay) cardModalOverlay.style.display = 'none';
-      document.body.style.overflow = '';
-      return;
-    }
-  });
-}
-if(document.getElementById('otp-cancel')){
-  document.getElementById('otp-cancel').addEventListener('click', ()=>{
-    if(otpModalOverlay) otpModalOverlay.style.display = 'none';
-    if(cardModalOverlay) cardModalOverlay.style.display = 'none';
-    document.body.style.overflow = '';
-  });
-}
-
-/* -------------------- INFO LINKS: sobre/terminos/privacidad/contacto -------------------- */
-/*
-  Esta función inicializa los enlaces:
-    <a href="#sobre">Sobre Nosotros</a>
-    <a href="#terminos">Términos</a>
-    <a href="#privacidad">Privacidad</a>
-    <a href="#contacto">Contacto</a>
-
-  Al hacer click se mostrará el modal #info-modal con el texto correspondiente.
-  Los textos están redactados para cubrir los requisitos básicos del comercio electrónico
-  en Colombia (identificación del proveedor, precios/impuestos, políticas de cambio/garantía,
-  manejo de datos personales y canales de contacto). Asegúrate de reemplazar los datos
-  de la empresa (razón social, NIT, dirección, correo, teléfono) por los reales.
-*/
-function initInfoLinks(){
-  const infoModalOverlay = document.getElementById('info-modal-overlay');
-  const infoModalContent = document.getElementById('info-modal-content');
-  const infoClose = document.getElementById('info-modal-close');
-  const infoCloseBottom = document.getElementById('info-modal-close-bottom');
-
-  function openInfoModal(html){
-    if(!infoModalOverlay || !infoModalContent) return;
-    infoModalContent.innerHTML = html;
-    infoModalOverlay.style.display = 'flex';
-    infoModalOverlay.setAttribute('aria-hidden','false');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeInfoModal(){
-    if(!infoModalOverlay) return;
-    infoModalOverlay.style.display = 'none';
-    infoModalOverlay.setAttribute('aria-hidden','true');
-    document.body.style.overflow = '';
-  }
-
-  if(infoClose) infoClose.addEventListener('click', closeInfoModal);
-  if(infoCloseBottom) infoCloseBottom.addEventListener('click', closeInfoModal);
-  if(infoModalOverlay) infoModalOverlay.addEventListener('click', (e)=>{ if(e.target === infoModalOverlay) closeInfoModal(); });
-
-  const sobreHtml = `
-    <h2>Sobre Nosotros</h2>
-    <p><strong>Nombre comercial:</strong> WyvernStore (reemplazar con razón social)</p>
-    <p><strong>NIT:</strong> 123456789-0 (reemplazar con NIT real)</p>
-    <p>Somos un comercio electrónico dedicado a la venta de productos relacionados con cómics y cultura pop.
-    Nuestro objetivo es ofrecer productos auténticos, descripciones claras y atención al cliente eficiente.</p>
-    <h4>Compromiso legal</h4>
-    <p>Operamos bajo el marco legal colombiano aplicable al comercio electrónico y al consumidor, garantizando
-    transparencia en precios, disponibilidad y condiciones de venta.</p>
-    <p style="font-size:0.9rem;color:#bbb">Nota: reemplaza los datos anteriores por los datos oficiales de tu empresa.</p>
-  `;
-
-  const terminosHtml = `
-    <h2>Términos y Condiciones</h2>
-    <p><strong>Precios:</strong> Todos los precios publicados incluyen/ excluyen impuestos según se indique. Los impuestos aplicables se mostrarán claramente durante el proceso de compra.</p>
-    <p><strong>Disponibilidad:</strong> Indicamos el stock disponible, pero puede variar por ventas simultáneas. Nos reservamos el derecho a confirmar o rechazar pedidos en caso de indisponibilidad.</p>
-    <p><strong>Formas de pago:</strong> Transferencia, tarjeta o pago por WhatsApp (según se ofrezca). No almacenamos datos sensibles de tarjetas en el cliente; en producción integra un proveedor de pagos seguro.</p>
-    <p><strong>Envíos y tiempos:</strong> Los plazos de entrega estimados se informan en la página de compra. Los costos de envío se detallan antes de confirmar.</p>
-    <p><strong>Cambios y devoluciones:</strong> Atendemos reclamaciones por productos defectuosos o no conformes según el Estatuto del Consumidor. Devuélvenos el producto en el estado acordado y notificaremos el procedimiento y plazos.</p>
-    <p><strong>Jurisdicción y normativa:</strong> Las relaciones de consumo se rigen por la normativa colombiana (por ejemplo, Ley 1480/2011 - Estatuto del Consumidor y Ley 527/1999 en lo aplicable).</p>
-    <p style="font-size:0.9rem;color:#bbb">Si necesitas condiciones más específicas (garantía extendida, política de reembolsos exacta, etc.), edita este texto para reflejarlas.</p>
-  `;
-
-  const privacidadHtml = `
-    <h2>Política de Privacidad y Tratamiento de Datos</h2>
-    <p><strong>Responsable del tratamiento:</strong> WyvernStore (reemplazar con razón social y datos).</p>
-    <p><strong>Finalidad:</strong> Recopilamos datos personales (nombre, correo, teléfono, dirección) para procesar pedidos, facturación, envíos y atención al cliente.</p>
-    <p><strong>Base legal:</strong> Tratamiento necesario para la ejecución del contrato de compra y obligaciones legales. Respetamos los principios y derechos establecidos en la Ley de Protección de Datos Personales (Ley 1581 de 2012) y su reglamentación.</p>
-    <p><strong>Derechos de los titulares:</strong> tienes derecho a conocer, actualizar, rectificar y suprimir tus datos, además de limitar su uso o solicitar que dejen de ser tratados. Para ejercer tus derechos contáctanos mediante los canales abajo.</p>
-    <p><strong>Compartir datos:</strong> Podemos compartir datos con proveedores logísticos o pasarelas de pago estrictamente para cumplir el pedido. Siempre pedimos medidas de seguridad a nuestros proveedores.</p>
-    <p style="font-size:0.9rem;color:#bbb">Consulta la Ley 1581 de 2012 y Decreto 1377 de 2013 para los detalles regulatorios. Mantendremos registros de la política y autorizaciones según la normativa aplicable.</p>
-  `;
-
-  const contactoHtml = `
-    <h2>Contacto</h2>
-    <p><strong>Correo:</strong> contacto@wyvernstore.example (reemplazar)</p>
-    <p><strong>Teléfono / WhatsApp:</strong> +57 320 737 8992 (reemplazar si aplica)</p>
-    <p><strong>Dirección:</strong> Dirección comercial o sede (reemplazar)</p>
-    <p>Si tienes una queja o reclamación sobre un producto o servicio puedes contactarnos y, si aplica, acudir a la Superintendencia de Industria y Comercio (SIC) como entidad de protección al consumidor.</p>
-  `;
-
-  // asignar handlers a enlaces si existen
-  const linkMap = [
-    { sel: 'a[href="#sobre"]', html: sobreHtml },
-    { sel: 'a[href="#terminos"]', html: terminosHtml },
-    { sel: 'a[href="#privacidad"]', html: privacidadHtml },
-    { sel: 'a[href="#contacto"]', html: contactoHtml }
-  ];
-
-  linkMap.forEach(l => {
-    const els = document.querySelectorAll(l.sel);
-    els.forEach(el => {
-      el.addEventListener('click', function(ev){
-        ev.preventDefault();
-        openInfoModal(l.html);
-      });
-    });
-  });
-}
+/* ---------- boot ---------- */
+loadCategories();
+updateCartUI();
 </script>
 </body>
 </html>
+
 

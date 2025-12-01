@@ -693,16 +693,12 @@ async function fetchServerStock(sheetKeyRaw, row){
   }
 }
 
-/* ---------- FUNCIONES CORREGIDAS PARA SEGUIMIENTO DE STOCK ---------- */
+/* ---------- FUNCIONES CORREGIDAS PARA SEGUIMIENTO DE STOCK & PERFORMANCE ---------- */
 
 /* ---------- getOriginalStock (ajustada) ---------- */
 function getOriginalStock(sheetKey, row){
-  // intenta obtener el "base" que usamos para calcular display: normalmente es serverStock
-  // pero si hubo una transacción reciente (lastTx) y el carrito aún contiene la reserva,
-  // necesitamos computar origStock = serverStock + lastTx para que origStock - reservedLocal === serverStock.
   const skLower = (sheetKey||'').toString().trim().toLowerCase();
   const rStr = String(row);
-  // buscar card en DOM
   const card = Array.from(document.querySelectorAll('.product-card')).find(c => {
     const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString().trim().toLowerCase();
     const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
@@ -712,45 +708,43 @@ function getOriginalStock(sheetKey, row){
   const reserved = getReservedQty(sheetKey, row);
 
   if(card){
+    // prefer serverStock attribute if present (represents what's stored in DB)
     const serverStockAttr = card.dataset.serverStock;
     const lastTx = Number(card.dataset.lastTxDecrement || 0);
 
     if(serverStockAttr !== undefined && serverStockAttr !== null && serverStockAttr !== ''){
       const serverStockNum = Number(serverStockAttr || 0);
-      // Si hay una tx reciente y hay reserva local, reconstruimos origStock para que
-      // origStock - reserved === serverStock (y el UI no salte mientras el carrito existe).
+      // Si hay una transacción reciente (lastTx) y hay reserva local, reconstruimos origStock temporalmente:
+      // origStock = serverStock + lastTx para que origStock - reserved === serverStock mientras la reserva exista.
       if(lastTx > 0 && reserved > 0){
         return Math.max(0, serverStockNum + lastTx);
       }
-      // si no hay tx reciente o no hay reserva local, el "original" es el serverStock
       return Math.max(0, serverStockNum);
     }
 
-    // fallback: si no hay serverStock, usar dataset.origStock si existe
+    // fallback: dataset.origStock
     if(card.dataset.origStock !== undefined){
       return Number(card.dataset.origStock || 0);
     }
   }
 
-  // fallback a cache: buscar en lastProductsCache
+  // fallback a cache
   const p = findProductInCache(sheetKey, row);
   if (p){
     const d = p.data || {};
     const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0;
     return Number(stock || 0);
   }
-
   const p2 = (Array.isArray(lastProductsCache) && lastProductsCache.find(pp=>String(pp.row)===String(row))) || null;
   if(p2){
     const d = p2.data || {};
     const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || 0;
     return Number(stock || 0);
   }
-
   return 0;
 }
 
-/* ---------- refreshCardStockDisplay (ajustada para tx temporales) ---------- */
+/* ---------- refreshCardStockDisplay (ajustada) ---------- */
 function refreshCardStockDisplay(sheetKey, row){
   const cards = Array.from(document.querySelectorAll('.product-card')).filter(c => {
     const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString().trim().toLowerCase();
@@ -758,30 +752,23 @@ function refreshCardStockDisplay(sheetKey, row){
     return sk === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
   });
 
-  if(!cards.length){
-    // nada que actualizar
-    return;
-  }
+  if(!cards.length) return;
 
   const reserved = getReservedQty(sheetKey, row);
 
   cards.forEach(card => {
-    // preferimos serverStock si existe
     const serverStockAttr = card.dataset.serverStock;
     const lastTx = Number(card.dataset.lastTxDecrement || 0);
     let origStockForCalc;
 
     if(serverStockAttr !== undefined && serverStockAttr !== null && serverStockAttr !== ''){
       const serverStockNum = Number(serverStockAttr || 0);
-      // Si hubo una tx reciente y hay reserva local, reconstruimos origStock temporalmente:
-      // origStock = serverStock + lastTx -> así origStock - reserved = serverStock (correcto mientras la reserva exista).
       if(lastTx > 0 && reserved > 0){
         origStockForCalc = Math.max(0, serverStockNum + lastTx);
       } else {
         origStockForCalc = Math.max(0, serverStockNum);
       }
     } else {
-      // fallback al valor dataset.origStock (antiguo comportamiento)
       origStockForCalc = Number(card.dataset.origStock !== undefined ? (card.dataset.origStock || 0) : getOriginalStock(sheetKey, row));
     }
 
@@ -803,8 +790,10 @@ function refreshCardStockDisplay(sheetKey, row){
 }
 
 /*
-  updateStockOnServer_decrement ahora devuelve true si todas las unidades solicitadas
-  fueron decrementadas OK, o false si hubo cualquier fallo.
+  updateStockOnServer_decrement: ahora:
+   - realiza las peticiones por unidad en paralelo (mejor rendimiento)
+   - devuelve true si se decremetó la cantidad completa; false si hubo fallos
+   - actualiza dataset.serverStock y dataset.lastTxDecrement en DOM al terminar exitosamente
 */
 async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
   if(!qty || qty <= 0) return false;
@@ -814,68 +803,78 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
     return false;
   }
 
-  let successCount = 0;
-  let lastConfirmedStock = undefined;
-
+  // crear N promesas (qty) para enviar decrement en paralelo
+  const requests = [];
   for(let i=0;i<qty;i++){
-    try {
-      const resp = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'decrement', sheetKey: mappedKey, row: String(row) })
-      });
+    requests.push(fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'decrement', sheetKey: mappedKey, row: String(row) })
+    }).then(async resp => {
       const text = await resp.text().catch(()=>null);
       let json = null;
       try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
+      return { ok: resp.ok && json && !json.error, status: resp.status, json, text };
+    }).catch(err => ({ ok:false, err })));
+  }
 
-      if(resp.ok && json && !json.error){
-        lastConfirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : lastConfirmedStock;
+  // ejecutar en paralelo y esperar resultados
+  const settled = await Promise.allSettled(requests);
+  let successCount = 0;
+  let lastConfirmedStock = undefined;
+
+  for(const s of settled){
+    if(s.status === 'fulfilled'){
+      const result = s.value;
+      if(result && result.ok){
         successCount++;
+        if(result.json && result.json.newStock !== undefined){
+          lastConfirmedStock = Number(result.json.newStock);
+        }
       } else {
-        console.warn('Decrement fallo o respuesta inesperada:', resp.status, text);
-        break;
+        // fallo parcial, continuar contabilizando (pero no consideramos esto éxito total)
       }
-    } catch (err){
-      console.warn('Decrement petición falló:', err);
-      break;
+    } else {
+      // petición rechazada
     }
   }
 
-  // si todas las unidades fueron decrementadas correctamente, actualizamos DOM/cache una sola vez
-  if(successCount === qty && lastConfirmedStock !== undefined){
-    // Guardar serverStock y marcar la tx (para mantener la visual mientras el carrito exista)
+  // si todas las unidades se decremetaron correctamente -> éxito
+  if(successCount === qty){
+    // actualizar DOM/cache una sola vez
     document.querySelectorAll('.product-card').forEach(card=>{
       const csk = (card.dataset.sheetKey||'').toString().trim().toLowerCase();
       const rw = card.dataset.row;
       if(String(rw) === String(row) && (csk === mappedKey.toString().trim().toLowerCase() || csk === sheetKeyRaw.toString().trim().toLowerCase())){
-        // serverStock = valor real en servidor después del decremento
-        card.dataset.serverStock = String(Math.max(0, Number(lastConfirmedStock)));
-        // registramos cuánto fue decrementado en esta tx. Esto nos permite mostrar el valor correcto
-        // mientras la reserva sigue presente (antes de limpiar el carrito).
+        // establecer serverStock y marcar la tx
+        if(lastConfirmedStock !== undefined){
+          card.dataset.serverStock = String(Math.max(0, Number(lastConfirmedStock)));
+        }
+        // registramos cuánto fue decrementado en esta tx; esto ayuda a mantener UI estable hasta re-sync final
         card.dataset.lastTxDecrement = String(Number(qty));
       }
     });
 
-    // Actualizar cache local si existe
+    // actualizar cache local si existe
     if (Array.isArray(lastProductsCache)){
       const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
       if (p){
         p.data = p.data || {};
-        p.data.Stock = Number(lastConfirmedStock);
-        p.data.stock = Number(lastConfirmedStock);
+        if(lastConfirmedStock !== undefined){
+          p.data.Stock = Number(lastConfirmedStock);
+          p.data.stock = Number(lastConfirmedStock);
+        }
       }
     }
 
-    // refrescar UI para ese item
     refreshCardStockDisplay(mappedKey, row);
     return true;
   }
 
-  // Si no se completó todo, podemos intentar re-sync parcial: solicitar stock actual y actualizar DOM
+  // si hubo fallos, intentar re-sincronizar desde servidor la cantidad real y limpiar lastTxDecrement
   try {
     const current = await fetchServerStock(mappedKey, row);
     if(current !== null && current !== undefined){
-      // actualizamos serverStock sin marcar lastTxDecrement (porque fue parcial/inconsistente)
       document.querySelectorAll('.product-card').forEach(card=>{
         const csk = (card.dataset.sheetKey||'').toString().trim().toLowerCase();
         const rw = card.dataset.row;
@@ -894,7 +893,9 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
       }
       refreshCardStockDisplay(mappedKey, row);
     }
-  } catch(e){ console.warn('updateStockOnServer_decrement: re-sync failed', e); }
+  } catch(e){
+    console.warn('updateStockOnServer_decrement: re-sync failed', e);
+  }
 
   return false;
 }
@@ -915,7 +916,6 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
 
     if(resp.ok && json && !json.error){
       const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : Number(newStock);
-      // actualizar DOM: serverStock = confirmedStock. eliminamos lastTxDecrement porque esto es un set explícito.
       document.querySelectorAll('.product-card').forEach(card=>{
         const csk = (card.dataset.sheetKey||'').toString().trim().toLowerCase();
         const rw = card.dataset.row;
@@ -924,7 +924,6 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
           delete card.dataset.lastTxDecrement;
         }
       });
-      // actualizar cache local
       if (Array.isArray(lastProductsCache)){
         const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
         if (p){
@@ -955,7 +954,6 @@ async function refreshStockFromServerForItem(sheetKeyRaw, row){
       const rw = card.dataset.row;
       if (String(rw) === String(row) && csk === mappedKey.toString().trim().toLowerCase()){
         card.dataset.serverStock = String(Math.max(0, Number(serverStock)));
-        // ya se normalizó en servidor: quitar marca de tx
         delete card.dataset.lastTxDecrement;
       }
     });
@@ -977,103 +975,21 @@ async function refreshStockFromServerForItem(sheetKeyRaw, row){
   }
 }
 
-/* ---------- FIN FUNCIONES CORREGIDAS PARA SEGUIMIENTO DE STOCK ---------- */
-
-/* ---------- stock / UI helpers ---------- */
-function findProductInCache(sheetKey, row){
-  if(!Array.isArray(lastProductsCache)) return null;
-  const targetSk = (sheetKey || '').toString().trim();
-  return lastProductsCache.find(pp => {
-    const sk = (pp.sheetKey || (pp.data && (pp.data.Categoria || pp.data.categoria)) || '').toString().trim();
-    return String(pp.row) === String(row) && sk.toString().trim().toLowerCase() === targetSk.toLowerCase();
-  }) || null;
-}
-
-function getReservedQty(sheetKey, row){
-  return cart.filter(i => (i.sheetKey||'').toString().trim().toLowerCase() === (sheetKey||'').toString().trim().toLowerCase() && String(i.row) === String(row)).reduce((s,i)=>s+Number(i.qty||0), 0);
-}
-
-function updateCartUI(){
-  const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
-  const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
-  if(cartIconBtn) cartIconBtn.innerText = `Carrito (${count})`;
-  saveCart();
-}
-
-/* ---------- add / remove cart ---------- */
-async function addToCartFromCard(card, qty){
-  const sheetKey = (card && card.dataset.sheetKey) || lastLoadedSheetKey || 'UNKNOWN';
-  const row = card && card.dataset.row;
-  const name = card?.querySelector('.product-title')?.innerText || 'Sin nombre';
-  const priceRaw = card?.dataset.price !== undefined ? card.dataset.price : (card?.querySelector('.product-price')?.innerText || '');
-  const priceNum = parsePriceNumber(priceRaw);
-  const origStock = getOriginalStock(sheetKey, row);
-  const reserved = getReservedQty(sheetKey,row);
-  const available = Math.max(0, origStock - reserved);
-
-  if(qty > available){
-    alert('No hay suficiente stock disponible.');
-    return;
-  }
-
-  const key = `${sheetKey}::${row}`;
-  const existing = cart.find(i=>cartItemKey(i) === key);
-  if(existing){
-    existing.qty = Math.min(origStock, existing.qty + qty);
-  } else {
-    cart.push({ sheetKey, row, name, price: priceRaw, _priceNum: priceNum, qty });
-  }
-
-  refreshCardStockDisplay(sheetKey,row);
-  updateCartUI();
-
-  // nota: ya no decrementamos el stock al añadir al carrito.
-  // El decremento se realizará cuando se confirme el pago por tarjeta o al enviar por WhatsApp.
-  if(cartIconBtn){
-    cartIconBtn.style.transform = 'scale(1.12)';
-    setTimeout(()=> cartIconBtn.style.transform = '', 200);
-  }
-}
-
-function removeFromCart(idx){
-  if(idx >= 0 && idx < cart.length){
-    const item = cart[idx];
-    const sheetKey = item.sheetKey;
-    const row = item.row;
-    const removedQty = Number(item.qty || 0);
-
-    cart.splice(idx, 1);
-    refreshCardStockDisplay(sheetKey, row);
-    updateCartUI();
-    openCartPopup();
-
-    // Ya no restauramos stock en el servidor aquí porque no lo decrementamos al añadir.
-  }
-}
-
-/* ----------------- helpers para "commit" de compra ----------------- */
-
-// intenta decrementar en el servidor (llama a updateStockOnServer_decrement) para cada item
-// devuelve array de items que fallaron (si todo ok, devuelve [])
+/* ---------- finalizePurchaseOnServer: ahora paraleliza items ---------- */
 async function finalizePurchaseOnServer(items){
-  const failures = [];
-  for (const it of items || []){
+  // lanzamos todas las operaciones de decrement en paralelo (cada una puede a su vez lanzar múltiples peticiones)
+  const ops = (items || []).map(it => {
     const qty = Number(it.qty || 0);
-    if (!qty) continue;
-    try {
-      const ok = await updateStockOnServer_decrement(it.sheetKey, it.row, qty);
-      if(!ok){
-        failures.push(it);
-      }
-    } catch (err){
-      console.warn('finalizePurchaseOnServer: error para', it.sheetKey, it.row, err);
-      failures.push(it);
-    }
-  }
+    if (!qty) return Promise.resolve({ ok: false, item: it });
+    return updateStockOnServer_decrement(it.sheetKey, it.row, qty).then(ok => ({ ok, item: it }));
+  });
+
+  const results = await Promise.all(ops);
+  const failures = results.filter(r => !r.ok).map(r => r.item);
   return failures;
 }
 
-/* ---------- envío por WhatsApp (ahora usa finalizePurchaseOnServer) ---------- */
+/* ---------- envío por WhatsApp (mejor manejo y resync) ---------- */
 async function sendToWhatsApp(){
   if(cart.length === 0){
     alert('El carrito está vacío');
@@ -1093,9 +1009,10 @@ async function sendToWhatsApp(){
   message += `*TOTAL: ${Number(total).toLocaleString('de-DE')}*\n\n`;
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 
-  // Intentar decrementar en servidor; si falla, refrescar stock y no limpiar el carrito
+  // Intentar decrementar en servidor
   let failures = [];
   try {
+    // finalizePurchaseOnServer ahora es concurrente y más rápido
     failures = await finalizePurchaseOnServer(cart);
   } catch (e){
     console.warn('Error finalizando decrements antes de WhatsApp', e);
@@ -1106,32 +1023,38 @@ async function sendToWhatsApp(){
     // guardamos los items comprados para resync posterior
     const purchased = cart.slice();
 
-    // pedir stock actualizado para cada item (opcional rápido) y actualizar la UI
+    // refrescar stock real desde servidor para cada item (paralelo)
     try {
-      await Promise.all(cart.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
     } catch(e){
       console.warn('Error refrescando stock tras decrementar (WA):', e);
     }
 
-    // todo OK: abrir WhatsApp y limpiar carrito (UI ya refleja decremento)
+    // Abrir WhatsApp y limpiar carrito
     window.open(url, '_blank');
 
     // limpiar carrito local
     cart = [];
+    saveCart();
     updateCartUI();
 
-    // RE-SYNC final: ahora que cart está vacío, forzamos una lectura desde servidor
+    // Si estamos en la vista "ALL" recargamos para evitar inconsistencias entre vistas
     try {
-      await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      if(lastLoadedSheetKey === 'ALL'){
+        await loadProductsAll();
+      } else if(lastLoadedSheetKey){
+        await loadProductsFor(lastLoadedSheetKey);
+      } else {
+        refreshAllCardDisplays();
+      }
     } catch(e){
-      console.warn('Error re-sincronizando stock después de limpiar carrito (WA):', e);
+      console.warn('Error re-cargando productos tras compra (WA):', e);
+      refreshAllCardDisplays();
     }
 
-    refreshAllCardDisplays();
     closeCartPopup();
     return;
   } else {
-    // falló alguna decrementación: preguntar al usuario si quiere continuar
     const proceed = confirm('No fue posible actualizar el stock en el servidor para algunos productos. ¿Deseas continuar y enviar el pedido por WhatsApp de todas maneras? (Si no, la página re-sincronizará el stock)');
     if (!proceed){
       // Resync only the failed items
@@ -1143,8 +1066,17 @@ async function sendToWhatsApp(){
       // usuario decide continuar: abrir WhatsApp y limpiar carrito (posible inconsistencia)
       window.open(url, '_blank');
       cart = [];
+      saveCart();
       updateCartUI();
-      refreshAllCardDisplays();
+      try {
+        if(lastLoadedSheetKey === 'ALL'){
+          await loadProductsAll();
+        } else if(lastLoadedSheetKey){
+          await loadProductsFor(lastLoadedSheetKey);
+        } else {
+          refreshAllCardDisplays();
+        }
+      } catch(e){ console.warn('Error recargando tras continuar con inconsistencia', e); refreshAllCardDisplays(); }
       closeCartPopup();
       return;
     }
@@ -1156,7 +1088,6 @@ function openCartPopup(){
   if(cart.length === 0){
     cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
     cartTotalEl.innerHTML = '';
-    // inyectar acciones si no existen
     ensureCartActions();
     cartPopupOverlay.style.display = 'flex';
     cartPopupOverlay.setAttribute('aria-hidden','false');
@@ -1182,7 +1113,6 @@ function openCartPopup(){
   const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
   cartTotalEl.innerHTML = `💰 Total: <span style="color:#9D4EDD">${Number(total).toLocaleString('de-DE')}</span>`;
 
-  // ensure actions/buttons exist
   ensureCartActions();
   cartPopupOverlay.style.display = 'flex';
   cartPopupOverlay.setAttribute('aria-hidden','false');
@@ -1201,7 +1131,6 @@ function ensureCartActions(){
   const popupInner = cartPopupOverlay.querySelector('.cart-popup') || cartPopupOverlay.firstElementChild;
   if(!popupInner) return;
 
-  // buscar o crear fila de acciones (no absolute para evitar superposición)
   let actionsRow = popupInner.querySelector('.cart-actions-row');
   if(!actionsRow){
     actionsRow = document.createElement('div');
@@ -1210,7 +1139,6 @@ function ensureCartActions(){
     popupInner.appendChild(actionsRow);
   }
 
-  // -- Botón Cerrar (si no existe) --
   if(!actionsRow.querySelector('.close-btn')){
     const closeBtn = document.createElement('button');
     closeBtn.className = 'close-btn';
@@ -1220,7 +1148,6 @@ function ensureCartActions(){
     actionsRow.appendChild(closeBtn);
   }
 
-  // -- Reusar botón WhatsApp existente si está en el DOM --
   let existingWaBtn = popupInner.querySelector('#cart-confirm') || document.getElementById('cart-confirm');
   if(existingWaBtn){
     if(existingWaBtn.parentElement !== actionsRow){
@@ -1239,7 +1166,6 @@ function ensureCartActions(){
     }
   }
 
-  // -- Botón Pagar con tarjeta (solo crear si no existe) --
   if(!actionsRow.querySelector('#cart-paycard')){
     const payBtn = document.createElement('button');
     payBtn.id = 'cart-paycard';
@@ -1259,12 +1185,11 @@ function ensureCartActions(){
 function renderProducts(products, sheetKey){
   if (!products || !products.length){
     productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">No hay productos</div>';
-    // actualizar carrusel con cache si quieres
     populateCarouselFromProducts(lastProductsCache, 6);
     return;
   }
 
-  // actualizar cache
+  // actualizar cache (normalizamos sheetKey)
   lastProductsCache = (products || []).map(p => {
     return {
       row: p.row,
@@ -1287,7 +1212,9 @@ function renderProducts(products, sheetKey){
 
     const card = document.createElement('div');
     card.className = 'product-card';
+    // guardamos tanto origStock (fallback) como serverStock para el nuevo enfoque
     card.dataset.origStock = String(stock);
+    card.dataset.serverStock = String(stock); // inicializamos serverStock con lo que viene del servidor
     card.dataset.price = price;
     card.dataset.row = String(p.row);
     card.dataset.sheetKey = String(productSheetKey);
@@ -1317,7 +1244,6 @@ function renderProducts(products, sheetKey){
     const placeholder = card.querySelector('.prod-img-placeholder');
     if (imgUrl && /^https?:\/\//i.test(imgUrl)){
       const imgEl = makeImgEl(imgUrl, name, 'product-image');
-      // replace placeholder with img container
       const wrap = document.createElement('div');
       wrap.style.width = '100%';
       wrap.style.height = '380px';
@@ -1461,13 +1387,18 @@ async function loadProductsAll(){
     if (data.error){ productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
     let products = data.products || [];
 
+    // Normalizar categoria y stock en cada producto (aseguramos que p.data.Stock esté presente)
     products.forEach(p=>{
       p.data = p.data || {};
       if(!p.data.Categoria) p.data.Categoria = p.data.Categoria || p.data.categoria || 'UNKNOWN';
+      // si la fuente tiene Stock/cantidad colocamos en data.Stock
+      const st = firstKeyValue(p.data, ['stock','cantidad','Stock']);
+      if(st !== undefined && st !== null) p.data.Stock = Number(st || 0);
     });
 
     const cats = [...new Set(products.map(p => (p.data && (p.data.Categoria || p.data.categoria)) ).filter(Boolean))];
 
+    // obtener detalles por categoria (paralelo)
     const detailsPromises = cats.map(cat => fetch(API_URL+'?sheetKey='+encodeURIComponent(cat), {cache:'no-store'})
       .then(res=>res.json().catch(()=>({products:[]})))
       .then(json => ({ cat, products: json.products || [] }))
@@ -1496,12 +1427,16 @@ async function loadProductsAll(){
         if(!d.Icono && (det.Icono || det.icono || det.icon)) d.Icono = det.Icono || det.icono || det.icon;
         if(!d.Img && (det.Img || det.img || det.imagen || det.image)) d.Img = det.Img || det.img || det.imagen || det.image;
         if(!d.Categoria && det.Categoria) d.Categoria = det.Categoria;
+        // merge stock if present in det
+        const st = firstKeyValue(det, ['stock','cantidad','Stock']);
+        if(st !== undefined && st !== null) d.Stock = Number(st || d.Stock || 0);
       }
       p.sheetKey = p.sheetKey || d.Categoria || cat;
       p.data = d;
       return p;
     });
 
+    // actualizar cache y render
     lastProductsCache = products.map(p => {
       return {
         row: p.row,
@@ -1592,7 +1527,6 @@ function openInfo(key){
   if(infoContentDiv) infoContentDiv.innerHTML = `<h2 style="color:#9D4EDD;margin-bottom:8px">${escapeHtml(entry.title || '')}</h2>${entry.html || ''}`;
   if(infoOverlay) { infoOverlay.style.display = 'flex'; infoOverlay.setAttribute('aria-hidden','false'); }
   document.body.style.overflow = 'hidden';
-  // focus accesible
   const modal = document.getElementById('info-modal');
   if(modal) modal.focus && modal.focus();
 }
@@ -1679,7 +1613,6 @@ function populateCarouselFromProducts(products, maxSlides = 6){
     const dotsContainer = document.getElementById('carouselDots');
     if(!carouselEl) return;
 
-    // elegir hasta maxSlides productos que tengan imagen
     const slides = [];
     for (let i = 0; i < (products || []).length && slides.length < maxSlides; i++){
       const p = products[i];
@@ -1691,44 +1624,27 @@ function populateCarouselFromProducts(products, maxSlides = 6){
       });
     }
 
-    // Si no hay slides con imagen, no modificar
     if(!slides.length) return;
 
-    // Vaciar y construir nuevos items
     carouselEl.innerHTML = '';
     slides.forEach(s => {
       const item = document.createElement('div');
       item.className = 'carousel-item';
-
-      // wrapper cuadrado centrado
       const wrap = document.createElement('div');
       wrap.className = 'carousel-img-wrap';
-
-      // crear imagen (usa proxy si existe)
       const imgEl = makeImgEl(s.img, s.title || 'Slide', 'carousel-img');
-      // no forzamos cover; dejamos que la clase CSS (object-fit: contain) la gestione
-      imgEl.loading = 'eager'; // cargar rápido para el carrusel
-
-      // Append img to wrapper
+      imgEl.loading = 'eager';
       wrap.appendChild(imgEl);
-
-      // caption
       const caption = document.createElement('div');
       caption.className = 'carousel-caption';
       caption.innerHTML = `<h3>${escapeHtml(s.title || '')}</h3><p>${s.price ? ('$ ' + fmtPrice(s.price)) : ''}</p>`;
-
       item.appendChild(wrap);
       item.appendChild(caption);
       carouselEl.appendChild(item);
-
-      // hacer click en la imagen abre el modal (opcional)
       imgEl.addEventListener('click', ()=> openImageModal(s.img, s.title));
     });
 
-    // recalcular totalSlides y reiniciar dots + estado del carousel
     totalSlides = document.querySelectorAll('.carousel .carousel-item').length || 1;
-
-    // reiniciar los dots
     if(typeof initDots === 'function'){
       initDots();
     } else {
@@ -1742,11 +1658,8 @@ function populateCarouselFromProducts(products, maxSlides = 6){
         }
       }
     }
-
-    // resetear índice y mostrar primer slide
     if(typeof goToSlide === 'function') goToSlide(0);
     else if(typeof updateCarousel === 'function') updateCarousel();
-
   } catch (err){
     console.warn('populateCarouselFromProducts error', err);
   }
@@ -1769,7 +1682,6 @@ function openCardPaymentModal(){
     alert('El carrito está vacío');
     return;
   }
-  // limpiar errores y campos (si existen)
   const errEl = document.getElementById('card-errors'); if(errEl) errEl.innerText = '';
   ['card-name','card-email','card-phone','card-address','card-number','card-exp','card-cvv'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
@@ -1814,14 +1726,13 @@ function validateCardInputs(){
 }
 
 document.addEventListener('click', (e)=>{
-  if(e.target && e.target.id === 'card-submit'){ 
+  if(e.target && e.target.id === 'card-submit'){
     const err = validateCardInputs();
     const errEl = document.getElementById('card-errors');
     if(err){ if(errEl) errEl.innerText = err; return; }
     const amount = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
     const customer = { name: document.getElementById('card-name').value.trim(), email: document.getElementById('card-email').value.trim(), phone: document.getElementById('card-phone').value.trim(), address: document.getElementById('card-address').value.trim() };
     _pendingPayment = { items: JSON.parse(JSON.stringify(cart)), customer, amount };
-    // mostrar OTP modal
     if(otpModalOverlay) otpModalOverlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
@@ -1840,7 +1751,6 @@ if(document.getElementById('otp-confirm')){
       return;
     }
 
-    // Intentar decrementar en servidor; si falla, re-sincronizar los items fallidos
     const items = (_pendingPayment && _pendingPayment.items) || [];
     let failures = [];
     try {
@@ -1851,7 +1761,6 @@ if(document.getElementById('otp-confirm')){
     }
 
     if (failures.length === 0){
-      // refrescar stock real desde servidor para cada item comprado (asegura UI sincronizada)
       try {
         await Promise.all(items.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
       } catch(e){
@@ -1860,23 +1769,33 @@ if(document.getElementById('otp-confirm')){
 
       const fakeToken = 'tok_' + Date.now();
       alert('Pago confirmado. Token: ' + fakeToken + '\nGracias por tu compra.');
-      // limpiar carrito (ya se ha decrementado en el servidor)
       cart = [];
       saveCart();
       updateCartUI();
-      refreshAllCardDisplays();
+
+      try {
+        if(lastLoadedSheetKey === 'ALL'){
+          await loadProductsAll();
+        } else if(lastLoadedSheetKey){
+          await loadProductsFor(lastLoadedSheetKey);
+        } else {
+          refreshAllCardDisplays();
+        }
+      } catch(e){
+        console.warn('Error recargando productos tras pago:', e);
+        refreshAllCardDisplays();
+      }
+
       if(otpModalOverlay) otpModalOverlay.style.display = 'none';
       if(cardModalOverlay) cardModalOverlay.style.display = 'none';
       closeCartPopup();
       document.body.style.overflow = '';
       return;
     } else {
-      // hubo fallos: re-sincronizar el stock real para los items afectados
       alert('Hubo un problema actualizando el stock para algunos productos. La página se sincronizará con el stock real.');
       try {
         await Promise.all(failures.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
       } catch(e){ console.warn('Error refrescando stock tras fallo', e); }
-      // no limpiamos el carrito para que el usuario revise/edite
       if(otpModalOverlay) otpModalOverlay.style.display = 'none';
       if(cardModalOverlay) cardModalOverlay.style.display = 'none';
       document.body.style.overflow = '';
@@ -1897,3 +1816,4 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+

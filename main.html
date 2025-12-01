@@ -495,8 +495,10 @@ const cartTotalEl = document.getElementById('cart-total');
 const cartCloseBtn = document.getElementById('cart-close');
 const cartConfirmBtn = document.getElementById('cart-confirm');
 
-function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
-function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
+/* ---------- tarjetas de pago / OTP (vars) ---------- */
+const cardModalOverlay = document.getElementById('card-modal-overlay');
+const otpModalOverlay = document.getElementById('otp-modal-overlay');
+let _pendingPayment = null;
 
 /* ---------- utilidades ---------- */
 function firstKeyValue(obj, keys){
@@ -532,8 +534,10 @@ function escapeHtml(str){
   if(str === undefined || str === null) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+function saveCart(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
+function cartItemKey(item){ return `${item.sheetKey}::${item.row}`; }
 
-/* ---------- modales automaticos (si no existen crear) ---------- */
+/* ---------- ensure modals exist (image/modal/card/otp/info) ---------- */
 (function ensureModalsExist(){
   if(!document.getElementById('img-modal-overlay')){
     const overlay = document.createElement('div');
@@ -557,6 +561,53 @@ function escapeHtml(str){
       </div>
     `;
     document.body.appendChild(im);
+  }
+  // card modal skeleton (if not present in page)
+  if(!document.getElementById('card-modal-overlay')){
+    const div = document.createElement('div');
+    div.id = 'card-modal-overlay';
+    div.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:20000';
+    div.innerHTML = `
+      <div id="card-modal" style="background:#0b0b0b;padding:16px;border-radius:12px;width:520px;max-width:96%;color:#eee">
+        <h3>Pagar con tarjeta</h3>
+        <div id="card-errors" style="color:#f66;margin-bottom:8px"></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label>Nombre completo<input id="card-name" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
+          <label>Correo<input id="card-email" type="email" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
+          <label>Teléfono<input id="card-phone" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
+          <label>Dirección<textarea id="card-address" rows="2" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff"></textarea></label>
+          <hr style="border:none;border-top:1px solid #222" />
+          <label>Número de tarjeta<input id="card-number" placeholder="4242 4242 4242 4242" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
+          <div style="display:flex;gap:8px">
+            <label style="flex:1">MM/AA<input id="card-exp" placeholder="08/28" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
+            <label style="width:120px">CVV<input id="card-cvv" placeholder="123" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button id="card-cancel" style="padding:8px;border-radius:6px;background:transparent;border:1px solid #333;color:#ddd">Cancelar</button>
+            <button id="card-submit" style="padding:8px;border-radius:6px;background:#9D4EDD;color:#fff">Pagar ahora</button>
+          </div>
+          <div style="font-size:0.85rem;color:#aaa">En producción integra Stripe/Adyen y nunca almacenes CVV.</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(div);
+  }
+  if(!document.getElementById('otp-modal-overlay')){
+    const o = document.createElement('div');
+    o.id = 'otp-modal-overlay';
+    o.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:21000';
+    o.innerHTML = `
+      <div style="background:#0b0b0b;padding:16px;border-radius:12px;width:360px;color:#eee">
+        <h4>3D Secure — Código OTP</h4>
+        <p style="color:#aaa">Ingresa el código OTP (para pruebas usa <strong>123456</strong>).</p>
+        <input id="otp-input" placeholder="Código OTP" style="padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff;width:100%" />
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button id="otp-cancel" style="padding:8px;border-radius:6px;background:transparent;border:1px solid #333;color:#ddd">Cancelar</button>
+          <button id="otp-confirm" style="padding:8px;border-radius:6px;background:#9D4EDD;color:#fff">Confirmar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(o);
   }
 })();
 
@@ -584,8 +635,6 @@ function observeLazyImages(rootEl) {
   const imgs = (rootEl || document).querySelectorAll('img[data-src]');
   imgs.forEach(img => { if (document.contains(img)) lazyObserver.observe(img); });
 }
-
-/* ---------- image helpers ---------- */
 function makeImgEl(raw, alt, className){
   const img = document.createElement('img');
   img.alt = alt || '';
@@ -593,6 +642,7 @@ function makeImgEl(raw, alt, className){
   img.loading = 'lazy';
   try {
     img.dataset.src = raw ? (API_URL + 'image-proxy?url=' + encodeURIComponent(raw)) : '';
+    // placeholder tiny gif to reserve space until lazy load sets src
     img.src = img.dataset.src ? 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==' : '';
   } catch(e) {
     img.src = '';
@@ -633,18 +683,15 @@ async function fetchServerStock(sheetKeyRaw, row){
 }
 
 /**
- * updateStockOnServer_decrement:
- * - intenta petición atómica con qty (si worker la soporta)
- * - fallback: N requests en paralelo
- * - aplica newStock en DOM y cache local si viene en la respuesta
- * - devuelve { ok: boolean, newStock: number|undefined }
+ * decrement: intenta atómico, fallback n requests en paralelo.
+ * Aplica newStock si el worker lo devuelve.
  */
 async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
   if(!qty || qty <= 0) return { ok:false, newStock: undefined };
   const mappedKey = mapToAvailableSheetKey(sheetKeyRaw);
   if(!mappedKey) return { ok:false, newStock: undefined };
 
-  // intento atómico (con qty)
+  // intento atómico
   try {
     const resp = await fetch(API_URL, {
       method: 'POST',
@@ -659,11 +706,9 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
       applyNewStockToDOMAndCache(mappedKey, row, ns);
       return { ok:true, newStock: ns };
     }
-  } catch(e){
-    /* ignore and fallback */
-  }
+  } catch(e){ /* fallback below */ }
 
-  // fallback: N requests in parallel
+  // fallback parallel
   const promises = [];
   for(let i=0;i<qty;i++){
     promises.push(fetch(API_URL, {
@@ -690,14 +735,13 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
   if(lastNewStock !== undefined){
     applyNewStockToDOMAndCache(mappedKey, row, lastNewStock);
   } else if(successCount > 0){
-    // si hubo éxito pero no devolvieron newStock, refrescamos desde servidor
     const server = await fetchServerStock(mappedKey, row);
     if(server !== null) applyNewStockToDOMAndCache(mappedKey, row, Number(server));
   }
   return { ok: successCount === qty, newStock: lastNewStock };
 }
 
-/** aplica newStock al DOM y a lastProductsCache */
+/** Aplica newStock al DOM y a la cache local */
 function applyNewStockToDOMAndCache(mappedKey, row, newStock){
   const pk = normalizeProductKey(mappedKey, row);
   const reservedLocal = getReservedQty(mappedKey, row);
@@ -708,7 +752,6 @@ function applyNewStockToDOMAndCache(mappedKey, row, newStock){
       card.dataset.origStock = String(Math.max(0, Number(newStock) + Number(reservedLocal || 0)));
     }
   });
-  // actualizar cache local
   if (Array.isArray(lastProductsCache)){
     const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
     if(p){
@@ -720,9 +763,7 @@ function applyNewStockToDOMAndCache(mappedKey, row, newStock){
   refreshCardStockDisplay(mappedKey, row);
 }
 
-/**
- * set stock en servidor (y aplicar respuesta si devuelve newStock)
- */
+/** set stock */
 async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
   const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
   try {
@@ -743,9 +784,7 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
   return false;
 }
 
-/**
- * increase via set (usar fetchServerStock + set) — útil al eliminar del carrito
- */
+/** increase via set (read server + set) */
 async function updateStockOnServer_increaseViaSet(sheetKeyRaw, row, delta){
   if(!delta || delta <= 0) return;
   const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
@@ -765,7 +804,6 @@ function findProductInCache(sheetKey, row){
     return String(pp.row) === String(row) && sk === targetSk;
   }) || null;
 }
-
 function getOriginalStock(sheetKey, row){
   const pk = normalizeProductKey(sheetKey, row);
   const card = Array.from(document.querySelectorAll('.product-card, .card')).find(c => c.dataset.productKey === pk || (normalizeProductKey(c.dataset.sheetKey, c.dataset.row) === pk));
@@ -787,18 +825,15 @@ function getOriginalStock(sheetKey, row){
   }
   return 0;
 }
-
 function getReservedQty(sheetKey, row){
   return cart.filter(i => (i.sheetKey||'').toString().trim().toLowerCase() === (sheetKey||'').toString().trim().toLowerCase() && String(i.row) === String(row)).reduce((s,i)=>s+Number(i.qty||0), 0);
 }
-
 async function refreshStockFromServerForItem(sheetKeyRaw, row){
   const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
   const serverStock = await fetchServerStock(mappedKey, row);
   if (serverStock === null || serverStock === undefined) return;
   applyNewStockToDOMAndCache(mappedKey, row, Number(serverStock));
 }
-
 function refreshCardStockDisplay(sheetKey, row){
   const pk = normalizeProductKey(sheetKey, row);
   const cards = Array.from(document.querySelectorAll('.product-card, .card')).filter(c => {
@@ -824,21 +859,16 @@ function refreshCardStockDisplay(sheetKey, row){
   });
 }
 
-/**
- * Finaliza compra: paraleliza decrement por item y actualiza cache/dom si worker devuelve newStock.
- * Devuelve array de items que fallaron.
- */
+/* ---------- finalize purchase on server ---------- */
 async function finalizePurchaseOnServer(items){
   const failures = [];
   if(!Array.isArray(items) || items.length === 0) return failures;
-
   const promises = items.map(async (it) => {
     const qty = Number(it.qty || 0);
     if(!qty) return { ok: true, item: it };
     const res = await updateStockOnServer_decrement(it.sheetKey, it.row, qty);
     return { ok: !!res.ok, item: it };
   });
-
   const results = await Promise.all(promises);
   results.forEach(r => { if(!r.ok) failures.push(r.item); });
   return failures;
@@ -851,7 +881,6 @@ function updateCartUI(){
   if(cartIconBtn) cartIconBtn.innerText = `Carrito (${count})`;
   saveCart();
 }
-
 async function addToCartFromCard(card, qty){
   const sheetKeyRaw = (card && card.dataset.sheetKey) || lastLoadedSheetKey || 'UNKNOWN';
   const sheetKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
@@ -879,10 +908,9 @@ async function addToCartFromCard(card, qty){
   refreshCardStockDisplay(sheetKey,row);
   updateCartUI();
 
-  // intentar decrement directamente (optimistic) y aplicar respuesta si hay newStock
+  // decrement optimista en el servidor (no await para no bloquear UI)
   updateStockOnServer_decrement(sheetKey, row, qty).catch(()=>{});
 }
-
 function removeFromCart(idx){
   if(idx >= 0 && idx < cart.length){
     const item = cart[idx];
@@ -892,14 +920,13 @@ function removeFromCart(idx){
     cart.splice(idx, 1);
     refreshCardStockDisplay(sheetKey, row);
     updateCartUI();
-    // sincronizar con servidor para sumar stock
+    openCartPopup();
+    // sincronizar subida de stock
     updateStockOnServer_increaseViaSet(sheetKey, row, removedQty).catch(()=>{});
   }
 }
-
 async function sendToWhatsApp(){
   if(cart.length === 0){ alert('El carrito está vacío'); return; }
-
   let message = '*Nuevo Pedido - WyvernStore*\n\n';
   let total = 0;
   cart.forEach(item => {
@@ -942,28 +969,65 @@ async function sendToWhatsApp(){
   }
 }
 
-/* ---------- carrito popup y acciones ---------- */
+/* ---------- carrito popup UI (asegura botones: cerrar, wa, tarjeta y equis por item) ---------- */
 function openCartPopup(){
   if(!cartPopupOverlay) return;
+  let html = '';
   if(cart.length === 0){
-    if(cartItemsContainer) cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
-    if(cartTotalEl) cartTotalEl.innerHTML = '';
+    cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
+    cartTotalEl.innerHTML = '';
     if(cartPopupOverlay){ cartPopupOverlay.style.display = 'flex'; cartPopupOverlay.setAttribute('aria-hidden','false'); }
     document.body.style.overflow = 'hidden';
     return;
   }
-  let html = '';
   cart.forEach((item, idx) => {
     const itemTotal = parsePriceNumber(item._priceNum !== undefined ? item._priceNum : item.price) * Number(item.qty||0);
-    html += `<div class="cart-item" style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #111">
-      <div style="flex:1"><div style="font-weight:800">${escapeHtml(item.name)}</div><div style="font-size:0.9rem;color:#aaa">x${item.qty} — ${Number(itemTotal).toLocaleString('de-DE')}</div></div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end"><button style="background:transparent;border:none;color:#f66;cursor:pointer;font-weight:800" onclick="removeFromCart(${idx})">✕</button></div>
-    </div>`;
+    html += `
+      <div class="cart-item" style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #111">
+        <div style="flex:1">
+          <div style="font-weight:800">${escapeHtml(item.name)}</div>
+          <div style="font-size:0.9rem;color:#aaa">x${item.qty} — ${Number(itemTotal).toLocaleString('de-DE')}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button title="Eliminar" style="background:transparent;border:none;color:#f66;cursor:pointer;font-weight:800" onclick="removeFromCart(${idx})">✕</button>
+        </div>
+      </div>
+    `;
   });
-  if(cartItemsContainer) cartItemsContainer.innerHTML = html;
+  cartItemsContainer.innerHTML = html;
   const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
-  if(cartTotalEl) cartTotalEl.innerHTML = `💰 Total: <span style="color:#9D4EDD">${Number(total).toLocaleString('de-DE')}</span>`;
-  if(cartPopupOverlay){ cartPopupOverlay.style.display = 'flex'; cartPopupOverlay.setAttribute('aria-hidden','false'); }
+  cartTotalEl.innerHTML = `💰 Total: <span style="color:#9D4EDD">${Number(total).toLocaleString('de-DE')}</span>`;
+
+  // actions row (Cerrar, WhatsApp, Pagar con tarjeta)
+  let actionsRow = cartPopupOverlay.querySelector('.cart-actions-row');
+  if(!actionsRow){
+    actionsRow = document.createElement('div');
+    actionsRow.className = 'cart-actions-row';
+    actionsRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:8px;border-top:1px solid #111';
+    cartPopupOverlay.querySelector('.cart-popup')?.appendChild(actionsRow) || cartPopupOverlay.appendChild(actionsRow);
+  }
+  actionsRow.innerHTML = ''; // reconstruir
+
+  const closeBtn = document.createElement('button');
+  closeBtn.innerText = 'Cerrar';
+  closeBtn.style.cssText = 'padding:8px;border-radius:8px;border:1px solid #333;background:transparent;color:#ddd';
+  closeBtn.onclick = closeCartPopup;
+  actionsRow.appendChild(closeBtn);
+
+  const waBtn = document.createElement('button');
+  waBtn.innerText = 'Enviar por WhatsApp';
+  waBtn.style.cssText = 'padding:8px;border-radius:8px;background:#9D4EDD;color:#fff;border:none;margin-left:6px';
+  waBtn.onclick = sendToWhatsApp;
+  actionsRow.appendChild(waBtn);
+
+  const payBtn = document.createElement('button');
+  payBtn.innerText = 'Pagar con tarjeta';
+  payBtn.style.cssText = 'padding:8px;border-radius:8px;background:#3b82f6;color:#fff;border:none;margin-left:6px';
+  payBtn.onclick = openCardPaymentModal;
+  actionsRow.appendChild(payBtn);
+
+  cartPopupOverlay.style.display = 'flex';
+  cartPopupOverlay.setAttribute('aria-hidden','false');
   document.body.style.overflow = 'hidden';
 }
 function closeCartPopup(){ if(cartPopupOverlay){ cartPopupOverlay.style.display = 'none'; cartPopupOverlay.setAttribute('aria-hidden','true'); } document.body.style.overflow = ''; }
@@ -972,18 +1036,106 @@ if(cartIconBtn) cartIconBtn.addEventListener('click', openCartPopup);
 if(cartCloseBtn) cartCloseBtn.addEventListener('click', closeCartPopup);
 if(cartConfirmBtn) cartConfirmBtn.addEventListener('click', sendToWhatsApp);
 if(cartPopupOverlay) cartPopupOverlay.addEventListener('click', (e)=>{ if(e.target === cartPopupOverlay) closeCartPopup(); });
+window.removeFromCart = removeFromCart;
 
-/* ---------- render dinámico de productos (MEJORADO) ---------- */
+/* ---------- modal imagen ---------- */
+const imgModalOverlay = document.getElementById('img-modal-overlay');
+const imgModalImg = document.getElementById('img-modal-img');
+const imgModalClose = document.getElementById('img-modal-close');
+function openImageModal(url, alt){
+  if(!url) return;
+  imgModalImg.src = url.startsWith('http') ? (API_URL + 'image-proxy?url=' + encodeURIComponent(url)) : url;
+  imgModalImg.alt = alt || '';
+  if(imgModalOverlay) imgModalOverlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeImageModal(){ if(imgModalOverlay) imgModalOverlay.style.display = 'none'; if(imgModalImg) imgModalImg.src = ''; document.body.style.overflow = ''; }
+if(imgModalClose) imgModalClose.addEventListener('click', closeImageModal);
+if(imgModalOverlay) imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
+
+/* ---------- carrusel (simple) ---------- */
+let currentSlide = 0;
+let totalSlides = 0;
+function populateCarouselFromProducts(products, maxSlides = 6){
+  try {
+    const carouselEl = document.querySelector('.carousel');
+    const dotsContainer = document.getElementById('carouselDots');
+    if(!carouselEl) return;
+    const slides = [];
+    for (let i = 0; i < (products || []).length && slides.length < maxSlides; i++){
+      const p = products[i];
+      const img = (p.data && (firstKeyValue(p.data, ['img','Img','imagen','image','url','Imagen']) || p.data.Img || p.data.imagen || p.data.image)) || null;
+      if(img && /^https?:\/\//i.test(img)) slides.push({
+        img,
+        title: firstKeyValue(p.data||{}, ['name','nombre','producto','Nombre']) || (p.data && (p.data.Nombre || '')),
+        price: firstKeyValue(p.data||{}, ['price','precio','Precio']) || (p.data && p.data.Precio) || ''
+      });
+    }
+    if(!slides.length) { if(carouselEl) carouselEl.innerHTML = ''; return; }
+    carouselEl.innerHTML = '';
+    slides.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'carousel-item';
+      const wrap = document.createElement('div');
+      wrap.className = 'carousel-img-wrap';
+      const imgEl = makeImgEl(s.img, s.title || 'Slide', 'carousel-img');
+      imgEl.loading = 'eager';
+      wrap.appendChild(imgEl);
+      const caption = document.createElement('div');
+      caption.className = 'carousel-caption';
+      caption.innerHTML = `<h3>${escapeHtml(s.title || '')}</h3><p>${s.price ? ('$ ' + fmtPrice(s.price)) : ''}</p>`;
+      item.appendChild(wrap);
+      item.appendChild(caption);
+      carouselEl.appendChild(item);
+      imgEl.addEventListener('click', ()=> openImageModal(s.img, s.title));
+    });
+    totalSlides = document.querySelectorAll('.carousel .carousel-item').length || 1;
+    initDots();
+    goToSlide(0);
+    observeLazyImages(carouselEl);
+  } catch (err){
+    console.warn('populateCarouselFromProducts error', err);
+  }
+}
+function initDots(){
+  const dotsContainer = document.getElementById('carouselDots');
+  if(!dotsContainer) return;
+  dotsContainer.innerHTML = '';
+  for(let i=0;i<totalSlides;i++){
+      const dot = document.createElement('div');
+      dot.className='dot';
+      if(i===0) dot.classList.add('active');
+      dot.onclick = ()=>goToSlide(i);
+      dotsContainer.appendChild(dot);
+  }
+}
+function moveCarousel(direction){
+  currentSlide += direction;
+  if(currentSlide < 0) currentSlide = totalSlides - 1;
+  if(currentSlide >= totalSlides) currentSlide = 0;
+  updateCarousel();
+}
+function goToSlide(index){ currentSlide = index; updateCarousel(); }
+function updateCarousel(){
+  const carousel = document.querySelector('.carousel');
+  if(!carousel) return;
+  carousel.style.transform = `translateX(-${currentSlide * 100}%)`;
+  const dots = document.querySelectorAll('.dot');
+  dots.forEach((dot, idx)=> dot.classList.toggle('active', idx === currentSlide));
+}
+setInterval(()=> { if(totalSlides>1) moveCarousel(1); }, 5000);
+
+/* ---------- render dinámico de productos ---------- */
 function renderProducts(products, sheetKey){
   if (!products || !products.length){
     if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">No hay productos</div>';
+    populateCarouselFromProducts(lastProductsCache, 6);
     return;
   }
 
-  // rebuild cache
   lastProductsCache = (products || []).map(p => ({
     row: p.row,
-    sheetKey: (p.sheetKey || (p.data && (p.data.Categoria || p.data.categoria)) || '').toString(),
+    sheetKey: (p.sheetKey || (p.data && (p.data.Categoria || p.data.categoria)) || sheetKey || 'UNKNOWN').toString(),
     data: p.data || {}
   }));
 
@@ -997,7 +1149,6 @@ function renderProducts(products, sheetKey){
     const stock = Number(firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0);
     const imgUrl = firstKeyValue(d, ['img','Img','imagen','image','url','Imagen']) || d.Img || '';
     const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota','Nota']) || d.descripcion || '';
-
     const productSheetKey = mapToAvailableSheetKey(p.sheetKey || d.Categoria || d.categoria || 'UNKNOWN') || (p.sheetKey || d.Categoria || d.categoria || 'UNKNOWN');
 
     const card = document.createElement('div');
@@ -1011,7 +1162,9 @@ function renderProducts(products, sheetKey){
 
     card.innerHTML = `
       <div style="min-height:380px; display:flex; align-items:center; justify-content:center; background:#0f0f0f;">
-        <div style="width:90%;text-align:center;padding:16px;"><div class="prod-img-placeholder" style="width:100%;height:300px;display:flex;align-items:center;justify-content:center;color:#888">🖼️</div></div>
+        <div style="width:90%;text-align:center;padding:16px;">
+          <div class="prod-img-placeholder" style="width:100%;height:300px;display:flex;align-items:center;justify-content:center;color:#888">🖼️</div>
+        </div>
       </div>
       <div class="product-info">
         <div class="product-title">${escapeHtml(name)}</div>
@@ -1050,7 +1203,6 @@ function renderProducts(products, sheetKey){
 
   productsGrid.appendChild(frag);
 
-  // event delegation
   if (!productsGrid._hasDelegation) {
     productsGrid.addEventListener('click', function(e){
       const plus = e.target.closest('.plus');
@@ -1091,7 +1243,7 @@ function renderProducts(products, sheetKey){
     productsGrid._hasDelegation = true;
   }
 
-  // sincronizar stocks mostrados pero con limitador para no saturar worker
+  // sincronizar stocks de los cards mostrados (batch)
   (async function syncAllShownStocks(){
     const cards = Array.from(document.querySelectorAll('.product-card'));
     const limit = 6;
@@ -1105,16 +1257,19 @@ function renderProducts(products, sheetKey){
     }
     workerBatch().catch(()=>{});
   })();
+
+  // actualizar carrusel de la vista
+  populateCarouselFromProducts(lastProductsCache, 6);
 }
 
-/* ---------- helper: refresh all cards ---------- */
+/* ---------- refresh all cards ---------- */
 function refreshAllCardDisplays(){
   document.querySelectorAll('.product-card, .card').forEach(card => {
     refreshCardStockDisplay(card.dataset.sheetKey, card.dataset.row);
   });
 }
 
-/* ---------- categories and loading (cache-bust added) ---------- */
+/* ---------- categories & loaders (cache-bust) ---------- */
 async function loadCategories(){
   try {
     const r = await fetch(API_URL + '?_=' + Date.now(), {cache:'no-store'});
@@ -1126,7 +1281,6 @@ async function loadCategories(){
     if(tabsRow) tabsRow.innerHTML = '<div style="color:#f88">Error cargando categorías</div>';
   }
 }
-
 function renderTabs(sheets){
   if(!tabsRow) return;
   tabsRow.innerHTML = '';
@@ -1156,7 +1310,7 @@ function renderTabs(sheets){
   loadProductsAll();
 }
 
-/* ---------- loadProductsFor (cache-buster) ---------- */
+/* ---------- loadProductsFor ---------- */
 async function loadProductsFor(sheetKey){
   lastLoadedSheetKey = sheetKey;
   if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando productos...</div>';
@@ -1172,7 +1326,7 @@ async function loadProductsFor(sheetKey){
   }
 }
 
-/* ----------------- loadProductsAll (cache-bust + details) ----------------- */
+/* ---------- loadProductsAll (merge + details) ---------- */
 async function loadProductsAll(){
   lastLoadedSheetKey = "ALL";
   if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando todos los productos...</div>';
@@ -1182,21 +1336,19 @@ async function loadProductsAll(){
     if (data.error){ if(productsGrid) productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
     let products = (data.products || []).map(p=> { p.data = p.data || {}; return p; });
 
-    // normalizar category por producto
     products.forEach(p=>{
       const cat = p.data.Categoria || p.data.categoria || p.sheetKey || 'UNKNOWN';
       p.sheetKey = mapToAvailableSheetKey(cat) || String(cat);
     });
 
-    // pedir detalles por categoria (usar bust para evitar cache stale por hoja)
     const cats = [...new Set(products.map(p => p.sheetKey).filter(Boolean))];
     const detailsPromises = cats.map(cat => fetch(API_URL + '?sheetKey=' + encodeURIComponent(cat) + '&_=' + Date.now(), {cache:'no-store'})
       .then(res => res.json().catch(()=>({products:[]})))
       .then(json => ({ cat, products: json.products || [] }))
       .catch(()=>({cat, products:[]}))
     );
-
     const details = await Promise.all(detailsPromises);
+
     const detailMap = {};
     details.forEach(obj=>{
       const cat = obj.cat;
@@ -1230,22 +1382,7 @@ async function loadProductsAll(){
   }
 }
 
-/* ---------- abrir modal imagen ---------- */
-const imgModalOverlay = document.getElementById('img-modal-overlay');
-const imgModalImg = document.getElementById('img-modal-img');
-const imgModalClose = document.getElementById('img-modal-close');
-function openImageModal(url, alt){
-  if(!url) return;
-  imgModalImg.src = url.startsWith('http') ? (API_URL + 'image-proxy?url=' + encodeURIComponent(url)) : url;
-  imgModalImg.alt = alt || '';
-  if(imgModalOverlay) imgModalOverlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-}
-function closeImageModal(){ if(imgModalOverlay) imgModalOverlay.style.display = 'none'; if(imgModalImg) imgModalImg.src = ''; document.body.style.overflow = ''; }
-if(imgModalClose) imgModalClose.addEventListener('click', closeImageModal);
-if(imgModalOverlay) imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
-
-/* ---------- búsqueda ---------- */
+/* ---------- search ---------- */
 function searchProducts(){
   const el = document.getElementById('searchInput');
   const searchTerm = el ? el.value : '';
@@ -1264,14 +1401,116 @@ function searchProducts(){
 const searchInputEl = document.getElementById('searchInput');
 if(searchInputEl) searchInputEl.addEventListener('keypress', function(e){ if(e.key === 'Enter') searchProducts(); });
 
-/* ---------- inicialización ---------- */
-(function(){
-  updateCartUI();
-  loadCategories();
-  initInfoLinks && initInfoLinks(); // si existe función previa de info links
-})();
+/* ---------- card payment logic (modal + otp) ---------- */
+function luhnCheck(num){
+  const s = String(num).replace(/\D/g,''); if(!s) return false;
+  let sum = 0; let alt = false;
+  for(let i = s.length - 1; i >= 0; i--){
+    const ch = s.charAt(i); const d = Number(ch);
+    if(Number.isNaN(d)) return false;
+    let v = d;
+    if(alt){ v = v * 2; if(v > 9) v = v - 9; }
+    sum = sum + v;
+    alt = !alt;
+  }
+  return (sum % 10) === 0;
+}
+function validateCardInputs(){
+  const name = (document.getElementById('card-name') || {}).value || '';
+  const email = (document.getElementById('card-email') || {}).value || '';
+  const phone = (document.getElementById('card-phone') || {}).value || '';
+  const addr = (document.getElementById('card-address') || {}).value || '';
+  const number = (document.getElementById('card-number') || {}).value.replace(/\s+/g,'') || '';
+  const exp = (document.getElementById('card-exp') || {}).value || '';
+  const cvv = (document.getElementById('card-cvv') || {}).value || '';
 
-/* ---------- info links (si quieres textos legales en modal) ---------- */
+  if(!name || !email || !phone || !addr) return 'Completa tus datos personales.';
+  if(!number || number.length < 12) return 'Número de tarjeta inválido.';
+  if(!luhnCheck(number)) return 'Número de tarjeta no pasa Luhn (tarjeta inválida de prueba).';
+  if(!exp || !/^(0[1-9]|1[0-2])\/(\d{2})$/.test(exp)) return 'Formato MM/AA inválido.';
+  const parts = exp.split('/'); const mm = Number(parts[0]); const yy = Number(parts[1]);
+  const now = new Date(); const yearFull = 2000 + yy; const expDate = new Date(yearFull, mm - 1, 1);
+  if(expDate.getFullYear() < now.getFullYear() || (expDate.getFullYear() === now.getFullYear() && (mm - 1) < now.getMonth())){ return 'La tarjeta está vencida.'; }
+  if(!cvv || cvv.length < 3) return 'CVV inválido.';
+  return null;
+}
+function openCardPaymentModal(){
+  if(cart.length === 0){ alert('El carrito está vacío'); return; }
+  const errEl = document.getElementById('card-errors'); if(errEl) errEl.innerText = '';
+  ['card-name','card-email','card-phone','card-address','card-number','card-exp','card-cvv'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  if(cardModalOverlay) cardModalOverlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeCardPaymentModal(){ if(cardModalOverlay) cardModalOverlay.style.display = 'none'; document.body.style.overflow = ''; }
+
+document.addEventListener('click', (e)=>{
+  if(e.target && e.target.id === 'card-submit'){
+    const err = validateCardInputs();
+    const errEl = document.getElementById('card-errors');
+    if(err){ if(errEl) errEl.innerText = err; return; }
+    const amount = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
+    const customer = { name: document.getElementById('card-name').value.trim(), email: document.getElementById('card-email').value.trim(), phone: document.getElementById('card-phone').value.trim(), address: document.getElementById('card-address').value.trim() };
+    _pendingPayment = { items: JSON.parse(JSON.stringify(cart)), customer, amount };
+    if(otpModalOverlay) otpModalOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  if(e.target && e.target.id === 'card-cancel'){ closeCardPaymentModal(); }
+});
+
+if(document.getElementById('otp-confirm')){
+  document.getElementById('otp-confirm').addEventListener('click', async ()=>{ 
+    const code = (document.getElementById('otp-input') || {}).value || '';
+    if(!code){ alert('Ingresa el código OTP'); return; }
+    if(code !== '123456'){
+      alert('Pago fallido: OTP incorrecto.');
+      if(otpModalOverlay) otpModalOverlay.style.display = 'none';
+      if(cardModalOverlay) cardModalOverlay.style.display = 'none';
+      document.body.style.overflow = '';
+      return;
+    }
+
+    const items = (_pendingPayment && _pendingPayment.items) || [];
+    let failures = [];
+    try {
+      failures = await finalizePurchaseOnServer(items);
+    } catch(e){
+      failures = items.slice();
+    }
+
+    if (failures.length === 0){
+      await Promise.all(items.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      const fakeToken = 'tok_' + Date.now();
+      alert('Pago confirmado. Token: ' + fakeToken + '\nGracias por tu compra.');
+      cart = [];
+      saveCart();
+      updateCartUI();
+      refreshAllCardDisplays();
+      if(otpModalOverlay) otpModalOverlay.style.display = 'none';
+      if(cardModalOverlay) cardModalOverlay.style.display = 'none';
+      closeCartPopup();
+      document.body.style.overflow = '';
+      return;
+    } else {
+      alert('Hubo un problema actualizando el stock para algunos productos. La página se sincronizará con el stock real.');
+      await Promise.all(failures.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      if(otpModalOverlay) otpModalOverlay.style.display = 'none';
+      if(cardModalOverlay) cardModalOverlay.style.display = 'none';
+      document.body.style.overflow = '';
+      return;
+    }
+  });
+}
+if(document.getElementById('otp-cancel')){
+  document.getElementById('otp-cancel').addEventListener('click', ()=>{
+    if(otpModalOverlay) otpModalOverlay.style.display = 'none';
+    if(cardModalOverlay) cardModalOverlay.style.display = 'none';
+    document.body.style.overflow = '';
+  });
+}
+
+/* ---------- info links (textos legales, adaptables) ---------- */
 function initInfoLinks(){
   const infoModalOverlay = document.getElementById('info-modal-overlay');
   const infoModalContent = document.getElementById('info-modal-content');
@@ -1289,10 +1528,15 @@ function initInfoLinks(){
   if(infoCloseBottom) infoCloseBottom.addEventListener('click', closeInfoModal);
   if(infoModalOverlay) infoModalOverlay.addEventListener('click', (e)=>{ if(e.target === infoModalOverlay) closeInfoModal(); });
 
-  const sobreHtml = `<h2>Sobre Nosotros</h2><p><strong>Nombre comercial:</strong> WyvernStore (reemplazar)</p><p>Comercio electrónico especializado en productos de cómics y cultura pop. Operamos conforme a la normativa colombiana de comercio electrónico y protección al consumidor.</p>`;
-  const terminosHtml = `<h2>Términos y Condiciones</h2><p>Precios, disponibilidad, envíos, devoluciones y jurisdicción aplicable. Reemplaza por tu política completa.</p>`;
-  const privacidadHtml = `<h2>Política de Privacidad</h2><p>Tratamiento de datos personales según Ley 1581/2012 y su reglamentación. Reemplaza con tu información de responsable y contacto.</p>`;
-  const contactoHtml = `<h2>Contacto</h2><p>Correo: contacto@wyvernstore.example — Teléfono: +57 320 737 8992 (reemplazar)</p>`;
+  const sobreHtml = `<h2>Sobre Nosotros</h2>
+    <p><strong>Nombre comercial:</strong> WyvernStore (reemplazar)</p>
+    <p>Comercio electrónico de venta de productos. Operamos conforme al <strong>Reglamento para Comercio Electrónico en Colombia</strong> y la Ley de Protección al Consumidor.</p>`;
+  const terminosHtml = `<h2>Términos y Condiciones</h2>
+    <p>Precios y disponibilidad pueden cambiar. Políticas de envío, garantías, devoluciones y jurisdicción: República de Colombia. Reemplaza con tu política completa.</p>`;
+  const privacidadHtml = `<h2>Política de Privacidad</h2>
+    <p>Tratamiento de datos personales según Ley 1581/2012 y su reglamentación. Responsable: reemplace con nombre y datos de contacto.</p>`;
+  const contactoHtml = `<h2>Contacto</h2>
+    <p>Correo: contacto@wyvernstore.example — Teléfono: +57 320 737 8992 (reemplazar)</p>`;
 
   const linkMap = [
     { sel: 'a[href="#sobre"]', html: sobreHtml },
@@ -1305,9 +1549,17 @@ function initInfoLinks(){
     els.forEach(el => el.addEventListener('click', function(ev){ ev.preventDefault(); openInfoModal(l.html); }));
   });
 }
+
+/* ---------- inicialización ---------- */
+(function(){
+  updateCartUI();
+  loadCategories();
+  initInfoLinks();
+})();
 </script>
 </body>
 </html>
+
 
 
 

@@ -533,7 +533,7 @@ function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-/* ---------- ensure modals (sin cambios funcionales) ---------- */
+/* ---------- utils: modales automáticos (sin cambios funcionales) ---------- */
 (function ensureModalsExist(){
   if(!document.getElementById('img-modal-overlay')){
     const overlay = document.createElement('div');
@@ -588,9 +588,25 @@ function escapeHtml(str){
     `;
     document.body.appendChild(o);
   }
+  if(!document.getElementById('info-modal-overlay')){
+    const im = document.createElement('div');
+    im.id = 'info-modal-overlay';
+    im.setAttribute('aria-hidden','true');
+    im.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);z-index:20010;padding:20px';
+    im.innerHTML = `
+      <div id="info-modal" role="dialog" aria-modal="true" aria-label="Información" style="max-width:800px;width:100%;max-height:90vh;overflow:auto;background:linear-gradient(135deg,#0f0f10 0%,#161216 100%);border-radius:12px;padding:20px;color:#fff;border:1px solid rgba(255,255,255,0.04);box-shadow:0 30px 60px rgba(0,0,0,0.6)">
+        <button id="info-modal-close" style="float:right;background:transparent;border:none;color:#fff;font-weight:800;cursor:pointer;font-size:1.2rem">×</button>
+        <div id="info-modal-content" style="clear:both;padding-top:8px"></div>
+        <div style="margin-top:12px;text-align:right">
+          <button id="info-modal-close-bottom" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#fff">Cerrar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(im);
+  }
 })();
 
-/* ---------- lazy loading / imgs ---------- */
+/* ---------- lazy loading ---------- */
 const lazyObserver = (function(){
   if (typeof IntersectionObserver === 'undefined') return null;
   return new IntersectionObserver((entries, obs) => {
@@ -614,6 +630,8 @@ function observeLazyImages(rootEl) {
   const imgs = (rootEl || document).querySelectorAll('img[data-src]');
   imgs.forEach(img => { if (document.contains(img)) lazyObserver.observe(img); });
 }
+
+/* ---------- makeImgEl ---------- */
 function makeImgEl(raw, alt, className){
   const img = document.createElement('img');
   img.alt = alt || '';
@@ -632,10 +650,14 @@ function makeImgEl(raw, alt, className){
   return img;
 }
 
-/* ---------------- STOCK helpers ---------------- */
+/* ---------------- STOCK helpers y normalización ---------------- */
+
+/** Normaliza la clave única del producto para evitar colisiones */
 function normalizeProductKey(sheetKey, row){
   return `${String(sheetKey||'').trim().toLowerCase()}::${String(row)}`;
 }
+
+/** Busca coincidencia en availableSheetKeys */
 function mapToAvailableSheetKey(input){
   if(!input) return null;
   const s = String(input).trim();
@@ -646,6 +668,7 @@ function mapToAvailableSheetKey(input){
   return s || null;
 }
 
+/** Intenta leer stock real del servidor */
 async function fetchServerStock(sheetKeyRaw, row){
   try {
     const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
@@ -664,18 +687,25 @@ async function fetchServerStock(sheetKeyRaw, row){
   }
 }
 
-/* updateStockOnServer_decrement con logging (debug) */
+/* ---------- IMPORTANT: updated decrement to apply newStock immediately and update cache ---------- */
+/**
+ * updateStockOnServer_decrement:
+ *  - tries atomic request with qty (if worker supports)
+ *  - fallback: N parallel requests
+ *  - returns { ok: boolean, newStock: number|undefined }
+ */
 async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
-  if(!qty || qty <= 0) return false;
+  if(!qty || qty <= 0) return { ok: false, newStock: undefined };
   const mappedKey = mapToAvailableSheetKey(sheetKeyRaw);
   if(!mappedKey){
     console.warn('updateStockOnServer_decrement: sheetKey no reconocido:', sheetKeyRaw);
-    return false;
+    return { ok: false, newStock: undefined };
   }
 
   console.log('[decrement] intentando', { mappedKey, row, qty });
 
-  const applyNewStockToDOM = (newStock) => {
+  const applyNewStockToDOMAndCache = (newStock) => {
+    // actualizar DOM
     const pk = normalizeProductKey(mappedKey, row);
     document.querySelectorAll('.product-card').forEach(card=>{
       if(card.dataset.productKey === pk){
@@ -685,10 +715,19 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
       }
     });
     refreshCardStockDisplay(mappedKey, row);
+    // actualizar cache local (lastProductsCache)
+    if (Array.isArray(lastProductsCache)){
+      const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
+      if(p){
+        p.data = p.data || {};
+        p.data.Stock = Number(newStock);
+        p.data.stock = Number(newStock);
+      }
+    }
   };
 
   try {
-    // intento atómico con qty
+    // Intento atómico con qty (muchos workers lo aceptan)
     const respAtomic = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -701,12 +740,13 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
       try { json = txt ? JSON.parse(txt) : null; } catch(e){ json = null; }
       console.log('[decrement] respuesta atómica', { ok: respAtomic.ok, status: respAtomic.status, json, txt });
       if(respAtomic.ok && json && !json.error && (json.newStock !== undefined)){
-        applyNewStockToDOM(Number(json.newStock));
-        return true;
+        const ns = Number(json.newStock);
+        applyNewStockToDOMAndCache(ns);
+        return { ok: true, newStock: ns };
       }
     }
 
-    // fallback: N requests en paralelo
+    // Fallback: N requests en paralelo (más rápido que secuencial)
     const promises = [];
     for(let i=0;i<qty;i++){
       promises.push(
@@ -737,20 +777,25 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
     }
 
     if(lastNewStock !== undefined){
-      applyNewStockToDOM(lastNewStock);
+      applyNewStockToDOMAndCache(lastNewStock);
+      return { ok: successCount === qty, newStock: lastNewStock };
     } else {
       if(successCount > 0){
+        // forzar refresco desde servidor para asegurar consistencia
         await refreshStockFromServerForItem(mappedKey, row);
       }
     }
 
-    return successCount === qty;
+    return { ok: successCount === qty, newStock: undefined };
   } catch (err){
     console.warn('updateStockOnServer_decrement fallo:', err);
-    return false;
+    return { ok: false, newStock: undefined };
   }
 }
 
+/**
+ * set stock en servidor y aplicar newStock a DOM si worker devuelve newStock
+ */
 async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
   const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
   try {
@@ -759,6 +804,7 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'set', sheetKey: mappedKey, row: String(row), value: String(newStock) })
     });
+
     const text = await resp.text().catch(()=>null);
     let json = null;
     try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
@@ -787,6 +833,9 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
   }
 }
 
+/**
+ * Aumentar stock en servidor usando fetchServerStock + set (útil cuando removemos items del carrito)
+ */
 async function updateStockOnServer_increaseViaSet(sheetKeyRaw, row, delta){
   if(!delta || delta <= 0) return;
   const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
@@ -805,6 +854,7 @@ async function updateStockOnServer_increaseViaSet(sheetKeyRaw, row, delta){
 }
 
 /* ---------- stock / UI helpers ---------- */
+
 function findProductInCache(sheetKey, row){
   if(!Array.isArray(lastProductsCache)) return null;
   const targetSk = (sheetKey || '').toString().trim().toLowerCase();
@@ -827,6 +877,7 @@ function getOriginalStock(sheetKey, row){
     const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0;
     return Number(stock || 0);
   }
+  // último recurso: buscar por row en cache (no ideal)
   const p2 = (Array.isArray(lastProductsCache) && lastProductsCache.find(pp=>String(pp.row)===String(row))) || null;
   if(p2){
     const d = p2.data || {};
@@ -840,6 +891,9 @@ function getReservedQty(sheetKey, row){
   return cart.filter(i => (i.sheetKey||'').toString().trim().toLowerCase() === (sheetKey||'').toString().trim().toLowerCase() && String(i.row) === String(row)).reduce((s,i)=>s+Number(i.qty||0), 0);
 }
 
+/**
+ * Refresca stock de servidor para un item: actualiza DOM y cache
+ */
 async function refreshStockFromServerForItem(sheetKeyRaw, row){
   try {
     const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
@@ -871,6 +925,9 @@ async function refreshStockFromServerForItem(sheetKeyRaw, row){
   }
 }
 
+/**
+ * Actualiza la UI de stock en tarjeta(s) que correspondan a sheetKey::row
+ */
 function refreshCardStockDisplay(sheetKey, row){
   const pk = normalizeProductKey(sheetKey, row);
   const cards = Array.from(document.querySelectorAll('.product-card')).filter(c => c.dataset.productKey === pk);
@@ -893,32 +950,54 @@ function refreshCardStockDisplay(sheetKey, row){
   });
 }
 
+/**
+ * Finaliza compra: paraleliza el decrement para cada item (qty por item).
+ * Devuelve array de items que fallaron.
+ * Ahora recoge newStock cuando la función de decrement lo devuelve y actualiza cache/local.
+ */
 async function finalizePurchaseOnServer(items){
   const failures = [];
   if(!Array.isArray(items) || items.length === 0) return failures;
 
   console.log('[finalizePurchaseOnServer] items', items.map(i=>({sheetKey:i.sheetKey, row:i.row, qty:i.qty})));
 
+  // Lanzamos decrements y recogemos newStock si el worker lo devuelve
   const promises = items.map(async (it) => {
     const qty = Number(it.qty || 0);
-    if(!qty) return { ok: true, item: it };
+    if(!qty) return { ok: true, item: it, newStock: undefined };
     try {
-      const ok = await updateStockOnServer_decrement(it.sheetKey, it.row, qty);
-      return { ok, item: it };
+      const res = await updateStockOnServer_decrement(it.sheetKey, it.row, qty);
+      return { ok: !!res.ok, item: it, newStock: res.newStock };
     } catch (err){
       console.warn('finalizePurchaseOnServer item error', it, err);
-      return { ok: false, item: it };
+      return { ok: false, item: it, newStock: undefined };
     }
   });
 
   const results = await Promise.all(promises);
-  results.forEach(r => { if(!r.ok) failures.push(r.item); });
-
   console.log('[finalizePurchaseOnServer] results', results);
+
+  // aplicar actualizaciones en cache/local ya se hizo dentro de updateStockOnServer_decrement
+  results.forEach(r => {
+    if(!r.ok) failures.push(r.item);
+  });
+
+  // Forzar refresco visual final (por si queda alguna tarjeta duplicada)
+  try {
+    results.forEach(r => {
+      if(r.ok){
+        // si tenemos newStock lo aplicamos también (ya aplicado por la función), si no, intentamos refrescar desde servidor
+        if(r.newStock === undefined){
+          refreshStockFromServerForItem(r.item.sheetKey, r.item.row).catch(()=>{});
+        }
+      }
+    });
+  } catch(e){ console.warn('finalizePurchaseOnServer post-refresh error', e); }
+
   return failures;
 }
 
-/* ---------- cart UI ---------- */
+/* ---------- updateCartUI ---------- */
 function updateCartUI(){
   const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
   const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
@@ -926,8 +1005,8 @@ function updateCartUI(){
   saveCart();
 }
 
+/* ---------- add / remove cart ---------- */
 async function addToCartFromCard(card, qty){
-  // guardar sheetKey ya mapeada (asegurar que coincide con worker)
   const rawSheetKey = (card && card.dataset.sheetKey) || lastLoadedSheetKey || 'UNKNOWN';
   const sheetKey = mapToAvailableSheetKey(rawSheetKey) || rawSheetKey;
   const row = card && card.dataset.row;
@@ -954,6 +1033,7 @@ async function addToCartFromCard(card, qty){
   refreshCardStockDisplay(sheetKey,row);
   updateCartUI();
 
+  // No decrementar al añadir: se decreta al confirmar pago o enviar WA.
   if(cartIconBtn){
     cartIconBtn.style.transform = 'scale(1.12)';
     setTimeout(()=> cartIconBtn.style.transform = '', 200);
@@ -971,10 +1051,13 @@ function removeFromCart(idx){
     refreshCardStockDisplay(sheetKey, row);
     updateCartUI();
     openCartPopup();
+
+    // No restauramos inmediatamente en servidor aquí (optamos por reconciliar por set si necesario)
+    // Si deseas aumentar stock en servidor cuando se elimina del carrito, llamar updateStockOnServer_increaseViaSet(sheetKey, row, removedQty)
   }
 }
 
-/* ---------- enviar por WhatsApp ---------- */
+/* ---------- envío por WhatsApp (usa finalizePurchaseOnServer) ---------- */
 async function sendToWhatsApp(){
   if(cart.length === 0){
     alert('El carrito está vacío');
@@ -1003,6 +1086,7 @@ async function sendToWhatsApp(){
 
   if (failures.length === 0){
     const purchased = cart.slice();
+
     try {
       await Promise.all(cart.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
     } catch(e){
@@ -1010,13 +1094,16 @@ async function sendToWhatsApp(){
     }
 
     window.open(url, '_blank');
+
     cart = [];
     updateCartUI();
+
     try {
       await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
     } catch(e){
       console.warn('Error re-sincronizando stock después de limpiar carrito (WA):', e);
     }
+
     refreshAllCardDisplays();
     closeCartPopup();
     return;
@@ -1038,7 +1125,7 @@ async function sendToWhatsApp(){
   }
 }
 
-/* ---------- cart popup ---------- */
+/* ---------- carrito popup y acciones ---------- */
 function openCartPopup(){
   if(cart.length === 0){
     if(cartItemsContainer) cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
@@ -1130,7 +1217,7 @@ function ensureCartActions(){
   }
 }
 
-/* ---------- render productos ---------- */
+/* ---------- render dinámico de productos (MEJORADO para TODOS) ---------- */
 function renderProducts(products, sheetKey){
   if (!products || !products.length){
     productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">No hay productos</div>';
@@ -1254,6 +1341,11 @@ function renderProducts(products, sheetKey){
         addToCartFromCard(card, qty);
         return;
       }
+
+      const img = e.target.closest('.product-image');
+      if(img){
+        return;
+      }
     });
     productsGrid._hasDelegation = true;
   }
@@ -1324,16 +1416,17 @@ function renderTabs(sheets){
     tabsRow.appendChild(btn);
   });
 
-  // cargar "Todos" por defecto
   loadProductsAll();
 }
 
-/* ---------- loadProductsFor / loadProductsAll (mejoradas) ---------- */
+/* ----------------- loadProductsFor (cache-buster) ----------------- */
 async function loadProductsFor(sheetKey){
   lastLoadedSheetKey = sheetKey;
   if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando productos...</div>';
   try {
-    const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
+    // añadir bust para evitar edge-cache stale en primer load
+    const bust = Date.now();
+    const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey)+'&_='+bust, {cache:'no-store'});
     const data = await r.json();
     if (data.error){ if(productsGrid) productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
     let products = (data.products || []).map(p=> {
@@ -1352,16 +1445,18 @@ async function loadProductsFor(sheetKey){
   }
 }
 
+/* ----------------- loadProductsAll (cache-buster + details) ----------------- */
 async function loadProductsAll(){
   lastLoadedSheetKey = "ALL";
   if(productsGrid) productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando todos los productos...</div>';
   try {
-    const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
+    const bust = Date.now();
+    const r = await fetch(API_URL+'?all=1&_='+bust, {cache:'no-store'});
     const data = await r.json();
     if (data.error){ if(productsGrid) productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
     let products = (data.products || []).map(p => { p.data = p.data || {}; return p; });
 
-    // Normalizar sheetKey por producto usando mapToAvailableSheetKey
+    // Normalizar sheetKey por producto: preferir Categoria en los datos, luego p.sheetKey
     products.forEach(p=>{
       const rawCat = p.data.Categoria || p.data.categoria || p.sheetKey || 'UNKNOWN';
       p.sheetKey = mapToAvailableSheetKey(rawCat) || String(rawCat);
@@ -1371,8 +1466,8 @@ async function loadProductsAll(){
     const cats = [...new Set(products.map(p => p.sheetKey).filter(Boolean))];
     console.log('[loadProductsAll] cats mapped', cats);
 
-    // pedir detalles por categoria (usar claves mapeadas)
-    const detailsPromises = cats.map(catKey => fetch(API_URL+'?sheetKey='+encodeURIComponent(catKey), {cache:'no-store'})
+    // pedir detalles por categoria (usar claves mapeadas) con bust para evitar edge cached sheet data
+    const detailsPromises = cats.map(catKey => fetch(API_URL+'?sheetKey='+encodeURIComponent(catKey)+'&_='+bust, {cache:'no-store'})
       .then(res=>res.json().catch(()=>({products:[]})))
       .then(json => ({ cat: catKey, products: json.products || [] }))
       .catch(()=>({cat: catKey, products:[]}))
@@ -1415,7 +1510,7 @@ async function loadProductsAll(){
   }
 }
 
-/* ---------- imagen modal ---------- */
+/* ---------- util: abrir modal imagen ---------- */
 const imgModalOverlay = document.getElementById('img-modal-overlay');
 const imgModalImg = document.getElementById('img-modal-img');
 const imgModalClose = document.getElementById('img-modal-close');
@@ -1430,10 +1525,9 @@ function closeImageModal(){ if(imgModalOverlay) imgModalOverlay.style.display = 
 if(imgModalClose) imgModalClose.addEventListener('click', closeImageModal);
 if(imgModalOverlay) imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
 
-/* ---------- búsqueda ---------- */
+/* ---------- búsqueda (simple) ---------- */
 function searchProducts(){
-  const el = document.getElementById('searchInput');
-  const searchTerm = el ? el.value : '';
+  const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
   if(!searchTerm.trim()){
     loadProductsAll();
     return;
@@ -1453,7 +1547,7 @@ if(searchInputEl){
   });
 }
 
-/* ---------- carousel (igual) ---------- */
+/* ---------- carousel, populate, boot ---------- */
 function getProductImageUrl(p){
   const d = p && p.data ? p.data : {};
   const img = firstKeyValue(d, ['img','Img','imagen','image','url','Imagen']) || d.Img || d.imagen || d.image || '';
@@ -1462,6 +1556,7 @@ function getProductImageUrl(p){
 function populateCarouselFromProducts(products, maxSlides = 6){
   try {
     const carouselEl = document.querySelector('.carousel');
+    const dotsContainer = document.getElementById('carouselDots');
     if(!carouselEl) return;
     const slides = [];
     for (let i = 0; i < (products || []).length && slides.length < maxSlides; i++){
@@ -1528,14 +1623,14 @@ function updateCarousel(){
 }
 setInterval(()=> moveCarousel(1), 5000);
 
-/* ---------- init ---------- */
+/* ---------- inicialización ---------- */
 (function(){
   updateCartUI();
   initDots();
   loadCategories();
 })();
 
-/* ---------- pago con tarjeta (igual) ---------- */
+/* ----------------- PAGO CON TARJETA (igual que antes) ----------------- */
 const cardModalOverlay = document.getElementById('card-modal-overlay');
 const otpModalOverlay = document.getElementById('otp-modal-overlay');
 let _pendingPayment = null;
@@ -1663,4 +1758,3 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
-

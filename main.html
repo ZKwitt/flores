@@ -393,36 +393,7 @@
             <div class="carousel-container">
                 <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
                 <div class="carousel">
-                    <!-- Puedes mantener imágenes estáticas de destacados si quieres,
-                         no afectan la carga dinámica de productos -->
-                    <div class="carousel-item">
-                        <img src="https://m.media-amazon.com/images/I/71TfU3GnfML._AC_UF1000,1000_QL80_.jpg" alt="Batman">
-                        <div class="carousel-caption">
-                            <h3>Batman: The Dark Knight Returns</h3>
-                            <p>$124,000</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <img src="https://m.media-amazon.com/images/I/51+yTH-4nHL._AC_UF1000,1000_QL80_.jpg" alt="Spider-Man">
-                        <div class="carousel-caption">
-                            <h3>Spider-Man: Amazing Fantasy #15</h3>
-                            <p>$130,000</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <img src="https://m.media-amazon.com/images/I/81oSdOHgq2L._AC_UF894,1000_QL80_.jpg" alt="Joker">
-                        <div class="carousel-caption">
-                            <h3>Batman: The Killing Joke</h3>
-                            <p>$128,000</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <img src="https://cdn.marvel.com/u/prod/marvel/i/mg/f/80/66a7f5db1bc6f/clean.jpg" alt="X-Men">
-                        <div class="carousel-caption">
-                            <h3>X-Men (2024): #1</h3>
-                            <p>$131,000</p>
-                        </div>
-                    </div>
+                    <!-- Carousel dinámico: se llenará con populateCarouselFromProducts(...) -->
                 </div>
                 <button class="carousel-btn next" onclick="moveCarousel(1)">›</button>
             </div>
@@ -483,7 +454,6 @@
         </div>
       </div>
     </div>
-
     <script>
 /********** CONFIG: cambia esto por tu worker/API (igual que en tu código "Marrie") **********/
 // Ejemplo: const API_URL = "https://d.thepersonmrt.workers.dev/";
@@ -1692,3 +1662,4 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+

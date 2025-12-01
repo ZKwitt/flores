@@ -996,22 +996,40 @@ async function sendToWhatsApp(){
     failures = cart.slice();
   }
 
-if (failures.length === 0){
-  // TODO: pedir stock actualizado para cada item y actualizar la UI
-  try {
-    await Promise.all(cart.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
-  } catch(e){
-    console.warn('Error refrescando stock tras decrementar (WA):', e);
-  }
+  if (failures.length === 0){
+    // pedir stock actualizado para cada item y actualizar la UI (garantiza sincronía visual)
+    try {
+      await Promise.all(cart.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+    } catch(e){
+      console.warn('Error refrescando stock tras decrementar (WA):', e);
+    }
 
-  // ahora todo OK: abrir WhatsApp y limpiar carrito
-  window.open(url, '_blank');
-  cart = [];
-  updateCartUI();
-  refreshAllCardDisplays();
-  closeCartPopup();
-  return;
-}
+    // todo OK: abrir WhatsApp y limpiar carrito (UI ya refleja decremento)
+    window.open(url, '_blank');
+    cart = [];
+    updateCartUI();
+    refreshAllCardDisplays();
+    closeCartPopup();
+    return;
+  } else {
+    // falló alguna decrementación: preguntar al usuario si quiere continuar
+    const proceed = confirm('No fue posible actualizar el stock en el servidor para algunos productos. ¿Deseas continuar y enviar el pedido por WhatsApp de todas maneras? (Si no, la página re-sincronizará el stock)');
+    if (!proceed){
+      // Resync only the failed items
+      try {
+        await Promise.all(failures.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      } catch(e){ console.warn('Error al refrescar stock tras fallo WhatsApp', e); }
+      return;
+    } else {
+      // usuario decide continuar: abrir WhatsApp y limpiar carrito (posible inconsistencia)
+      window.open(url, '_blank');
+      cart = [];
+      updateCartUI();
+      refreshAllCardDisplays();
+      closeCartPopup();
+      return;
+    }
+  }
 }
 
 /* ---------- abrir/cerrar carrito (ahora inyecta botón pagar con tarjeta) ---------- */
@@ -1122,6 +1140,8 @@ function ensureCartActions(){
 function renderProducts(products, sheetKey){
   if (!products || !products.length){
     productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">No hay productos</div>';
+    // actualizar carrusel con cache si quieres
+    populateCarouselFromProducts(lastProductsCache, 6);
     return;
   }
 
@@ -1246,6 +1266,8 @@ function renderProducts(products, sheetKey){
     productsGrid._hasDelegation = true;
   }
 
+  // actualizar carrusel con las imágenes de los productos renderizados
+  populateCarouselFromProducts(products, 6);
 }
 
 function refreshAllCardDisplays(){
@@ -1420,7 +1442,7 @@ function loadMore(){
 
 /* ---------- inicialización UI (carrusel + carga) ---------- */
 let currentSlide = 0;
-const totalSlides = document.querySelectorAll('.carousel .carousel-item').length || 1;
+let totalSlides = document.querySelectorAll('.carousel .carousel-item').length || 1;
 function initDots(){
   const dotsContainer = document.getElementById('carouselDots');
   if(!dotsContainer) return;
@@ -1448,6 +1470,82 @@ function updateCarousel(){
   dots.forEach((dot, idx)=> dot.classList.toggle('active', idx === currentSlide));
 }
 setInterval(()=> moveCarousel(1), 5000);
+
+/* ------------------ Carrusel dinámico desde productos ------------------ */
+function getProductImageUrl(p){
+  const d = p && p.data ? p.data : {};
+  const img = firstKeyValue(d, ['img','Img','imagen','image','url','Imagen']) || d.Img || d.imagen || d.image || '';
+  return img && /^https?:\/\//i.test(img) ? img : null;
+}
+
+function populateCarouselFromProducts(products, maxSlides = 6){
+  try {
+    const carouselEl = document.querySelector('.carousel');
+    const dotsContainer = document.getElementById('carouselDots');
+    if(!carouselEl) return;
+
+    // elegir hasta maxSlides productos que tengan imagen
+    const slides = [];
+    for (let i = 0; i < (products || []).length && slides.length < maxSlides; i++){
+      const p = products[i];
+      const img = getProductImageUrl(p);
+      if(img) slides.push({ img, title: firstKeyValue(p.data||{}, ['name','nombre','producto','Nombre']) || (p.data && (p.data.Nombre || '')), price: firstKeyValue(p.data||{}, ['price','precio','Precio']) || (p.data && p.data.Precio) || '' });
+    }
+
+    // Si no hay slides suficientes, no modificar nada (o podrías mantener los estáticos)
+    if(!slides.length){
+      return;
+    }
+
+    // Vaciar y construir nuevos items
+    carouselEl.innerHTML = '';
+    slides.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'carousel-item';
+
+      // construir imagen usando makeImgEl (respeta tu proxy y lazy)
+      const imgEl = makeImgEl(s.img, s.title || 'Slide', 'product-image');
+      imgEl.style.height = '450px';
+      imgEl.style.width = '100%';
+      imgEl.style.objectFit = 'cover';
+      imgEl.loading = 'eager'; // cargar rápido para el carrusel
+
+      // caption
+      const caption = document.createElement('div');
+      caption.className = 'carousel-caption';
+      caption.innerHTML = `<h3>${escapeHtml(s.title || '')}</h3><p>${s.price ? ('$ ' + fmtPrice(s.price)) : ''}</p>`;
+
+      item.appendChild(imgEl);
+      item.appendChild(caption);
+      carouselEl.appendChild(item);
+    });
+
+    // recalcular totalSlides y reiniciar dots + estado del carousel
+    totalSlides = document.querySelectorAll('.carousel .carousel-item').length || 1;
+
+    // reiniciar los dots
+    if(typeof initDots === 'function'){
+      initDots();
+    } else {
+      if(dotsContainer){
+        dotsContainer.innerHTML = '';
+        for(let i=0;i<totalSlides;i++){
+          const dot = document.createElement('div');
+          dot.className = 'dot' + (i===0 ? ' active' : '');
+          dot.onclick = ()=> goToSlide(i);
+          dotsContainer.appendChild(dot);
+        }
+      }
+    }
+
+    // resetear índice y mostrar primer slide
+    if(typeof goToSlide === 'function') goToSlide(0);
+    else if(typeof updateCarousel === 'function') updateCarousel();
+
+  } catch (err){
+    console.warn('populateCarouselFromProducts error', err);
+  }
+}
 
 /* ---------- boot ---------- */
 (function(){
@@ -1548,6 +1646,13 @@ if(document.getElementById('otp-confirm')){
     }
 
     if (failures.length === 0){
+      // refrescar stock real desde servidor para cada item comprado (asegura UI sincronizada)
+      try {
+        await Promise.all(items.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      } catch(e){
+        console.warn('Error refrescando stock tras pago:', e);
+      }
+
       const fakeToken = 'tok_' + Date.now();
       alert('Pago confirmado. Token: ' + fakeToken + '\nGracias por tu compra.');
       // limpiar carrito (ya se ha decrementado en el servidor)
@@ -1587,7 +1692,3 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
-
-
-
-

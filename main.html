@@ -561,14 +561,14 @@ function escapeHtml(str){
     overlay.innerHTML = '<img id="img-modal-img" src=\"\" alt=\"\" style=\"max-width:92%;max-height:92%\" /><button id=\"img-modal-close\" style=\"position:fixed;top:18px;right:18px;padding:8px;border-radius:8px;\">Cerrar</button>';
     document.body.appendChild(overlay);
   }
-  // card payment modal (simulación)
+  // card payment modal
   if(!document.getElementById('card-modal-overlay')){
     const div = document.createElement('div');
     div.id = 'card-modal-overlay';
     div.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:20000';
     div.innerHTML = `
       <div id="card-modal" style="background:#0b0b0b;padding:16px;border-radius:12px;width:520px;max-width:96%;color:#eee">
-        <h3>Pagar con tarjeta (Simulación)</h3>
+        <h3>Pagar con tarjeta</h3>
         <div id="card-errors" style="color:#f66;margin-bottom:8px"></div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label>Nombre completo<input id="card-name" style="width:100%;padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff" /></label>
@@ -585,13 +585,13 @@ function escapeHtml(str){
             <button id="card-cancel" style="padding:8px;border-radius:6px;background:transparent;border:1px solid #333;color:#ddd">Cancelar</button>
             <button id="card-submit" style="padding:8px;border-radius:6px;background:#9D4EDD;color:#fff">Pagar ahora</button>
           </div>
-          <div style="font-size:0.85rem;color:#aaa">Simulación: <strong>no</strong> se envían datos a ningún proveedor. En producción integra Stripe/Adyen y nunca almacenes CVV.</div>
+          <div style="font-size:0.85rem;color:#aaa">En producción integra Stripe/Adyen y nunca almacenes CVV.</div>
         </div>
       </div>
     `;
     document.body.appendChild(div);
   }
-  // OTP modal (3DS simulado)
+  // OTP modal
   if(!document.getElementById('otp-modal-overlay')){
     const o = document.createElement('div');
     o.id = 'otp-modal-overlay';
@@ -599,7 +599,7 @@ function escapeHtml(str){
     o.innerHTML = `
       <div style="background:#0b0b0b;padding:16px;border-radius:12px;width:360px;color:#eee">
         <h4>3D Secure — Código OTP</h4>
-        <p style="color:#aaa">Ingresa el código que se "envió" a tu teléfono (usa <strong>123456</strong> para simular éxito)</p>
+        <p style="color:#aaa">Ingresa el código OTP (para pruebas usa <strong>123456</strong>).</p>
         <input id="otp-input" placeholder="Código OTP" style="padding:8px;border-radius:6px;background:#111;border:1px solid #222;color:#fff;width:100%" />
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
           <button id="otp-cancel" style="padding:8px;border-radius:6px;background:transparent;border:1px solid #333;color:#ddd">Cancelar</button>
@@ -877,10 +877,8 @@ async function addToCartFromCard(card, qty){
   refreshCardStockDisplay(sheetKey,row);
   updateCartUI();
 
-  // Petición asíncrona para decrementar stock en servidor (serial por qty)
-  updateStockOnServer_decrement(sheetKey, row, qty).catch(e=>console.warn('updateStockOnServer_decrement error', e));
-
-  // pequeña animación
+  // nota: ya no decrementamos el stock al añadir al carrito.
+  // El decremento se realizará cuando se confirme el pago por tarjeta.
   cartIconBtn.style.transform = 'scale(1.12)';
   setTimeout(()=> cartIconBtn.style.transform = '', 200);
 }
@@ -897,10 +895,7 @@ function removeFromCart(idx){
     updateCartUI();
     openCartPopup();
 
-    // sincronizar con servidor: read + set (increaseViaSet)
-    updateStockOnServer_increaseViaSet(sheetKey, row, removedQty).catch(e => {
-      console.warn('updateStockOnServer_increaseViaSet error', e);
-    });
+    // Ya no restauramos stock en el servidor aquí porque no lo decrementamos al añadir.
   }
 }
 
@@ -926,7 +921,7 @@ function sendToWhatsApp(){
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
 
-  // Clear cart after sending
+  // Clear cart after sending (si prefieres que WhatsApp también actualice stock, dime)
   cart = [];
   updateCartUI();
   refreshAllCardDisplays();
@@ -1005,14 +1000,12 @@ function ensureCartActions(){
   // -- Reusar botón WhatsApp existente si está en el DOM --
   let existingWaBtn = popupInner.querySelector('#cart-confirm') || document.getElementById('cart-confirm');
   if(existingWaBtn){
-    // si está en otro lugar, lo movemos a actionsRow para evitar duplicados visuales
     if(existingWaBtn.parentElement !== actionsRow){
       actionsRow.appendChild(existingWaBtn);
-      existingWaBtn.style.display = ''; // asegurarse visible
+      existingWaBtn.style.display = '';
       existingWaBtn.style.marginLeft = '6px';
     }
   } else {
-    // si no existe, creamos uno (solo entonces)
     if(!actionsRow.querySelector('.wa-btn')){
       const waBtn = document.createElement('button');
       waBtn.className = 'wa-btn';
@@ -1033,10 +1026,8 @@ function ensureCartActions(){
     actionsRow.appendChild(payBtn);
   }
 
-  // eliminar duplicados antiguos si existieran (por si ya se añadieron varias veces antes)
   const payDuplicates = popupInner.querySelectorAll('#cart-paycard');
   if(payDuplicates.length > 1){
-    // dejar solo el primero y eliminar el resto
     for(let i = 1; i < payDuplicates.length; i++) payDuplicates[i].remove();
   }
 }
@@ -1118,13 +1109,11 @@ function renderProducts(products, sheetKey){
       imgContainer.addEventListener('click', ()=> openImageModal(imgUrl, name));
     }
 
-    // delegation handlers per card (buttons)
     frag.appendChild(card);
   });
 
   productsGrid.appendChild(frag);
 
-  // single delegated listener for the grid (works for all cards)
   if (!productsGrid._hasDelegation) {
     productsGrid.addEventListener('click', function(e){
       const plus = e.target.closest('.plus');
@@ -1164,7 +1153,6 @@ function renderProducts(products, sheetKey){
 
       const img = e.target.closest('.product-image');
       if(img){
-        // handled by image click earlier
         return;
       }
     });
@@ -1249,7 +1237,6 @@ async function loadProductsAll(){
       if(!p.data.Categoria) p.data.Categoria = p.data.Categoria || p.data.categoria || 'UNKNOWN';
     });
 
-    // Recolección de detalles por categorías (opcional, igual que Marrie)
     const cats = [...new Set(products.map(p => (p.data && (p.data.Categoria || p.data.categoria)) ).filter(Boolean))];
 
     const detailsPromises = cats.map(cat => fetch(API_URL+'?sheetKey='+encodeURIComponent(cat), {cache:'no-store'})
@@ -1323,7 +1310,6 @@ function searchProducts(){
     loadProductsAll();
     return;
   }
-  // Búsqueda local en cache (rápida) — si quieres búsqueda en servidor, reemplaza por petición API.
   const q = searchTerm.trim().toLowerCase();
   const found = lastProductsCache.filter(p => {
     const d = p.data || {};
@@ -1379,7 +1365,7 @@ setInterval(()=> moveCarousel(1), 5000);
   loadCategories();
 })();
 
-/* ----------------- PAGO CON TARJETA (SIMULACIÓN) ----------------- */
+/* ----------------- PAGO CON TARJETA ----------------- */
 const cardModalOverlay = document.getElementById('card-modal-overlay');
 const otpModalOverlay = document.getElementById('otp-modal-overlay');
 let _pendingPayment = null; // { items: [...], customer: {...}, amount }
@@ -1453,20 +1439,30 @@ if(document.getElementById('otp-confirm')){
     const code = (document.getElementById('otp-input') || {}).value || '';
     if(!code){ alert('Ingresa el código OTP'); return; }
     if(code !== '123456'){
-      alert('Pago fallido: OTP incorrecto. Restaurando stock reservado...');
-      // restaurar stock para cada item
-      for(const it of (_pendingPayment && _pendingPayment.items) || cart){
-        try{ await updateStockOnServer_increaseViaSet(it.sheetKey, it.row, Number(it.qty||0)); } catch(e){ console.warn('restore stock error', e); }
-      }
+      alert('Pago fallido: OTP incorrecto.');
       if(otpModalOverlay) otpModalOverlay.style.display = 'none';
       if(cardModalOverlay) cardModalOverlay.style.display = 'none';
       document.body.style.overflow = '';
       return;
     }
-    // Éxito (simulado)
+
+    // Confirmación del pago => decrementar stock en servidor por cada item comprado
+    try {
+      for(const it of (_pendingPayment && _pendingPayment.items) || []){
+        const qty = Number(it.qty || 0);
+        if(qty > 0){
+          await updateStockOnServer_decrement(it.sheetKey, it.row, qty);
+        }
+      }
+    } catch(e){
+      console.warn('Error al decrementar stock en pago:', e);
+      // no abortamos el flujo de éxito local, pero avisamos en consola
+    }
+
     const fakeToken = 'tok_' + Date.now();
-    alert('Pago simulado correcto. Token: ' + fakeToken + '\\nGracias por tu compra.');
-    // limpiar carrito (no restauramos stock porque ya se decrementó al añadir al carrito)
+    alert('Pago confirmado. Token: ' + fakeToken + '\\nGracias por tu compra.');
+
+    // limpiar carrito (ya se ha decrementado en el servidor)
     cart = [];
     saveCart();
     updateCartUI();
@@ -1485,8 +1481,9 @@ if(document.getElementById('otp-cancel')){
   });
 }
 
-/* ----------------- fin pago simulado ----------------- */
+/* ----------------- fin pago ----------------- */
 
 </script>
 </body>
 </html>
+

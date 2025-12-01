@@ -1628,6 +1628,8 @@ setInterval(()=> moveCarousel(1), 5000);
   updateCartUI();
   initDots();
   loadCategories();
+  // inicializar manejadores del modal de información (para enlaces #sobre, #terminos, #privacidad, #contacto)
+  initInfoLinks();
 })();
 
 /* ----------------- PAGO CON TARJETA (igual que antes) ----------------- */
@@ -1755,6 +1757,105 @@ if(document.getElementById('otp-cancel')){
     document.body.style.overflow = '';
   });
 }
+
+/* -------------------- INFO LINKS: sobre/terminos/privacidad/contacto -------------------- */
+/*
+  Esta función inicializa los enlaces:
+    <a href="#sobre">Sobre Nosotros</a>
+    <a href="#terminos">Términos</a>
+    <a href="#privacidad">Privacidad</a>
+    <a href="#contacto">Contacto</a>
+
+  Al hacer click se mostrará el modal #info-modal con el texto correspondiente.
+  Los textos están redactados para cubrir los requisitos básicos del comercio electrónico
+  en Colombia (identificación del proveedor, precios/impuestos, políticas de cambio/garantía,
+  manejo de datos personales y canales de contacto). Asegúrate de reemplazar los datos
+  de la empresa (razón social, NIT, dirección, correo, teléfono) por los reales.
+*/
+function initInfoLinks(){
+  const infoModalOverlay = document.getElementById('info-modal-overlay');
+  const infoModalContent = document.getElementById('info-modal-content');
+  const infoClose = document.getElementById('info-modal-close');
+  const infoCloseBottom = document.getElementById('info-modal-close-bottom');
+
+  function openInfoModal(html){
+    if(!infoModalOverlay || !infoModalContent) return;
+    infoModalContent.innerHTML = html;
+    infoModalOverlay.style.display = 'flex';
+    infoModalOverlay.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeInfoModal(){
+    if(!infoModalOverlay) return;
+    infoModalOverlay.style.display = 'none';
+    infoModalOverlay.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+
+  if(infoClose) infoClose.addEventListener('click', closeInfoModal);
+  if(infoCloseBottom) infoCloseBottom.addEventListener('click', closeInfoModal);
+  if(infoModalOverlay) infoModalOverlay.addEventListener('click', (e)=>{ if(e.target === infoModalOverlay) closeInfoModal(); });
+
+  const sobreHtml = `
+    <h2>Sobre Nosotros</h2>
+    <p><strong>Nombre comercial:</strong> WyvernStore (reemplazar con razón social)</p>
+    <p><strong>NIT:</strong> 123456789-0 (reemplazar con NIT real)</p>
+    <p>Somos un comercio electrónico dedicado a la venta de productos relacionados con cómics y cultura pop.
+    Nuestro objetivo es ofrecer productos auténticos, descripciones claras y atención al cliente eficiente.</p>
+    <h4>Compromiso legal</h4>
+    <p>Operamos bajo el marco legal colombiano aplicable al comercio electrónico y al consumidor, garantizando
+    transparencia en precios, disponibilidad y condiciones de venta.</p>
+    <p style="font-size:0.9rem;color:#bbb">Nota: reemplaza los datos anteriores por los datos oficiales de tu empresa.</p>
+  `;
+
+  const terminosHtml = `
+    <h2>Términos y Condiciones</h2>
+    <p><strong>Precios:</strong> Todos los precios publicados incluyen/ excluyen impuestos según se indique. Los impuestos aplicables se mostrarán claramente durante el proceso de compra.</p>
+    <p><strong>Disponibilidad:</strong> Indicamos el stock disponible, pero puede variar por ventas simultáneas. Nos reservamos el derecho a confirmar o rechazar pedidos en caso de indisponibilidad.</p>
+    <p><strong>Formas de pago:</strong> Transferencia, tarjeta o pago por WhatsApp (según se ofrezca). No almacenamos datos sensibles de tarjetas en el cliente; en producción integra un proveedor de pagos seguro.</p>
+    <p><strong>Envíos y tiempos:</strong> Los plazos de entrega estimados se informan en la página de compra. Los costos de envío se detallan antes de confirmar.</p>
+    <p><strong>Cambios y devoluciones:</strong> Atendemos reclamaciones por productos defectuosos o no conformes según el Estatuto del Consumidor. Devuélvenos el producto en el estado acordado y notificaremos el procedimiento y plazos.</p>
+    <p><strong>Jurisdicción y normativa:</strong> Las relaciones de consumo se rigen por la normativa colombiana (por ejemplo, Ley 1480/2011 - Estatuto del Consumidor y Ley 527/1999 en lo aplicable).</p>
+    <p style="font-size:0.9rem;color:#bbb">Si necesitas condiciones más específicas (garantía extendida, política de reembolsos exacta, etc.), edita este texto para reflejarlas.</p>
+  `;
+
+  const privacidadHtml = `
+    <h2>Política de Privacidad y Tratamiento de Datos</h2>
+    <p><strong>Responsable del tratamiento:</strong> WyvernStore (reemplazar con razón social y datos).</p>
+    <p><strong>Finalidad:</strong> Recopilamos datos personales (nombre, correo, teléfono, dirección) para procesar pedidos, facturación, envíos y atención al cliente.</p>
+    <p><strong>Base legal:</strong> Tratamiento necesario para la ejecución del contrato de compra y obligaciones legales. Respetamos los principios y derechos establecidos en la Ley de Protección de Datos Personales (Ley 1581 de 2012) y su reglamentación.</p>
+    <p><strong>Derechos de los titulares:</strong> tienes derecho a conocer, actualizar, rectificar y suprimir tus datos, además de limitar su uso o solicitar que dejen de ser tratados. Para ejercer tus derechos contáctanos mediante los canales abajo.</p>
+    <p><strong>Compartir datos:</strong> Podemos compartir datos con proveedores logísticos o pasarelas de pago estrictamente para cumplir el pedido. Siempre pedimos medidas de seguridad a nuestros proveedores.</p>
+    <p style="font-size:0.9rem;color:#bbb">Consulta la Ley 1581 de 2012 y Decreto 1377 de 2013 para los detalles regulatorios. Mantendremos registros de la política y autorizaciones según la normativa aplicable.</p>
+  `;
+
+  const contactoHtml = `
+    <h2>Contacto</h2>
+    <p><strong>Correo:</strong> contacto@wyvernstore.example (reemplazar)</p>
+    <p><strong>Teléfono / WhatsApp:</strong> +57 320 737 8992 (reemplazar si aplica)</p>
+    <p><strong>Dirección:</strong> Dirección comercial o sede (reemplazar)</p>
+    <p>Si tienes una queja o reclamación sobre un producto o servicio puedes contactarnos y, si aplica, acudir a la Superintendencia de Industria y Comercio (SIC) como entidad de protección al consumidor.</p>
+  `;
+
+  // asignar handlers a enlaces si existen
+  const linkMap = [
+    { sel: 'a[href="#sobre"]', html: sobreHtml },
+    { sel: 'a[href="#terminos"]', html: terminosHtml },
+    { sel: 'a[href="#privacidad"]', html: privacidadHtml },
+    { sel: 'a[href="#contacto"]', html: contactoHtml }
+  ];
+
+  linkMap.forEach(l => {
+    const els = document.querySelectorAll(l.sel);
+    els.forEach(el => {
+      el.addEventListener('click', function(ev){
+        ev.preventDefault();
+        openInfoModal(l.html);
+      });
+    });
+  });
+}
 </script>
 </body>
 </html>
+

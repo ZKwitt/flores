@@ -706,6 +706,7 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
   }
 
   let successCount = 0;
+  let lastConfirmedStock = undefined;
 
   for(let i=0;i<qty;i++){
     try {
@@ -719,24 +720,10 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
       try { json = text ? JSON.parse(text) : null; } catch(e){ json = null; }
 
       if(resp.ok && json && !json.error){
-        const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : undefined;
-        console.debug('server newStock (decrement)', { sheetKey: mappedKey, row, confirmedStock });
-        // Actualizamos el DOM con el nuevo origStock = confirmedStock + reservedLocal (igual que antes)
-        if(confirmedStock !== undefined){
-          const reservedLocal = getReservedQty(mappedKey, row);
-          document.querySelectorAll('.product-card').forEach(card=>{
-            const csk = (card.dataset.sheetKey||'').toString().trim().toLowerCase();
-            const rw = card.dataset.row;
-            if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
-              card.dataset.origStock = String(Math.max(0, confirmedStock + reservedLocal));
-            }
-          });
-          refreshCardStockDisplay(mappedKey, row);
-        }
+        lastConfirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : lastConfirmedStock;
         successCount++;
       } else {
         console.warn('Decrement fallo o respuesta inesperada:', resp.status, text);
-        // no lanzamos, pero paramos los intentos adicionales
         break;
       }
     } catch (err){
@@ -745,7 +732,62 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
     }
   }
 
-  return successCount === qty;
+  // si todas las unidades fueron decrementadas correctamente, actualizamos DOM/cache una sola vez
+  if(successCount === qty && lastConfirmedStock !== undefined){
+    // Guardar serverStock y marcar la tx (para mantener la visual mientras el carrito exista)
+    document.querySelectorAll('.product-card').forEach(card=>{
+      const csk = (card.dataset.sheetKey||'').toString().trim().toLowerCase();
+      const rw = card.dataset.row;
+      if(String(rw) === String(row) && (csk === mappedKey.toString().trim().toLowerCase() || csk === sheetKeyRaw.toString().trim().toLowerCase())){
+        // serverStock = valor real en servidor después del decremento
+        card.dataset.serverStock = String(Math.max(0, Number(lastConfirmedStock)));
+        // registramos cuánto fue decrementado en esta tx. Esto nos permite mostrar el valor correcto
+        // mientras la reserva sigue presente (antes de limpiar el carrito).
+        card.dataset.lastTxDecrement = String(Number(qty));
+      }
+    });
+
+    // Actualizar cache local si existe
+    if (Array.isArray(lastProductsCache)){
+      const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
+      if (p){
+        p.data = p.data || {};
+        p.data.Stock = Number(lastConfirmedStock);
+        p.data.stock = Number(lastConfirmedStock);
+      }
+    }
+
+    // refrescar UI para ese item
+    refreshCardStockDisplay(mappedKey, row);
+    return true;
+  }
+
+  // Si no se completó todo, podemos intentar re-sync parcial: solicitar stock actual y actualizar DOM
+  try {
+    const current = await fetchServerStock(mappedKey, row);
+    if(current !== null && current !== undefined){
+      // actualizamos serverStock sin marcar lastTxDecrement (porque fue parcial/inconsistente)
+      document.querySelectorAll('.product-card').forEach(card=>{
+        const csk = (card.dataset.sheetKey||'').toString().trim().toLowerCase();
+        const rw = card.dataset.row;
+        if(String(rw) === String(row) && (csk === mappedKey.toString().trim().toLowerCase() || csk === sheetKeyRaw.toString().trim().toLowerCase())){
+          card.dataset.serverStock = String(Math.max(0, Number(current)));
+          delete card.dataset.lastTxDecrement;
+        }
+      });
+      if (Array.isArray(lastProductsCache)){
+        const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
+        if (p){
+          p.data = p.data || {};
+          p.data.Stock = Number(current);
+          p.data.stock = Number(current);
+        }
+      }
+      refreshCardStockDisplay(mappedKey, row);
+    }
+  } catch(e){ console.warn('updateStockOnServer_decrement: re-sync failed', e); }
+
+  return false;
 }
 
 async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
@@ -763,15 +805,24 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
 
     if(resp.ok && json && !json.error){
       const confirmedStock = (json.newStock !== undefined) ? Number(json.newStock) : Number(newStock);
-      console.debug('server newStock (set)', { sheetKey: mappedKey, row, confirmedStock });
-      const reservedLocal = getReservedQty(mappedKey, row);
+      // actualizar DOM: serverStock = confirmedStock. eliminamos lastTxDecrement porque esto es un set explícito.
       document.querySelectorAll('.product-card').forEach(card=>{
         const csk = (card.dataset.sheetKey||'').toString().trim().toLowerCase();
         const rw = card.dataset.row;
-        if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
-          card.dataset.origStock = String(Math.max(0, confirmedStock + reservedLocal));
+        if(String(rw) === String(row) && (csk.toLowerCase() === mappedKey.toString().trim().toLowerCase() || csk.toLowerCase() === sheetKeyRaw.toString().trim().toLowerCase())){
+          card.dataset.serverStock = String(Math.max(0, confirmedStock));
+          delete card.dataset.lastTxDecrement;
         }
       });
+      // actualizar cache local
+      if (Array.isArray(lastProductsCache)){
+        const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
+        if (p){
+          p.data = p.data || {};
+          p.data.Stock = Number(confirmedStock);
+          p.data.stock = Number(confirmedStock);
+        }
+      }
       refreshCardStockDisplay(mappedKey, row);
     } else {
       console.warn('updateStockOnServer_set: respuesta no OK', resp.status, text);
@@ -780,25 +831,6 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
     console.warn('updateStockOnServer_set fallo:', err);
   }
 }
-
-async function updateStockOnServer_increaseViaSet(sheetKeyRaw, row, delta){
-  if(!delta || delta <= 0) return;
-  const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
-  if(!mappedKey){
-    console.warn('No sheetKey mapeable a availableSheetKeys, abortando increase/set:', sheetKeyRaw);
-    return;
-  }
-
-  try {
-    const serverStock = await fetchServerStock(mappedKey, row);
-    const baseStock = (serverStock !== null && serverStock !== undefined) ? Number(serverStock) : Number(getOriginalStock(mappedKey, row) || 0);
-    const newStock = Math.max(0, baseStock + Number(delta));
-    await updateStockOnServer_set(mappedKey, row, newStock);
-  } catch (err){
-    console.warn('updateStockOnServer_increaseViaSet error', err);
-  }
-}
-
 /* ---------- stock / UI helpers ---------- */
 function findProductInCache(sheetKey, row){
   if(!Array.isArray(lastProductsCache)) return null;
@@ -810,24 +842,56 @@ function findProductInCache(sheetKey, row){
 }
 
 function getOriginalStock(sheetKey, row){
+  // intenta obtener el "base" que usamos para calcular display: normalmente es serverStock
+  // pero si hubo una transacción reciente (lastTx) y el carrito aún contiene la reserva,
+  // necesitamos computar origStock = serverStock + lastTx para que origStock - reservedLocal === serverStock.
+  const skLower = (sheetKey||'').toString().trim().toLowerCase();
+  const rStr = String(row);
+  // buscar card en DOM
   const card = Array.from(document.querySelectorAll('.product-card')).find(c => {
-    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString();
+    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString().trim().toLowerCase();
     const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
-    return sk.toString().trim().toLowerCase() === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
+    return sk === skLower && rrow === rStr;
   });
-  if (card && card.dataset.origStock !== undefined) return Number(card.dataset.origStock || 0);
+
+  const reserved = getReservedQty(sheetKey, row);
+
+  if(card){
+    const serverStockAttr = card.dataset.serverStock;
+    const lastTx = Number(card.dataset.lastTxDecrement || 0);
+
+    if(serverStockAttr !== undefined && serverStockAttr !== null && serverStockAttr !== ''){
+      const serverStockNum = Number(serverStockAttr || 0);
+      // Si hay una tx reciente y hay reserva local, reconstruimos origStock para que
+      // origStock - reserved === serverStock (y el UI no salte mientras el carrito existe).
+      if(lastTx > 0 && reserved > 0){
+        return Math.max(0, serverStockNum + lastTx);
+      }
+      // si no hay tx reciente o no hay reserva local, el "original" es el serverStock
+      return Math.max(0, serverStockNum);
+    }
+
+    // fallback: si no hay serverStock, usar dataset.origStock si existe
+    if(card.dataset.origStock !== undefined){
+      return Number(card.dataset.origStock || 0);
+    }
+  }
+
+  // fallback a cache: buscar en lastProductsCache
   const p = findProductInCache(sheetKey, row);
   if (p){
     const d = p.data || {};
     const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0;
     return Number(stock || 0);
   }
+
   const p2 = (Array.isArray(lastProductsCache) && lastProductsCache.find(pp=>String(pp.row)===String(row))) || null;
   if(p2){
     const d = p2.data || {};
     const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || 0;
     return Number(stock || 0);
   }
+
   return 0;
 }
 
@@ -841,10 +905,36 @@ function refreshCardStockDisplay(sheetKey, row){
     const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
     return sk === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
   });
-  const origStock = getOriginalStock(sheetKey, row);
+
+  if(!cards.length){
+    // nada que actualizar
+    return;
+  }
+
   const reserved = getReservedQty(sheetKey, row);
-  const avail = Math.max(0, origStock - reserved);
+
   cards.forEach(card => {
+    // preferimos serverStock si existe
+    const serverStockAttr = card.dataset.serverStock;
+    const lastTx = Number(card.dataset.lastTxDecrement || 0);
+    let origStockForCalc;
+
+    if(serverStockAttr !== undefined && serverStockAttr !== null && serverStockAttr !== ''){
+      const serverStockNum = Number(serverStockAttr || 0);
+      // Si hubo una tx reciente y hay reserva local, reconstruimos origStock temporalmente:
+      // origStock = serverStock + lastTx -> así origStock - reserved = serverStock (correcto mientras la reserva exista).
+      if(lastTx > 0 && reserved > 0){
+        origStockForCalc = Math.max(0, serverStockNum + lastTx);
+      } else {
+        origStockForCalc = Math.max(0, serverStockNum);
+      }
+    } else {
+      // fallback al valor dataset.origStock (antiguo comportamiento)
+      origStockForCalc = Number(card.dataset.origStock !== undefined ? (card.dataset.origStock || 0) : getOriginalStock(sheetKey, row));
+    }
+
+    const avail = Math.max(0, Math.round(origStockForCalc) - Number(reserved || 0));
+
     const stockSpan = card.querySelector('.stockval');
     if(stockSpan) stockSpan.innerText = avail;
     const orderBtn = card.querySelector('.product-btn');
@@ -859,7 +949,7 @@ function refreshCardStockDisplay(sheetKey, row){
     }
   });
 }
-
+     
 function updateCartUI(){
   const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
   const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
@@ -927,13 +1017,14 @@ async function refreshStockFromServerForItem(sheetKeyRaw, row){
     const serverStock = await fetchServerStock(mappedKey, row);
     if (serverStock === null || serverStock === undefined) return;
 
-    // Actualizar cards en DOM
+    // Actualizar cards en DOM: guardamos serverStock y eliminamos cualquier lastTxDecrement
     document.querySelectorAll('.product-card').forEach(card => {
       const csk = (card.dataset.sheetKey || '').toString().trim().toLowerCase();
       const rw = card.dataset.row;
       if (String(rw) === String(row) && csk === mappedKey.toString().trim().toLowerCase()){
-        const reservedLocal = getReservedQty(mappedKey, row);
-        card.dataset.origStock = String(Math.max(0, Number(serverStock) + Number(reservedLocal || 0)));
+        card.dataset.serverStock = String(Math.max(0, Number(serverStock)));
+        // ya se normalizó en servidor: quitar marca de tx
+        delete card.dataset.lastTxDecrement;
       }
     });
 
@@ -953,7 +1044,6 @@ async function refreshStockFromServerForItem(sheetKeyRaw, row){
     console.warn('refreshStockFromServerForItem error', err);
   }
 }
-
 // intenta decrementar en el servidor (llama a updateStockOnServer_decrement) para cada item
 // devuelve array de items que fallaron (si todo ok, devuelve [])
 async function finalizePurchaseOnServer(items){
@@ -1820,6 +1910,7 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+
 
 
 

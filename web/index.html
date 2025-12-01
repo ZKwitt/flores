@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KukoroShop</title>
+  <link rel="stylesheet" href="./styles/base.css">
+</head>
+<body>
+  <header>
+    <div id="tabsRow"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="searchInput" placeholder="Buscar..." />
+      <button id="cart-icon-btn">Carrito (0)</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="productsGrid"></div>
+  </main>
+
+  <!-- carrito popup básico (UI espera estos ids) -->
+  <div id="cart-popup-overlay" style="display:none">
+    <div class="cart-popup" style="background:#0b0b0b;padding:16px;border-radius:10px;color:#eee;max-width:520px;margin:auto;">
+      <div id="cart-items-container"></div>
+      <div id="cart-total" style="margin-top:8px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button id="cart-close">Cerrar</button>
+        <button id="cart-confirm">Enviar por WhatsApp</button>
+        <!-- Botón "Pagar con tarjeta" lo inyecta JS (para evitar duplicados en HTML) -->
+      </div>
+    </div>
+  </div>
+
+  <!-- cargamos el módulo principal -->
+  <script type="module" src="./scripts/main.js"></script>
+</body>
+</html>

@@ -996,33 +996,22 @@ async function sendToWhatsApp(){
     failures = cart.slice();
   }
 
-  if (failures.length === 0){
-    // todo OK: abrir WhatsApp y limpiar carrito (UI ya refleja decremento)
-    window.open(url, '_blank');
-    cart = [];
-    updateCartUI();
-    refreshAllCardDisplays();
-    closeCartPopup();
-    return;
-  } else {
-    // falló alguna decrementación: preguntar al usuario si quiere continuar
-    const proceed = confirm('No fue posible actualizar el stock en el servidor para algunos productos. ¿Deseas continuar y enviar el pedido por WhatsApp de todas maneras? (Si no, la página re-sincronizará el stock)');
-    if (!proceed){
-      // Resync only the failed items
-      try {
-        await Promise.all(failures.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
-      } catch(e){ console.warn('Error al refrescar stock tras fallo WhatsApp', e); }
-      return;
-    } else {
-      // usuario decide continuar: abrir WhatsApp y limpiar carrito (posible inconsistencia)
-      window.open(url, '_blank');
-      cart = [];
-      updateCartUI();
-      refreshAllCardDisplays();
-      closeCartPopup();
-      return;
-    }
+if (failures.length === 0){
+  // TODO: pedir stock actualizado para cada item y actualizar la UI
+  try {
+    await Promise.all(cart.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+  } catch(e){
+    console.warn('Error refrescando stock tras decrementar (WA):', e);
   }
+
+  // ahora todo OK: abrir WhatsApp y limpiar carrito
+  window.open(url, '_blank');
+  cart = [];
+  updateCartUI();
+  refreshAllCardDisplays();
+  closeCartPopup();
+  return;
+}
 }
 
 /* ---------- abrir/cerrar carrito (ahora inyecta botón pagar con tarjeta) ---------- */
@@ -1598,6 +1587,7 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+
 
 
 

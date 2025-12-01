@@ -473,7 +473,7 @@
         </div>
       </div>
     </div>
-    <script>
+ <script>
 /********** CONFIG: cambia esto por tu worker/API (igual que en tu código "Marrie") **********/
 // Ejemplo: const API_URL = "https://d.thepersonmrt.workers.dev/";
 // Reemplaza por tu endpoint. El worker debe soportar:
@@ -597,6 +597,24 @@ function escapeHtml(str){
       </div>
     `;
     document.body.appendChild(o);
+  }
+
+  // INFO modal (Sobre, Términos, Privacidad, Contacto) - crear si falta
+  if(!document.getElementById('info-modal-overlay')){
+    const im = document.createElement('div');
+    im.id = 'info-modal-overlay';
+    im.setAttribute('aria-hidden','true');
+    im.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);z-index:20010;padding:20px';
+    im.innerHTML = `
+      <div id="info-modal" role="dialog" aria-modal="true" aria-label="Información" style="max-width:800px;width:100%;max-height:90vh;overflow:auto;background:linear-gradient(135deg,#0f0f10 0%,#161216 100%);border-radius:12px;padding:20px;color:#fff;border:1px solid rgba(255,255,255,0.04);box-shadow:0 30px 60px rgba(0,0,0,0.6)">
+        <button id="info-modal-close" style="float:right;background:transparent;border:none;color:#fff;font-weight:800;cursor:pointer;font-size:1.2rem">×</button>
+        <div id="info-modal-content" style="clear:both;padding-top:8px"></div>
+        <div style="margin-top:12px;text-align:right">
+          <button id="info-modal-close-bottom" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#fff">Cerrar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(im);
   }
 })();
 
@@ -1402,6 +1420,82 @@ function closeImageModal(){ if(imgModalOverlay) imgModalOverlay.style.display = 
 if(imgModalClose) imgModalClose.addEventListener('click', closeImageModal);
 if(imgModalOverlay) imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
 
+/* ---------- INFO MODAL: textos basados en normativa colombiana (resumen) ---------- */
+const infoTexts = {
+  sobre: {
+    title: 'Sobre Nosotros',
+    html: `
+      <p><strong>WyvernStore</strong> es una tienda de cómics especializada en ventas a domicilio. Nuestro objetivo es ofrecer colecciones, novedades y ediciones especiales con entrega directa al domicilio del cliente.</p>
+      <p class="muted">Operamos como vendedor minorista responsable por la oferta y entrega de los productos solicitados.</p>
+    `
+  },
+  terminos: {
+    title: 'Términos y condiciones (resumen)',
+    html: `
+      <p><strong>Ámbito y compra:</strong> Las compras realizadas en este sitio constituyen un contrato de compraventa entre usted (consumidor) y WyvernStore (proveedor). Los precios publicados incluyen IVA cuando aplique y se confirmarán en el proceso de pago.</p>
+
+      <p><strong>Ventas a distancia y derecho de retracto:</strong> En las ventas a distancia usted cuenta con el derecho de retracto. El término máximo para ejercer este derecho es de <strong>cinco (5) días hábiles</strong> contados a partir de la entrega del bien (o desde la celebración del contrato, según el caso). Si ejerce el retracto, el contrato se resolverá y deberá devolver el producto en las mismas condiciones en que lo recibió; los costos de transporte para la devolución serán, en general, a cargo del consumidor salvo pacto distinto.</p>
+
+      <p><strong>Devoluciones y reembolsos:</strong> En caso de retracto o devolución procedente, WyvernStore realizará la devolución de todas las sumas pagadas en los términos y conforme a la normativa vigente. La devolución del dinero no podrá exceder de <strong>treinta (30) días calendario</strong> desde la notificación del ejercicio del retracto y la recepción del producto, salvo disposiciones especiales aplicables.</p>
+
+      <p class="muted">(Resumen informativo; procederemos conforme a la normativa vigente aplicable a ventas a distancia y protección del consumidor.)</p>
+    `
+  },
+  privacidad: {
+    title: 'Política de Privacidad (resumen)',
+    html: `
+      <p><strong>Datos que recolectamos:</strong> Para procesar pedidos a domicilio podemos solicitar nombre completo, teléfono, dirección de envío, correo electrónico y los datos necesarios para procesar el pago (por ejemplo, datos de tarjeta). <strong>No almacenamos números completos de tarjeta de crédito en nuestros servidores.</strong></p>
+
+      <p><strong>Procesamiento de pagos:</strong> Los datos de pago son procesados por una pasarela de pagos segura (proveedor de pago). WyvernStore únicamente utiliza la información necesaria para gestionar la compra y la entrega; los datos sensibles de pago se transmiten a un proveedor tercero especializado y no se guardan en texto completo en nuestros sistemas.</p>
+
+      <p><strong>Finalidad y base legal:</strong> Los datos se usan para (i) ejecutar el contrato de compraventa (procesar el pedido y la entrega), (ii) facturación y (iii) atención al cliente. El tratamiento se realiza con su consentimiento y/o para el cumplimiento del contrato y obligaciones legales.</p>
+
+      <p><strong>Derechos del titular:</strong> Usted tiene derecho a conocer, actualizar, rectificar y solicitar la supresión de sus datos personales, así como a revocar el consentimiento otorgado y presentar quejas ante la autoridad de protección de datos (Superintendencia de Industria y Comercio, SIC). Para ejercer estos derechos, por favor contacte a: <strong>contacto@wyvernstore.com</strong> o al teléfono <strong>+57 300 000 0000</strong>.</p>
+
+      <p class="muted">WyvernStore cumple con la normativa colombiana de protección de datos personales y reglamentos aplicables.</p>
+    `
+  },
+  contacto: {
+    title: 'Contacto',
+    html: `
+      <p>¿Necesitas ayuda con un pedido o quieres presentar una reclamación? Contáctanos:</p>
+      <ul>
+        <li><strong>Email:</strong> contacto@wyvernstore.com</li>
+        <li><strong>Teléfono / WhatsApp:</strong> +57 300 000 0000</li>
+        <li><strong>Horario de atención:</strong> Lunes a viernes 09:00–18:00</li>
+      </ul>
+      <p>Si su reclamación no es resuelta, tiene derecho a acudir a la Superintendencia de Industria y Comercio (SIC) para presentar su queja como consumidor.</p>
+    `
+  }
+};
+
+const infoOverlay = document.getElementById('info-modal-overlay');
+const infoContentDiv = document.getElementById('info-modal-content');
+const infoCloseBtn = document.getElementById('info-modal-close');
+const infoCloseBottomBtn = document.getElementById('info-modal-close-bottom');
+
+function openInfo(key){
+  const entry = infoTexts[key];
+  if(!entry) return;
+  if(infoContentDiv) infoContentDiv.innerHTML = `<h2 style="color:#9D4EDD;margin-bottom:8px">${escapeHtml(entry.title || '')}</h2>${entry.html || ''}`;
+  if(infoOverlay) { infoOverlay.style.display = 'flex'; infoOverlay.setAttribute('aria-hidden','false'); }
+  document.body.style.overflow = 'hidden';
+  // focus accesible
+  const modal = document.getElementById('info-modal');
+  if(modal) modal.focus && modal.focus();
+}
+
+function closeInfo(){
+  if(infoOverlay) { infoOverlay.style.display = 'none'; infoOverlay.setAttribute('aria-hidden','true'); }
+  if(infoContentDiv) infoContentDiv.innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+if(infoCloseBtn) infoCloseBtn.addEventListener('click', closeInfo);
+if(infoCloseBottomBtn) infoCloseBottomBtn.addEventListener('click', closeInfo);
+if(infoOverlay) infoOverlay.addEventListener('click', (e)=> { if(e.target === infoOverlay) closeInfo(); });
+document.addEventListener('keydown', (e)=> { if(e.key === 'Escape' && infoOverlay && infoOverlay.style.display === 'flex') closeInfo(); });
+
 /* ---------- búsqueda (simple) ---------- */
 function searchProducts(){
   const searchTerm = document.getElementById('searchInput').value;
@@ -1687,10 +1781,10 @@ if(document.getElementById('otp-cancel')){
 }
 
 /* ----------------- fin pago ----------------- */
-
 </script>
 </body>
 </html>
+
 
 
 

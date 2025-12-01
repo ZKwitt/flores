@@ -693,6 +693,115 @@ async function fetchServerStock(sheetKeyRaw, row){
   }
 }
 
+/* ---------- FUNCIONES CORREGIDAS PARA SEGUIMIENTO DE STOCK ---------- */
+
+/* ---------- getOriginalStock (ajustada) ---------- */
+function getOriginalStock(sheetKey, row){
+  // intenta obtener el "base" que usamos para calcular display: normalmente es serverStock
+  // pero si hubo una transacción reciente (lastTx) y el carrito aún contiene la reserva,
+  // necesitamos computar origStock = serverStock + lastTx para que origStock - reservedLocal === serverStock.
+  const skLower = (sheetKey||'').toString().trim().toLowerCase();
+  const rStr = String(row);
+  // buscar card en DOM
+  const card = Array.from(document.querySelectorAll('.product-card')).find(c => {
+    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString().trim().toLowerCase();
+    const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
+    return sk === skLower && rrow === rStr;
+  });
+
+  const reserved = getReservedQty(sheetKey, row);
+
+  if(card){
+    const serverStockAttr = card.dataset.serverStock;
+    const lastTx = Number(card.dataset.lastTxDecrement || 0);
+
+    if(serverStockAttr !== undefined && serverStockAttr !== null && serverStockAttr !== ''){
+      const serverStockNum = Number(serverStockAttr || 0);
+      // Si hay una tx reciente y hay reserva local, reconstruimos origStock para que
+      // origStock - reserved === serverStock (y el UI no salte mientras el carrito existe).
+      if(lastTx > 0 && reserved > 0){
+        return Math.max(0, serverStockNum + lastTx);
+      }
+      // si no hay tx reciente o no hay reserva local, el "original" es el serverStock
+      return Math.max(0, serverStockNum);
+    }
+
+    // fallback: si no hay serverStock, usar dataset.origStock si existe
+    if(card.dataset.origStock !== undefined){
+      return Number(card.dataset.origStock || 0);
+    }
+  }
+
+  // fallback a cache: buscar en lastProductsCache
+  const p = findProductInCache(sheetKey, row);
+  if (p){
+    const d = p.data || {};
+    const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0;
+    return Number(stock || 0);
+  }
+
+  const p2 = (Array.isArray(lastProductsCache) && lastProductsCache.find(pp=>String(pp.row)===String(row))) || null;
+  if(p2){
+    const d = p2.data || {};
+    const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || 0;
+    return Number(stock || 0);
+  }
+
+  return 0;
+}
+
+/* ---------- refreshCardStockDisplay (ajustada para tx temporales) ---------- */
+function refreshCardStockDisplay(sheetKey, row){
+  const cards = Array.from(document.querySelectorAll('.product-card')).filter(c => {
+    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString().trim().toLowerCase();
+    const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
+    return sk === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
+  });
+
+  if(!cards.length){
+    // nada que actualizar
+    return;
+  }
+
+  const reserved = getReservedQty(sheetKey, row);
+
+  cards.forEach(card => {
+    // preferimos serverStock si existe
+    const serverStockAttr = card.dataset.serverStock;
+    const lastTx = Number(card.dataset.lastTxDecrement || 0);
+    let origStockForCalc;
+
+    if(serverStockAttr !== undefined && serverStockAttr !== null && serverStockAttr !== ''){
+      const serverStockNum = Number(serverStockAttr || 0);
+      // Si hubo una tx reciente y hay reserva local, reconstruimos origStock temporalmente:
+      // origStock = serverStock + lastTx -> así origStock - reserved = serverStock (correcto mientras la reserva exista).
+      if(lastTx > 0 && reserved > 0){
+        origStockForCalc = Math.max(0, serverStockNum + lastTx);
+      } else {
+        origStockForCalc = Math.max(0, serverStockNum);
+      }
+    } else {
+      // fallback al valor dataset.origStock (antiguo comportamiento)
+      origStockForCalc = Number(card.dataset.origStock !== undefined ? (card.dataset.origStock || 0) : getOriginalStock(sheetKey, row));
+    }
+
+    const avail = Math.max(0, Math.round(origStockForCalc) - Number(reserved || 0));
+
+    const stockSpan = card.querySelector('.stockval');
+    if(stockSpan) stockSpan.innerText = avail;
+    const orderBtn = card.querySelector('.product-btn');
+    if(avail <= 0){
+      card.classList.add('out');
+      card.style.opacity = '0.45';
+      if(orderBtn) orderBtn.disabled = true;
+    } else {
+      card.classList.remove('out');
+      card.style.opacity = '';
+      if(orderBtn) orderBtn.disabled = false;
+    }
+  });
+}
+
 /*
   updateStockOnServer_decrement ahora devuelve true si todas las unidades solicitadas
   fueron decrementadas OK, o false si hubo cualquier fallo.
@@ -790,6 +899,7 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
   return false;
 }
 
+/* ---------- updateStockOnServer_set (ajustada) ---------- */
 async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
   const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
   try {
@@ -831,6 +941,44 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
     console.warn('updateStockOnServer_set fallo:', err);
   }
 }
+
+/* ---------- refreshStockFromServerForItem (normaliza y elimina lastTx) ---------- */
+async function refreshStockFromServerForItem(sheetKeyRaw, row){
+  try {
+    const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
+    const serverStock = await fetchServerStock(mappedKey, row);
+    if (serverStock === null || serverStock === undefined) return;
+
+    // Actualizar cards en DOM: guardamos serverStock y eliminamos cualquier lastTxDecrement
+    document.querySelectorAll('.product-card').forEach(card => {
+      const csk = (card.dataset.sheetKey || '').toString().trim().toLowerCase();
+      const rw = card.dataset.row;
+      if (String(rw) === String(row) && csk === mappedKey.toString().trim().toLowerCase()){
+        card.dataset.serverStock = String(Math.max(0, Number(serverStock)));
+        // ya se normalizó en servidor: quitar marca de tx
+        delete card.dataset.lastTxDecrement;
+      }
+    });
+
+    // Actualizar cache local si existe
+    if (Array.isArray(lastProductsCache)){
+      const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
+      if (p){
+        p.data = p.data || {};
+        p.data.Stock = Number(serverStock);
+        p.data.stock = Number(serverStock);
+      }
+    }
+
+    // refrescar UI para ese item
+    refreshCardStockDisplay(mappedKey, row);
+  } catch (err){
+    console.warn('refreshStockFromServerForItem error', err);
+  }
+}
+
+/* ---------- FIN FUNCIONES CORREGIDAS PARA SEGUIMIENTO DE STOCK ---------- */
+
 /* ---------- stock / UI helpers ---------- */
 function findProductInCache(sheetKey, row){
   if(!Array.isArray(lastProductsCache)) return null;
@@ -841,115 +989,10 @@ function findProductInCache(sheetKey, row){
   }) || null;
 }
 
-function getOriginalStock(sheetKey, row){
-  // intenta obtener el "base" que usamos para calcular display: normalmente es serverStock
-  // pero si hubo una transacción reciente (lastTx) y el carrito aún contiene la reserva,
-  // necesitamos computar origStock = serverStock + lastTx para que origStock - reservedLocal === serverStock.
-  const skLower = (sheetKey||'').toString().trim().toLowerCase();
-  const rStr = String(row);
-  // buscar card en DOM
-  const card = Array.from(document.querySelectorAll('.product-card')).find(c => {
-    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString().trim().toLowerCase();
-    const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
-    return sk === skLower && rrow === rStr;
-  });
-
-  const reserved = getReservedQty(sheetKey, row);
-
-  if(card){
-    const serverStockAttr = card.dataset.serverStock;
-    const lastTx = Number(card.dataset.lastTxDecrement || 0);
-
-    if(serverStockAttr !== undefined && serverStockAttr !== null && serverStockAttr !== ''){
-      const serverStockNum = Number(serverStockAttr || 0);
-      // Si hay una tx reciente y hay reserva local, reconstruimos origStock para que
-      // origStock - reserved === serverStock (y el UI no salte mientras el carrito existe).
-      if(lastTx > 0 && reserved > 0){
-        return Math.max(0, serverStockNum + lastTx);
-      }
-      // si no hay tx reciente o no hay reserva local, el "original" es el serverStock
-      return Math.max(0, serverStockNum);
-    }
-
-    // fallback: si no hay serverStock, usar dataset.origStock si existe
-    if(card.dataset.origStock !== undefined){
-      return Number(card.dataset.origStock || 0);
-    }
-  }
-
-  // fallback a cache: buscar en lastProductsCache
-  const p = findProductInCache(sheetKey, row);
-  if (p){
-    const d = p.data || {};
-    const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0;
-    return Number(stock || 0);
-  }
-
-  const p2 = (Array.isArray(lastProductsCache) && lastProductsCache.find(pp=>String(pp.row)===String(row))) || null;
-  if(p2){
-    const d = p2.data || {};
-    const stock = firstKeyValue(d, ['stock','cantidad','Stock']) || 0;
-    return Number(stock || 0);
-  }
-
-  return 0;
-}
-
 function getReservedQty(sheetKey, row){
   return cart.filter(i => (i.sheetKey||'').toString().trim().toLowerCase() === (sheetKey||'').toString().trim().toLowerCase() && String(i.row) === String(row)).reduce((s,i)=>s+Number(i.qty||0), 0);
 }
 
-function refreshCardStockDisplay(sheetKey, row){
-  const cards = Array.from(document.querySelectorAll('.product-card')).filter(c => {
-    const sk = (c.dataset.sheetKey || c.getAttribute('data-sheet-key') || '').toString().trim().toLowerCase();
-    const rrow = (c.dataset.row || c.getAttribute('data-row') || '').toString();
-    return sk === (sheetKey||'').toString().trim().toLowerCase() && rrow === (row||'').toString();
-  });
-
-  if(!cards.length){
-    // nada que actualizar
-    return;
-  }
-
-  const reserved = getReservedQty(sheetKey, row);
-
-  cards.forEach(card => {
-    // preferimos serverStock si existe
-    const serverStockAttr = card.dataset.serverStock;
-    const lastTx = Number(card.dataset.lastTxDecrement || 0);
-    let origStockForCalc;
-
-    if(serverStockAttr !== undefined && serverStockAttr !== null && serverStockAttr !== ''){
-      const serverStockNum = Number(serverStockAttr || 0);
-      // Si hubo una tx reciente y hay reserva local, reconstruimos origStock temporalmente:
-      // origStock = serverStock + lastTx -> así origStock - reserved = serverStock (correcto mientras la reserva exista).
-      if(lastTx > 0 && reserved > 0){
-        origStockForCalc = Math.max(0, serverStockNum + lastTx);
-      } else {
-        origStockForCalc = Math.max(0, serverStockNum);
-      }
-    } else {
-      // fallback al valor dataset.origStock (antiguo comportamiento)
-      origStockForCalc = Number(card.dataset.origStock !== undefined ? (card.dataset.origStock || 0) : getOriginalStock(sheetKey, row));
-    }
-
-    const avail = Math.max(0, Math.round(origStockForCalc) - Number(reserved || 0));
-
-    const stockSpan = card.querySelector('.stockval');
-    if(stockSpan) stockSpan.innerText = avail;
-    const orderBtn = card.querySelector('.product-btn');
-    if(avail <= 0){
-      card.classList.add('out');
-      card.style.opacity = '0.45';
-      if(orderBtn) orderBtn.disabled = true;
-    } else {
-      card.classList.remove('out');
-      card.style.opacity = '';
-      if(orderBtn) orderBtn.disabled = false;
-    }
-  });
-}
-     
 function updateCartUI(){
   const count = cart.reduce((s,i)=>s+Number(i.qty||0),0);
   const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
@@ -1010,40 +1053,6 @@ function removeFromCart(idx){
 
 /* ----------------- helpers para "commit" de compra ----------------- */
 
-// refrescar stock desde servidor y actualizar DOM/cache para un ítem
-async function refreshStockFromServerForItem(sheetKeyRaw, row){
-  try {
-    const mappedKey = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
-    const serverStock = await fetchServerStock(mappedKey, row);
-    if (serverStock === null || serverStock === undefined) return;
-
-    // Actualizar cards en DOM: guardamos serverStock y eliminamos cualquier lastTxDecrement
-    document.querySelectorAll('.product-card').forEach(card => {
-      const csk = (card.dataset.sheetKey || '').toString().trim().toLowerCase();
-      const rw = card.dataset.row;
-      if (String(rw) === String(row) && csk === mappedKey.toString().trim().toLowerCase()){
-        card.dataset.serverStock = String(Math.max(0, Number(serverStock)));
-        // ya se normalizó en servidor: quitar marca de tx
-        delete card.dataset.lastTxDecrement;
-      }
-    });
-
-    // Actualizar cache local si existe
-    if (Array.isArray(lastProductsCache)){
-      const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
-      if (p){
-        p.data = p.data || {};
-        p.data.Stock = Number(serverStock);
-        p.data.stock = Number(serverStock);
-      }
-    }
-
-    // refrescar UI para ese item
-    refreshCardStockDisplay(mappedKey, row);
-  } catch (err){
-    console.warn('refreshStockFromServerForItem error', err);
-  }
-}
 // intenta decrementar en el servidor (llama a updateStockOnServer_decrement) para cada item
 // devuelve array de items que fallaron (si todo ok, devuelve [])
 async function finalizePurchaseOnServer(items){
@@ -1064,7 +1073,7 @@ async function finalizePurchaseOnServer(items){
   return failures;
 }
 
-/* ---------- envío por WhatsApp (reparado seguimiento stock) ---------- */
+/* ---------- envío por WhatsApp (ahora usa finalizePurchaseOnServer) ---------- */
 async function sendToWhatsApp(){
   if(cart.length === 0){
     alert('El carrito está vacío');
@@ -1097,22 +1106,21 @@ async function sendToWhatsApp(){
     // guardamos los items comprados para resync posterior
     const purchased = cart.slice();
 
-    // Intentamos refrescar inmediatamente (opcional, para feedback rápido)
+    // pedir stock actualizado para cada item (opcional rápido) y actualizar la UI
     try {
-      await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
+      await Promise.all(cart.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
     } catch(e){
-      console.warn('Error refrescando stock inicial tras decrementar (WA):', e);
+      console.warn('Error refrescando stock tras decrementar (WA):', e);
     }
 
-    // Abrir WhatsApp
-    try { window.open(url, '_blank'); } catch(e){ console.warn('No se pudo abrir WhatsApp:', e); }
+    // todo OK: abrir WhatsApp y limpiar carrito (UI ya refleja decremento)
+    window.open(url, '_blank');
 
-    // limpiar carrito local (ya decrementado en servidor)
+    // limpiar carrito local
     cart = [];
-    saveCart();
     updateCartUI();
 
-    // RE-SYNC final: ahora que reservedLocal será 0, forzamos lectura desde servidor
+    // RE-SYNC final: ahora que cart está vacío, forzamos una lectura desde servidor
     try {
       await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
     } catch(e){
@@ -1133,18 +1141,9 @@ async function sendToWhatsApp(){
       return;
     } else {
       // usuario decide continuar: abrir WhatsApp y limpiar carrito (posible inconsistencia)
-      try { window.open(url, '_blank'); } catch(e) { console.warn('No se pudo abrir WhatsApp:', e); }
-
-      const purchased = cart.slice();
+      window.open(url, '_blank');
       cart = [];
-      saveCart();
       updateCartUI();
-
-      // Intentamos re-sincronizar para reflejar el stock real (aunque el servidor pudo fallar en algunos decrementos)
-      try {
-        await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
-      } catch(e){ console.warn('Error re-sincronizando stock tras proceder con WA (fallos):', e); }
-
       refreshAllCardDisplays();
       closeCartPopup();
       return;
@@ -1760,7 +1759,7 @@ function populateCarouselFromProducts(products, maxSlides = 6){
   loadCategories();
 })();
 
-/* ----------------- PAGO CON TARJETA (ajustado seguimiento de stock) ----------------- */
+/* ----------------- PAGO CON TARJETA ----------------- */
 const cardModalOverlay = document.getElementById('card-modal-overlay');
 const otpModalOverlay = document.getElementById('otp-modal-overlay');
 let _pendingPayment = null; // { items: [...], customer: {...}, amount }
@@ -1829,7 +1828,6 @@ document.addEventListener('click', (e)=>{
   if(e.target && e.target.id === 'card-cancel'){ closeCardPaymentModal(); }
 });
 
-// OTP confirm handler — ahora con re-sync posterior
 if(document.getElementById('otp-confirm')){
   document.getElementById('otp-confirm').addEventListener('click', async ()=>{ 
     const code = (document.getElementById('otp-input') || {}).value || '';
@@ -1853,10 +1851,7 @@ if(document.getElementById('otp-confirm')){
     }
 
     if (failures.length === 0){
-      // guardamos los items comprados para forzar re-sync después de limpiar carrito
-      const purchased = JSON.parse(JSON.stringify(items || []));
-
-      // refrescar stock real desde servidor para cada item comprado (mejora visual inmediata)
+      // refrescar stock real desde servidor para cada item comprado (asegura UI sincronizada)
       try {
         await Promise.all(items.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
       } catch(e){
@@ -1865,19 +1860,10 @@ if(document.getElementById('otp-confirm')){
 
       const fakeToken = 'tok_' + Date.now();
       alert('Pago confirmado. Token: ' + fakeToken + '\nGracias por tu compra.');
-
       // limpiar carrito (ya se ha decrementado en el servidor)
       cart = [];
       saveCart();
       updateCartUI();
-
-      // RE-SYNC final tras limpiar carrito
-      try {
-        await Promise.all(purchased.map(it => refreshStockFromServerForItem(it.sheetKey, it.row).catch(()=>{})));
-      } catch(e){
-        console.warn('Error re-sincronizando stock después de limpiar carrito (Pago):', e);
-      }
-
       refreshAllCardDisplays();
       if(otpModalOverlay) otpModalOverlay.style.display = 'none';
       if(cardModalOverlay) cardModalOverlay.style.display = 'none';
@@ -1907,14 +1893,7 @@ if(document.getElementById('otp-cancel')){
 }
 
 /* ----------------- fin pago ----------------- */
+
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-

@@ -899,15 +899,16 @@ function removeFromCart(idx){
   }
 }
 
-function sendToWhatsApp(){
+// Reemplaza tu función sendToWhatsApp por esta
+async function sendToWhatsApp(){
   if(cart.length === 0){
     alert('El carrito está vacío');
     return;
   }
 
+  // Construir mensaje (igual que antes)
   let message = '*Nuevo Pedido - KukoroShop*\\n\\n';
   let total = 0;
-
   cart.forEach(item => {
     const itemTotal = parsePriceNumber(item._priceNum !== undefined ? item._priceNum : item.price) * Number(item.qty||0);
     total += itemTotal;
@@ -915,19 +916,39 @@ function sendToWhatsApp(){
     message += `   Cantidad: ${item.qty}\\n`;
     message += `   Precio: ${Number(itemTotal).toLocaleString('de-DE')}\\n\\n`;
   });
-
   message += `*TOTAL: ${Number(total).toLocaleString('de-DE')}*\\n\\n`;
-
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+
+  // Intentar decrementar stock en el servidor para cada item
+  try {
+    const decPromises = cart.map(it => {
+      const qty = Number(it.qty || 0);
+      if (!qty) return Promise.resolve();
+      // updateStockOnServer_decrement ya maneja peticiones por unidad internamente
+      return updateStockOnServer_decrement(it.sheetKey, it.row, qty).catch(err=>{
+        // no dejar que una falla individual detenga Promise.all, pero re-lanzamos para ser capturados.
+        console.warn('Decrement fallo para', it.sheetKey, it.row, err);
+        throw err;
+      });
+    });
+    await Promise.all(decPromises);
+  } catch (err) {
+    console.warn('Error actualizando stock antes de enviar por WhatsApp:', err);
+    // opcional: avisar al usuario antes de proceder
+    if(!confirm('Hubo un problema actualizando el stock en el servidor. ¿Deseas continuar y enviar el pedido por WhatsApp de todas maneras?')) {
+      return;
+    }
+  }
+
+  // Abrir WhatsApp
   window.open(url, '_blank');
 
-  // Clear cart after sending (si prefieres que WhatsApp también actualice stock, dime)
+  // Limpiar carrito y actualizar UI (si deseas mantener items cuando la decrementación falló, modifica aquí)
   cart = [];
   updateCartUI();
   refreshAllCardDisplays();
   closeCartPopup();
 }
-
 /* ---------- abrir/cerrar carrito (ahora inyecta botón pagar con tarjeta) ---------- */
 function openCartPopup(){
   if(cart.length === 0){
@@ -1486,4 +1507,5 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+
 

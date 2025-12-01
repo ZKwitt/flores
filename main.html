@@ -486,18 +486,14 @@ const cartPopup = document.getElementById('cart-popup');
 const cartItemsContainer = document.getElementById('cart-items-container');
 const cartTotalEl = document.getElementById('cart-total');
 const cartCloseBtn = document.getElementById('cart-close');
-const cartConfirmBtn = document.getElementById('cart-confirm'); // botón WA está en el HTML
 const cartActionsContainer = document.getElementById('cart-actions');
-
-const carouselEl = document.querySelector('.carousel');
-const carouselDots = document.getElementById('carouselDots');
 
 let lastProductsCache = [];
 let availableSheetKeys = [];
 let lastLoadedSheetKey = null;
 let cart = JSON.parse(localStorage.getItem('shop_cart_v1') || '[]');
 
-const WHATSAPP_NUMBER = '573207378992'; // ajustar
+const WHATSAPP_NUMBER = '573207378992';
 
 /* --- utilidades --- */
 function firstKeyValue(obj, keys){
@@ -549,21 +545,28 @@ function observeLazyImages(rootEl){
   const imgs = (rootEl || document).querySelectorAll('img[data-src]');
   imgs.forEach(img => { if(document.contains(img)) lazyObserver.observe(img); });
 }
-function makeImgEl(url, alt, cls){
+/* makeImgEl ahora acepta eager=true para forzar carga inmediata */
+function makeImgEl(url, alt, cls, eager = false){
   const img = document.createElement('img');
   img.alt = alt || '';
   img.className = cls || '';
-  img.loading = 'lazy';
+  img.loading = eager ? 'eager' : 'lazy';
   try {
-    img.dataset.src = url ? (API_URL + 'image-proxy?url=' + encodeURIComponent(url)) : '';
-    img.src = img.dataset.src ? 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==' : '';
+    const proxied = url ? (API_URL + 'image-proxy?url=' + encodeURIComponent(url)) : '';
+    if(eager){
+      // cargar inmediatamente para evitar placeholders en tarjetas
+      img.src = proxied;
+    } else {
+      img.dataset.src = proxied;
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    }
   } catch(e) { img.src = ''; }
   img.style.objectFit = 'contain';
   img.onerror = () => { img.remove(); };
   return img;
 }
 
-/* --- normalización / stock helpers --- */
+/* --- normalization / stock helpers --- */
 function normalizeProductKey(sheetKey, row){ return `${String(sheetKey||'').trim().toLowerCase()}::${String(row)}`; }
 function mapToAvailableSheetKey(input){ if(!input) return null; const s = String(input).trim(); if(availableSheetKeys && availableSheetKeys.length){ const found = availableSheetKeys.find(k=>String(k).toLowerCase()===s.toLowerCase()); if(found) return found; } return s || null; }
 
@@ -590,7 +593,6 @@ function applyNewStockToDOM(mappedKey, row, newStock){
       card.dataset.origStock = String(Math.max(0, Number(newStock) + Number(reservedLocal || 0)));
     }
   });
-  // update cache
   lastProductsCache.forEach(p=>{
     if(String(p.row) === String(row) && (p.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase()){
       p.data = p.data || {};
@@ -601,12 +603,11 @@ function applyNewStockToDOM(mappedKey, row, newStock){
   refreshCardStockDisplay(mappedKey, row);
 }
 
-/* attempt atomic decrement, fallback parallel */
+/* decrement with atomic attempt + fallback */
 async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
   if(!qty || qty <= 0) return { ok:false };
   const mapped = mapToAvailableSheetKey(sheetKeyRaw);
   if(!mapped) return { ok:false };
-  // try atomic
   try {
     const resp = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'decrement', sheetKey: mapped, row: String(row), qty: Number(qty) }) });
     const text = await resp.text().catch(()=>null);
@@ -616,9 +617,9 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
       applyNewStockToDOM(mapped, row, Number(json.newStock));
       return { ok:true, newStock: Number(json.newStock) };
     }
-  } catch(e){ /* continue to fallback */ }
+  } catch(e){ /* fallback */ }
 
-  // fallback: parallel single decrements
+  // fallback: parallel singles
   const promises = [];
   for(let i=0;i<qty;i++){
     promises.push(fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'decrement', sheetKey: mapped, row: String(row) }) })
@@ -648,7 +649,7 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
   return { ok: successCount === qty, newStock: lastNewStock };
 }
 
-/* set stock */
+/* set/increase set */
 async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
   const mapped = mapToAvailableSheetKey(sheetKeyRaw) || sheetKeyRaw;
   try {
@@ -726,14 +727,8 @@ function refreshCardStockDisplay(sheetKey, row){
     if(stockSpan) stockSpan.innerText = avail;
     const btn = card.querySelector('.product-btn');
     if(avail <= 0){
-      card.classList.add('out');
-      card.style.opacity = '0.45';
-      if(btn) btn.disabled = true;
-    } else {
-      card.classList.remove('out');
-      card.style.opacity = '';
-      if(btn) btn.disabled = false;
-    }
+      card.classList.add('out'); card.style.opacity = '0.45'; if(btn) btn.disabled = true;
+    } else { card.classList.remove('out'); card.style.opacity = ''; if(btn) btn.disabled = false; }
   });
 }
 
@@ -776,18 +771,11 @@ async function addToCartFromCard(card, qty){
   if(existing){ existing.qty = Math.min(origStock, existing.qty + qty); }
   else { cart.push({ sheetKey, row, name, price: priceRaw, _priceNum: priceNum, qty }); }
 
-  // update UI (reserved will now be accounted)
   refreshCardStockDisplay(sheetKey, row);
   updateCartUI();
 
-  // attempt to decrement on server and apply newStock if returned
-  const res = await updateStockOnServer_decrement(sheetKey, row, qty).catch(()=>({ ok:false }));
-  if(res && res.ok && res.newStock !== undefined){
-    // already applied in updateStockOnServer_decrement
-  } else {
-    // if server didn't return newStock, try a read to sync later
-    refreshStockFromServerForItem(sheetKey, row).catch(()=>{});
-  }
+  // decrement on server; apply newStock when returned
+  updateStockOnServer_decrement(sheetKey, row, qty).catch(()=>{});
 }
 
 function removeFromCart(idx){
@@ -800,7 +788,6 @@ function removeFromCart(idx){
   refreshCardStockDisplay(sheetKey, row);
   updateCartUI();
   openCartPopup();
-  // increase stock on server (best-effort)
   updateStockOnServer_increaseViaSet(sheetKey, row, removedQty).catch(()=>{});
 }
 
@@ -814,7 +801,7 @@ async function sendToWhatsApp(){
     message += `*${item.name}*%0A   Cantidad: ${item.qty}%0A   Precio: ${Number(itemTotal).toLocaleString('de-DE')}%0A%0A`;
   });
   message += `*TOTAL: ${Number(total).toLocaleString('de-DE')}*%0A%0A`;
-  // finalize on server first
+
   let failures = [];
   try { failures = await finalizePurchaseOnServer(cart); } catch(e){ failures = cart.slice(); }
   if(failures.length === 0){
@@ -829,15 +816,13 @@ async function sendToWhatsApp(){
   }
 }
 
-/* cart popup rendering: ensures only one WA button, pay button works, single close */
+/* cart popup rendering */
 function openCartPopup(){
   if(!cartPopupOverlay) return;
   if(cart.length === 0){
     cartItemsContainer.innerHTML = '<p style="text-align:center;color:#999">Carrito vacío</p>';
     cartTotalEl.innerHTML = '';
-    cartPopupOverlay.style.display = 'flex';
-    cartPopupOverlay.setAttribute('aria-hidden','false');
-    document.body.style.overflow = 'hidden';
+    ensureCartActions(); cartPopupOverlay.style.display = 'flex'; cartPopupOverlay.setAttribute('aria-hidden','false'); document.body.style.overflow = 'hidden';
     return;
   }
   let html = '';
@@ -858,46 +843,51 @@ function openCartPopup(){
   cartItemsContainer.innerHTML = html;
   const total = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
   cartTotalEl.innerHTML = `💰 Total: <span style="color:#9D4EDD">${Number(total).toLocaleString('de-DE')}</span>`;
-
-  // ensure cart actions (close, wa, pay)
-  if(cartActionsContainer){
-    // keep existing #cart-close and #cart-confirm; add pay button if missing
-    // remove duplicates inside container then append in fixed order
-    cartActionsContainer.innerHTML = '';
-    const closeBtn = document.createElement('button');
-    closeBtn.id = 'cart-close-btn-generated';
-    closeBtn.className = 'btn-small btn-ghost';
-    closeBtn.innerText = 'Cerrar';
-    closeBtn.onclick = closeCartPopup;
-    cartActionsContainer.appendChild(closeBtn);
-
-    const waBtn = document.createElement('button');
-    waBtn.id = 'cart-wa-btn-generated';
-    waBtn.className = 'btn-small btn-primary';
-    waBtn.innerText = 'Enviar por WhatsApp';
-    waBtn.onclick = sendToWhatsApp;
-    cartActionsContainer.appendChild(waBtn);
-
-    const payBtn = document.createElement('button');
-    payBtn.id = 'cart-paycard';
-    payBtn.className = 'btn-small';
-    payBtn.style.cssText = 'background:#3b82f6;color:#fff;border-radius:8px;border:none;font-weight:700;padding:8px 12px;';
-    payBtn.innerText = 'Pagar con tarjeta';
-    payBtn.onclick = openCardPaymentModal;
-    cartActionsContainer.appendChild(payBtn);
-  }
-
+  ensureCartActions();
   cartPopupOverlay.style.display = 'flex';
   cartPopupOverlay.setAttribute('aria-hidden','false');
   document.body.style.overflow = 'hidden';
 }
 function closeCartPopup(){ if(cartPopupOverlay){ cartPopupOverlay.style.display = 'none'; cartPopupOverlay.setAttribute('aria-hidden','true'); } document.body.style.overflow = ''; }
 
+function ensureCartActions(){
+  // get container either from DOM or from variable
+  let container = cartPopup.querySelector('#cart-actions') || cartActionsContainer;
+  if(!container){
+    // create it under cart popup if missing
+    container = document.createElement('div');
+    container.id = 'cart-actions';
+    cartPopup.appendChild(container);
+  }
+  container.innerHTML = ''; // reset and create controlled buttons
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'btn-small btn-ghost';
+  closeBtn.innerText = 'Cerrar';
+  closeBtn.onclick = closeCartPopup;
+  container.appendChild(closeBtn);
+
+  const waBtn = document.createElement('button');
+  waBtn.id = 'cart-wa-btn-generated';
+  waBtn.className = 'btn-small btn-primary';
+  waBtn.innerText = 'Enviar por WhatsApp';
+  waBtn.onclick = sendToWhatsApp;
+  container.appendChild(waBtn);
+
+  const payBtn = document.createElement('button');
+  payBtn.id = 'cart-paycard';
+  payBtn.className = 'btn-small';
+  payBtn.style.cssText = 'background:#3b82f6;color:#fff;border-radius:8px;border:none;font-weight:700;padding:8px 12px;margin-left:6px;';
+  payBtn.innerText = 'Pagar con tarjeta';
+  payBtn.onclick = openCardPaymentModal;
+  container.appendChild(payBtn);
+}
+
+/* wire popup triggers */
 if(cartIconBtn) cartIconBtn.addEventListener('click', openCartPopup);
 if(cartCloseBtn) cartCloseBtn.addEventListener('click', closeCartPopup);
 if(cartPopupOverlay) cartPopupOverlay.addEventListener('click', (e)=>{ if(e.target === cartPopupOverlay) closeCartPopup(); });
-
-window.removeFromCart = removeFromCart; // exposición global para onclick inline
+window.removeFromCart = removeFromCart;
 
 /* --- image modal --- */
 const imgModalOverlay = document.getElementById('img-modal-overlay');
@@ -910,13 +900,16 @@ function openImageModal(url, alt){
   if(imgModalOverlay) imgModalOverlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 }
-function closeImageModal(){ if(imgModalOverlay) imgModalOverlay.style.display = 'none'; imgModalImg.src = ''; document.body.style.overflow = ''; }
+function closeImageModal(){ if(imgModalOverlay) imgModalOverlay.style.display = 'none'; if(imgModalImg) imgModalImg.src = ''; document.body.style.overflow = ''; }
 if(imgModalClose) imgModalClose.addEventListener('click', closeImageModal);
 if(imgModalOverlay) imgModalOverlay.addEventListener('click', (e)=>{ if(e.target === imgModalOverlay) closeImageModal(); });
 
 /* --- carousel helpers --- */
 let currentSlide = 0;
 let totalSlides = 0;
+const carouselEl = document.querySelector('.carousel');
+const carouselDots = document.getElementById('carouselDots');
+
 function populateCarouselFromProducts(products, maxSlides=6){
   if(!carouselEl) return;
   const slides = [];
@@ -930,7 +923,7 @@ function populateCarouselFromProducts(products, maxSlides=6){
   slides.forEach(s=>{
     const item = document.createElement('div'); item.className = 'carousel-item';
     const wrap = document.createElement('div'); wrap.className = 'carousel-img-wrap';
-    const imgEl = makeImgEl(s.img, s.title, 'carousel-img');
+    const imgEl = makeImgEl(s.img, s.title, 'carousel-img', true);
     imgEl.loading = 'eager';
     wrap.appendChild(imgEl);
     const caption = document.createElement('div'); caption.className = 'carousel-caption';
@@ -1001,7 +994,6 @@ function renderProducts(products, sheetKey){
     card.dataset.productKey = normalizeProductKey(productSheetKey, p.row);
     if(d.Stock !== undefined) card.dataset.serverStock = String(Number(d.Stock || 0));
 
-    // build inner HTML but keep an element for image so makeImgEl can insert
     card.innerHTML = `
       <div class="image-wrap" style="min-height:380px; display:flex; align-items:center; justify-content:center; background:#0f0f0f;">
         <div class="prod-img-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888">🖼️</div>
@@ -1020,26 +1012,21 @@ function renderProducts(products, sheetKey){
       </div>
     `;
 
-    // insert image element (lazy)
+    // Insert image element: **load eagerly for catalog cards** to avoid placeholder issues
     const wrap = card.querySelector('.image-wrap');
     if(imgUrl && /^https?:\/\//i.test(imgUrl)){
-      const imgEl = makeImgEl(imgUrl, name, 'product-image');
+      const imgEl = makeImgEl(imgUrl, name, 'product-image', true); // eager = true
       imgEl.style.maxHeight = '380px'; imgEl.style.width = 'auto';
-      // replace placeholder
       wrap.innerHTML = '';
       wrap.appendChild(imgEl);
-      observeLazyImages(card);
+      // allow modal on click
       imgEl.addEventListener('click', ()=> openImageModal(imgUrl, name));
-    } else {
-      // keep placeholder emoji
     }
-
     frag.appendChild(card);
   });
 
   productsGrid.appendChild(frag);
 
-  // single delegation for grid interactions
   if(!productsGrid._hasDelegation){
     productsGrid.addEventListener('click', function(e){
       const plus = e.target.closest('.plus');
@@ -1057,7 +1044,6 @@ function renderProducts(products, sheetKey){
     productsGrid._hasDelegation = true;
   }
 
-  // sync shown cards stock in small batches (avoid long blocking)
   (async function syncVisible(){
     const cards = Array.from(document.querySelectorAll('.product-card'));
     const limit = 6;
@@ -1067,11 +1053,9 @@ function renderProducts(products, sheetKey){
     }
   })();
 
-  // refresh carousel images
   populateCarouselFromProducts(lastProductsCache, 6);
 }
 
-/* refresh all */
 function refreshAllCardDisplays(){ document.querySelectorAll('.product-card').forEach(c => refreshCardStockDisplay(c.dataset.sheetKey, c.dataset.row)); }
 
 /* --- categories/loaders --- */
@@ -1125,12 +1109,10 @@ async function loadProductsAll(){
     const data = await r.json();
     if(data.error){ productsGrid.innerHTML = '<div style="text-align:center;color:#f88">Error: ' + escapeHtml(data.message||'') + '</div>'; return; }
     let products = (data.products || []).map(p=>{ p.data = p.data || {}; return p; });
-    // normalize sheetKey
     products.forEach(p => {
       const cat = p.data.Categoria || p.data.categoria || p.sheetKey || 'UNKNOWN';
       p.sheetKey = mapToAvailableSheetKey(cat) || String(cat);
     });
-    // fetch per-sheet details (some workers return partial info)
     const cats = [...new Set(products.map(p => p.sheetKey).filter(Boolean))];
     const detailsPromises = cats.map(cat => fetch(API_URL + '?sheetKey=' + encodeURIComponent(cat) + '&_=' + Date.now(), { cache:'no-store' }).then(res => res.json().catch(()=>({products:[]}))).then(json=>({cat, products: json.products||[]})).catch(()=>({cat, products:[]})));
     const details = await Promise.all(detailsPromises);
@@ -1175,7 +1157,6 @@ const searchInputEl = document.getElementById('searchInput');
 if(searchInputEl) searchInputEl.addEventListener('keypress', (e)=> { if(e.key === 'Enter') searchProducts(); });
 
 /* --- payment modal (card + OTP) --- */
-/* create modals if not present */
 (function ensureCardModal(){
   if(!document.getElementById('card-modal-overlay')){
     const div = document.createElement('div');
@@ -1270,7 +1251,6 @@ document.addEventListener('click', (e)=>{
     if(err){ if(errEl) errEl.innerText = err; return; }
     const amount = cart.reduce((s,i)=> s + (parsePriceNumber(i._priceNum !== undefined ? i._priceNum : i.price) * Number(i.qty||0)), 0);
     const customer = { name: document.getElementById('card-name').value.trim(), email: document.getElementById('card-email').value.trim(), phone: document.getElementById('card-phone').value.trim(), address: document.getElementById('card-address').value.trim() };
-    // pending payment object
     window._pendingPayment = { items: JSON.parse(JSON.stringify(cart)), customer, amount };
     const otp = document.getElementById('otp-modal-overlay'); if(otp) otp.style.display = 'flex';
   }
@@ -1305,7 +1285,7 @@ document.addEventListener('click', async (e)=>{
   }
 });
 
-/* --- info links (header/footer) - shows modal with text (Colombian e-commerce compliance base) --- */
+/* --- info links modal (compliance snippets) --- */
 (function initInfoLinks(){
   const infoModalId = 'info-modal-overlay-generated';
   if(!document.getElementById(infoModalId)){
@@ -1351,3 +1331,4 @@ document.addEventListener('click', async (e)=>{
 </script>
 </body>
 </html>
+

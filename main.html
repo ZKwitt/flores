@@ -1372,64 +1372,72 @@ function renderTabs(sheets){
   loadProductsAll();
 }
 
+// Reemplaza loadProductsFor por esto
 async function loadProductsFor(sheetKey){
   lastLoadedSheetKey = sheetKey;
-  productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando productos...</div>';
+  if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando productos</div>';
   try {
     const r = await fetch(API_URL+'?sheetKey='+encodeURIComponent(sheetKey), {cache:'no-store'});
     const data = await r.json();
-    if (data.error){ productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
-    const products = (data.products || []).map(p=> { if(!p.sheetKey) p.sheetKey = sheetKey; return p; });
-    lastProductsCache = products.map(p => ({ row: p.row, sheetKey: p.sheetKey || sheetKey, data: p.data || {} }));
-    renderProducts(products, sheetKey);
-  } catch(err){ console.error(err); productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error cargando productos</div>'; }
+    if (data.error){ contentEl.innerHTML='Error: '+escapeHtml(data.message||''); return; }
+    let products = (data.products || []).map(p=> {
+      p.data = p.data || {};
+      // normalizar sheetKey con la función de mapeo
+      const raw = p.sheetKey || p.data.Categoria || p.data.categoria || sheetKey || 'UNKNOWN';
+      p.sheetKey = mapToAvailableSheetKey(raw) || String(raw);
+      return p;
+    });
+
+    // Establecer cache en formato consistente esperado por el resto del código
+    lastProductsCache = products.map(p => ({ row: p.row, sheetKey: String(p.sheetKey), data: p.data || {} }));
+
+    renderProducts(products.map(p=>({ row: p.row, data: p.data, sheetKey: p.sheetKey })), sheetKey);
+  } catch(err){
+    console.error(err);
+    if(contentEl) contentEl.innerHTML='<div class="loading">Error cargando productos</div>';
+  }
 }
 
-/* ----------------- loadProductsAll (REPARADO para TODOS) ----------------- */
+// Reemplaza loadProductsAll por esto
 async function loadProductsAll(){
   lastLoadedSheetKey = "ALL";
-  productsGrid.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#aaa">Cargando todos los productos...</div>';
+  if(contentEl) contentEl.innerHTML = '<div class="loading">Cargando todos los productos</div>';
   try {
     const r = await fetch(API_URL+'?all=1', {cache:'no-store'});
     const data = await r.json();
-    if (data.error){ productsGrid.innerHTML='<div style="text-align:center;color:#f88">Error: '+escapeHtml(data.message||'')+'</div>'; return; }
-    let products = data.products || [];
+    if (data.error){ contentEl.innerHTML='Error: '+escapeHtml(data.message||''); return; }
+    let products = (data.products || []).map(p => { p.data = p.data || {}; return p; });
 
     // Normalizar sheetKey por producto: preferir Categoria en los datos, luego p.sheetKey
     products.forEach(p=>{
-      p.data = p.data || {};
-      const rawCat = p.data.Categoria || p.data.categoria || p.sheetKey || '';
-      // Intentar mapear a una sheetKey conocida (case-insensitive)
-      const mapped = mapToAvailableSheetKey(rawCat) || (p.sheetKey || rawCat || 'UNKNOWN');
-      p.sheetKey = String(mapped);
+      const rawCat = p.data.Categoria || p.data.categoria || p.sheetKey || 'UNKNOWN';
+      p.sheetKey = mapToAvailableSheetKey(rawCat) || String(rawCat);
     });
 
-    // recolectar categorías para pedir detalles por sheetKey (usar las claves ya mapeadas)
-    const cats = [...new Set(products.map(p => (p.sheetKey)).filter(Boolean))];
+    // recolectar categorías (claves ya mapeadas)
+    const cats = [...new Set(products.map(p => p.sheetKey).filter(Boolean))];
 
-    // pedir detalles por categoria (las llamadas pueden devolver Stock/Img/Descripcion)
-    const detailsPromises = cats.map(catKey => {
-      // asegurarnos de pedir con la clave "oficial" (catKey ya fue mapeada arriba)
-      return fetch(API_URL+'?sheetKey='+encodeURIComponent(catKey), {cache:'no-store'})
-        .then(res=>res.json().catch(()=>({products:[]})))
-        .then(json => ({ cat: catKey, products: json.products || [] }))
-        .catch(()=>({cat: catKey, products:[]}))
-    });
+    // pedir detalles por categoria (usar claves mapeadas)
+    const detailsPromises = cats.map(catKey => fetch(API_URL+'?sheetKey='+encodeURIComponent(catKey), {cache:'no-store'})
+      .then(res=>res.json().catch(()=>({products:[]})))
+      .then(json => ({ cat: catKey, products: json.products || [] }))
+      .catch(()=>({cat: catKey, products:[]}))
+    );
 
     const details = await Promise.all(detailsPromises);
 
+    // Construir map de detalles usando la misma clave mapeada
     const detailMap = {};
     details.forEach(obj=>{
       const cat = obj.cat;
       (obj.products || []).forEach(pp=>{
         const key = `${cat}::${String(pp.row)}`;
-        // pp.data puede venir anidado o ser directamente el objeto de fila
         detailMap[key] = (pp.data && Object.keys(pp.data).length) ? pp.data : pp;
         if(!pp.sheetKey) pp.sheetKey = cat;
       });
     });
 
-    // fusionar detalles en la lista de productos principal
+    // Fusionar detalles en la lista de productos principal
     products = products.map(p=>{
       const d = p.data || {};
       const cat = p.sheetKey || d.Categoria || d.categoria || 'UNKNOWN';
@@ -1439,28 +1447,22 @@ async function loadProductsAll(){
         if(!d.descripcion && (det.descripcion || det.Descripcion || det.description)) d.descripcion = firstKeyValue(det, ['descripcion','Descripcion','description','desc','nota','Nota']);
         if(!d.Icono && (det.Icono || det.icono || det.icon)) d.Icono = det.Icono || det.icono || det.icon;
         if(!d.Img && (det.Img || det.img || det.imagen || det.image)) d.Img = det.Img || det.img || det.imagen || det.image;
-        if(!d.Categoria && det.Categoria) d.Categoria = det.Categoria;
         if((det.Stock !== undefined) && (d.Stock === undefined)) d.Stock = det.Stock;
+        if(!d.Categoria && det.Categoria) d.Categoria = det.Categoria;
       }
-      p.sheetKey = p.sheetKey || d.Categoria || cat;
+      p.sheetKey = String(p.sheetKey || d.Categoria || cat);
       p.data = d;
       return p;
     });
 
-    // reconstruir lastProductsCache con sheetKey normalizado
-    lastProductsCache = products.map(p => {
-      return {
-        row: p.row,
-        sheetKey: (p.sheetKey || (p.data && (p.data.Categoria || p.data.categoria)) || 'UNKNOWN').toString(),
-        data: p.data || {}
-      };
-    });
+    // Reconstruir lastProductsCache con sheetKey normalizado
+    lastProductsCache = products.map(p => ({ row: p.row, sheetKey: String(p.sheetKey), data: p.data || {} }));
 
-    // render con sheetKey reales (no "ALL")
+    // Renderizar con sheetKey reales (no "ALL")
     renderProducts(lastProductsCache.map(p=>({ row: p.row, data: p.data, sheetKey: p.sheetKey })), "ALL");
   } catch(err){
     console.error(err);
-    productsGrid.innerHTML = '<div style="text-align:center;color:#f88">Error cargando productos</div>';
+    if(contentEl) contentEl.innerHTML = '<div class="loading">Error cargando productos</div>';
   }
 }
 /* ---------- util: abrir modal imagen ---------- */
@@ -1711,6 +1713,7 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+
 
 
 

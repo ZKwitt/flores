@@ -1398,19 +1398,23 @@ async function loadProductsAll(){
     // Normalizar sheetKey por producto: preferir Categoria en los datos, luego p.sheetKey
     products.forEach(p=>{
       p.data = p.data || {};
-      const cat = p.data.Categoria || p.data.categoria || p.sheetKey || 'UNKNOWN';
-      p.sheetKey = String(cat);
+      const rawCat = p.data.Categoria || p.data.categoria || p.sheetKey || '';
+      // Intentar mapear a una sheetKey conocida (case-insensitive)
+      const mapped = mapToAvailableSheetKey(rawCat) || (p.sheetKey || rawCat || 'UNKNOWN');
+      p.sheetKey = String(mapped);
     });
 
-    // recolectar categorías para pedir detalles por sheetKey
+    // recolectar categorías para pedir detalles por sheetKey (usar las claves ya mapeadas)
     const cats = [...new Set(products.map(p => (p.sheetKey)).filter(Boolean))];
 
     // pedir detalles por categoria (las llamadas pueden devolver Stock/Img/Descripcion)
-    const detailsPromises = cats.map(cat => fetch(API_URL+'?sheetKey='+encodeURIComponent(cat), {cache:'no-store'})
-      .then(res=>res.json().catch(()=>({products:[]})))
-      .then(json => ({ cat, products: json.products || [] }))
-      .catch(()=>({cat, products:[]}))
-    );
+    const detailsPromises = cats.map(catKey => {
+      // asegurarnos de pedir con la clave "oficial" (catKey ya fue mapeada arriba)
+      return fetch(API_URL+'?sheetKey='+encodeURIComponent(catKey), {cache:'no-store'})
+        .then(res=>res.json().catch(()=>({products:[]})))
+        .then(json => ({ cat: catKey, products: json.products || [] }))
+        .catch(()=>({cat: catKey, products:[]}))
+    });
 
     const details = await Promise.all(detailsPromises);
 
@@ -1419,7 +1423,8 @@ async function loadProductsAll(){
       const cat = obj.cat;
       (obj.products || []).forEach(pp=>{
         const key = `${cat}::${String(pp.row)}`;
-        detailMap[key] = pp.data || pp;
+        // pp.data puede venir anidado o ser directamente el objeto de fila
+        detailMap[key] = (pp.data && Object.keys(pp.data).length) ? pp.data : pp;
         if(!pp.sheetKey) pp.sheetKey = cat;
       });
     });
@@ -1458,7 +1463,6 @@ async function loadProductsAll(){
     productsGrid.innerHTML = '<div style="text-align:center;color:#f88">Error cargando productos</div>';
   }
 }
-
 /* ---------- util: abrir modal imagen ---------- */
 const imgModalOverlay = document.getElementById('img-modal-overlay');
 const imgModalImg = document.getElementById('img-modal-img');
@@ -1707,6 +1711,7 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+
 
 
 

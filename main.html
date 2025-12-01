@@ -142,6 +142,28 @@
             margin-bottom:3rem;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
+        /* Carrusel: contenedor cuadrado centrado para cada slide */
+.carousel-item .carousel-img-wrap{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  aspect-ratio: 1 / 1;      /* cuadrado */
+  max-height: 450px;
+  width: 100%;
+  overflow: hidden;
+  background: #0f0f0f;
+  border-radius: 8px;
+}
+
+/* imagen dentro del cuadrado: mantener proporciones, no recortar */
+.carousel-item .carousel-img{
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display:block;
+}
         .carousel-title {
             text-align:center;
             font-size:2.2rem;
@@ -1459,13 +1481,15 @@ function populateCarouselFromProducts(products, maxSlides = 6){
     for (let i = 0; i < (products || []).length && slides.length < maxSlides; i++){
       const p = products[i];
       const img = getProductImageUrl(p);
-      if(img) slides.push({ img, title: firstKeyValue(p.data||{}, ['name','nombre','producto','Nombre']) || (p.data && (p.data.Nombre || '')), price: firstKeyValue(p.data||{}, ['price','precio','Precio']) || (p.data && p.data.Precio) || '' });
+      if(img) slides.push({
+        img,
+        title: firstKeyValue(p.data||{}, ['name','nombre','producto','Nombre']) || (p.data && (p.data.Nombre || '')),
+        price: firstKeyValue(p.data||{}, ['price','precio','Precio']) || (p.data && p.data.Precio) || ''
+      });
     }
 
-    // Si no hay slides suficientes, no modificar nada (o podrías mantener los estáticos)
-    if(!slides.length){
-      return;
-    }
+    // Si no hay slides con imagen, no modificar
+    if(!slides.length) return;
 
     // Vaciar y construir nuevos items
     carouselEl.innerHTML = '';
@@ -1473,21 +1497,29 @@ function populateCarouselFromProducts(products, maxSlides = 6){
       const item = document.createElement('div');
       item.className = 'carousel-item';
 
-      // construir imagen usando makeImgEl (respeta tu proxy y lazy)
-      const imgEl = makeImgEl(s.img, s.title || 'Slide', 'product-image');
-      imgEl.style.height = '450px';
-      imgEl.style.width = '100%';
-      imgEl.style.objectFit = 'cover';
+      // wrapper cuadrado centrado
+      const wrap = document.createElement('div');
+      wrap.className = 'carousel-img-wrap';
+
+      // crear imagen (usa proxy si existe)
+      const imgEl = makeImgEl(s.img, s.title || 'Slide', 'carousel-img');
+      // no forzamos cover; dejamos que la clase CSS (object-fit: contain) la gestione
       imgEl.loading = 'eager'; // cargar rápido para el carrusel
+
+      // Append img to wrapper
+      wrap.appendChild(imgEl);
 
       // caption
       const caption = document.createElement('div');
       caption.className = 'carousel-caption';
       caption.innerHTML = `<h3>${escapeHtml(s.title || '')}</h3><p>${s.price ? ('$ ' + fmtPrice(s.price)) : ''}</p>`;
 
-      item.appendChild(imgEl);
+      item.appendChild(wrap);
       item.appendChild(caption);
       carouselEl.appendChild(item);
+
+      // hacer click en la imagen abre el modal (opcional)
+      imgEl.addEventListener('click', ()=> openImageModal(s.img, s.title));
     });
 
     // recalcular totalSlides y reiniciar dots + estado del carousel
@@ -1662,5 +1694,6 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+
 
 

@@ -727,7 +727,7 @@ function renderProducts(products, sheetKey){
     const stock = Number(firstKeyValue(d, ['stock','cantidad','Stock']) || d.Stock || 0);
     const imgUrl = firstKeyValue(d, ['img','Img','imagen','image','url','Imagen']) || d.Img || '';
     const description = firstKeyValue(d, ['descripcion','Descripcion','description','desc','nota','Nota']) || d.descripcion || '';
-    const productSheetKey = (p.sheetKey || d.Categoria || sheetKey || 'UNKNOWN').toString();
+    const productSheetKey = (p.sheetKey || d.Categoria || 'UNKNOWN').toString();
 
     const card = document.createElement('div');
     card.className = 'product-card';
@@ -999,6 +999,7 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
       const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
       if (p){
         p.data = p.data || {};
+        p.sheetKey = (p.sheetKey || p.data.Categoria || p.data.categoria || 'UNKNOWN').toString();
         p.data.Stock = Number(lastConfirmedStock);
         p.data.stock = Number(lastConfirmedStock);
       }
@@ -1022,6 +1023,7 @@ async function updateStockOnServer_decrement(sheetKeyRaw, row, qty){
         const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
         if (p){
           p.data = p.data || {};
+        p.sheetKey = (p.sheetKey || p.data.Categoria || p.data.categoria || 'UNKNOWN').toString();
           p.data.Stock = Number(current);
           p.data.stock = Number(current);
         }
@@ -1064,6 +1066,7 @@ async function updateStockOnServer_set(sheetKeyRaw, row, newStock){
         const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
         if (p){
           p.data = p.data || {};
+        p.sheetKey = (p.sheetKey || p.data.Categoria || p.data.categoria || 'UNKNOWN').toString();
           p.data.Stock = Number(confirmedStock);
           p.data.stock = Number(confirmedStock);
         }
@@ -1098,6 +1101,7 @@ async function refreshStockFromServerForItem(sheetKeyRaw, row){
       const p = lastProductsCache.find(pp => String(pp.row) === String(row) && (pp.sheetKey||'').toString().trim().toLowerCase() === mappedKey.toString().trim().toLowerCase());
       if (p){
         p.data = p.data || {};
+        p.sheetKey = (p.sheetKey || p.data.Categoria || p.data.categoria || 'UNKNOWN').toString();
         p.data.Stock = Number(serverStock);
         p.data.stock = Number(serverStock);
       }
@@ -1504,6 +1508,7 @@ async function loadProductsAll(){
 
     products.forEach(p=>{
       p.data = p.data || {};
+    p.sheetKey = (p.sheetKey || p.data.Categoria || p.data.categoria || 'UNKNOWN').toString();
       if(!p.data.Categoria) p.data.Categoria = p.data.Categoria || p.data.categoria || 'UNKNOWN';
     });
 
@@ -1766,5 +1771,6 @@ if(document.getElementById('otp-cancel')){
 </script>
 </body>
 </html>
+
 
 
